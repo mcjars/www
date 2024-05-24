@@ -266,7 +266,7 @@ export default function App() {
               {builds.map((b) => (
                 <Button
                   key={b.id}
-                  disabled={b.id.toString() === build}
+                  disabled={b.id === build?.id}
                   onClick={() => setBuild(b)}
                   className={'h-16 my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
