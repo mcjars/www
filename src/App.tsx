@@ -116,7 +116,7 @@ export default function App() {
           ) : jarDropBuild ? (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <div className={'flex flex-row'}>
-                <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
+                <img src={types?.find((t) => t.identifier === jarDropBuild.type)?.icon} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
                 <div className={'flex flex-col items-start'}>
                   <h1 className={'text-xl font-semibold'}>{types?.find((t) => t.identifier === type)?.name}</h1>
                   {jarDropBuild.buildNumber === 1 && jarDropBuild.projectVersionId ? <h1 className={'text-xl'}>{`Version ${jarDropBuild.projectVersionId}`}</h1> : <h1 className={'text-md'}>{`Build #${jarDropBuild.buildNumber}`}</h1>}
