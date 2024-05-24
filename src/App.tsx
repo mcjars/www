@@ -83,9 +83,13 @@ export default function App() {
         const hashArray = Array.from(new Uint8Array(hash))
         const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 
-        const build = await apiGetBuild(hashHex)
-        setJarDropBuild(build)
-        setIsJarDropLoading(false)
+        try {
+          const build = await apiGetBuild(hashHex)
+          setJarDropBuild(build)
+          setIsJarDropLoading(false)
+        } catch {
+          setIsJarDropLoading(false)
+        }
       }
 
       reader.readAsArrayBuffer(file)
