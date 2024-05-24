@@ -7,7 +7,7 @@ import apiGetBuilds from "@/api/builds"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BooleanParam, StringParam, useQueryParam } from "use-query-params"
 import bytes from "bytes"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { TbDownload } from "react-icons/tb"
 
@@ -52,7 +52,7 @@ export default function App() {
       <Drawer open={Boolean(build)} onOpenChange={(open) => setBuild(open ? build : undefined)}>
         <DrawerContent className={'w-full max-w-3xl mx-auto'}>
           <div className={'flex flex-row justify-between items-center p-2'}>
-            <img src={types?.find((t) => t.identifier === type)?.icon} alt={type} className={'h-24 w-24 mr-2 rounded-md'} />
+            <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
             <span className={'text-left w-96 self-start'}>
               <h1 className={'font-semibold text-xl'}>Installation</h1>
               {builds?.find((b) => b.id.toString() === build)?.zipUrl && (
@@ -78,34 +78,26 @@ export default function App() {
             </span>
             <div className={'flex flex-col items-center w-48 space-y-1 h-full'}>
               {builds?.find((b) => b.id.toString() === build)?.jarUrl && (
-                <Button
-                  as={'a'}
-                  href={builds.find((b) => b.id.toString() === build)?.jarUrl}
-                  target={'_blank'}
-                  rel={'noopener noreferrer'}
-                  className={'w-full h-full'}
-                >
-                  <TbDownload size={24} className={'mr-1'} />
-                  <span className={'flex flex-col items-center'}>
-                    <p className={'font-semibold'}>Download Jar</p>
-                    <p className={'text-xs -mt-1'}>{bytes(builds.find((b) => b.id.toString() === build)?.jarSize ?? 0)}</p>
-                  </span>
-                </Button>
+                <a href={builds.find((b) => b.id.toString() === build)?.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'}>
+                  <Button className={'w-full h-full'}>
+                    <TbDownload size={24} className={'mr-1'} />
+                    <span className={'flex flex-col items-center'}>
+                      <p className={'font-semibold'}>Download Jar</p>
+                      <p className={'text-xs -mt-1'}>{bytes(builds.find((b) => b.id.toString() === build)?.jarSize ?? 0)}</p>
+                    </span>
+                  </Button>
+                </a>
               )}
               {builds?.find((b) => b.id.toString() === build)?.zipUrl && (
-                <Button
-                  as={'a'}
-                  href={builds.find((b) => b.id.toString() === build)?.zipUrl}
-                  target={'_blank'}
-                  rel={'noopener noreferrer'}
-                  className={'w-full h-full'}
-                >
-                  <TbDownload size={24} className={'mr-1'} />
-                  <span className={'flex flex-col items-center'}>
-                    <p className={'font-semibold'}>Download Zip</p>
-                    <p className={'text-xs -mt-1'}>{bytes(builds.find((b) => b.id.toString() === build)?.zipSize ?? 0)}</p>
-                  </span>
-                </Button>
+                <a href={builds.find((b) => b.id.toString() === build)?.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'}>
+                  <Button className={'w-full h-full'}>
+                    <TbDownload size={24} className={'mr-1'} />
+                    <span className={'flex flex-col items-center'}>
+                      <p className={'font-semibold'}>Download Zip</p>
+                      <p className={'text-xs -mt-1'}>{bytes(builds.find((b) => b.id.toString() === build)?.zipSize ?? 0)}</p>
+                    </span>
+                  </Button>
+                </a>
               )}
             </div>
           </div>
@@ -158,7 +150,7 @@ export default function App() {
                   onClick={() => setVersion(v.latest.versionId ?? v.latest.projectVersionId)}
                   className={'h-16 my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
-                  <img src={types.find((t) => t.identifier === type)?.icon} alt={type} className={'h-12 w-12 mr-2 rounded-md'} />
+                  <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{v.latest.versionId ?? v.latest.projectVersionId}</h1>
                     <p>{v.builds} Build{v.builds === 1 ? '' : 's'}</p>
@@ -185,12 +177,12 @@ export default function App() {
                   onClick={() => setBuild(b.id.toString())}
                   className={'h-16 my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
-                  <img src={types.find((t) => t.identifier === type)?.icon} alt={type} className={'h-12 w-12 mr-2 rounded-md'} />
+                  <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{b.buildNumber === 1 && b.projectVersionId ? `Version ${b.projectVersionId}` : `Build #${b.buildNumber}`}</h1>
                     <span className={'grid w-60 grid-cols-2'}>
                       <p>{b.created}</p>
-                      <p>{bytes(b.jarSize ?? b.zipSize)}</p>
+                      <p>{bytes(b.jarSize ?? b.zipSize ?? 0)}</p>
                     </span>
                   </span>
                 </Button>
