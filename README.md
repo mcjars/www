@@ -1,3 +1,3 @@
 # MCJars
 
-https://mcjars.app
+https://mcjar.app
