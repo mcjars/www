@@ -151,7 +151,7 @@ export default function App() {
                   <>
                     <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
                     {build.jarUrl && (
-                      <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'mx-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
+                      <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'ml-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
                     )}
                     <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>{build.zipUrl?.split('/').pop()?.slice(0, -4)}</p>.</p>
                   </>
