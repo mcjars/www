@@ -9,6 +9,7 @@ export type PartialMinecraftBuild = {
 	created: string
 	jarUrl: string | null
 	jarSize: number | null
+	jarLocation: string | null
 	zipUrl: string | null
 	zipSize: number | null
 }

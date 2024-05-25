@@ -141,7 +141,7 @@ export default function App() {
       </Drawer>
 
       <Drawer open={Boolean(build)} onOpenChange={(open) => setBuild(open ? build : undefined)}>
-        <DrawerContent className={'w-full max-w-3xl mx-auto'}>
+        <DrawerContent className={'w-full max-w-3xl mx-auto h-fit'}>
           {build && (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
@@ -152,9 +152,12 @@ export default function App() {
                     <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
                     {build.jarUrl && (
                       <>
-                        <p className={'text-xs flex flex-row'}>Download the Jar file and check for a <p className={'mx-1 font-bold'}>.mcvapi.jarUrl.txt</p> file.</p>
-                        <p className={'ml-2 text-xs'}>If the file exists, rename the Jar file to the value inside the file.</p>
-                        <p className={'ml-2 text-xs flex flex-row'}>If the file does not exist, rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
+                        <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and check for a <p className={'mx-1 font-bold'}>.mcvapi.jarUrl.txt</p> file.</p>
+                        {build.jarLocation ? (
+                          <p className={'ml-2 text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'font-bold'}>{build.jarLocation}</p>.</p>
+                        ) : (
+                          <p className={'ml-2 text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'font-bold'}>server.jar</p>.</p>
+                        )}
                       </>
                     )}
                     <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>{build.zipUrl?.split('/').pop()?.slice(0, -4)}</p>.</p>
@@ -163,8 +166,8 @@ export default function App() {
                 {build.jarUrl && !build.zipUrl && (
                   <>
                     <p className={'text-xs'}>Download the Jar file and place it in your server's root folder.</p>
-                    <p className={'text-xs flex flex-row'}>Rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
-                    <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
+                    <p className={'text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
+                    <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
                   </>
                 )}
               </span>
