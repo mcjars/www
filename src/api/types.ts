@@ -5,6 +5,9 @@ type MinecraftType = {
 	name: string
 	icon: string
 	homepage: string
+	description: string
+	deprecated: boolean
+	experimental: boolean
 
 	builds: number
 	versions: {

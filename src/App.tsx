@@ -207,7 +207,11 @@ export default function App() {
                   <img src={t.icon} alt={t.name} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{t.name}</h1>
-                    <p>{t.builds} Build{t.builds === 1 ? '' : 's'}</p>
+                    <p>
+                      {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>Experimental</span>}
+                      {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>Deprecated</span>}
+                      {t.builds} Build{t.builds === 1 ? '' : 's'}
+                    </p>
                   </span>
                 </Button>
               ))}
