@@ -5,12 +5,13 @@ import apiGetTypes from "@/api/types"
 import apiGetVersions from "@/api/versions"
 import apiGetBuilds, { PartialMinecraftBuild } from "@/api/builds"
 import apiGetBuild from "@/api/build"
+import apiGetStats from "@/api/stats"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BooleanParam, StringParam, useQueryParam } from "use-query-params"
 import bytes from "bytes"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import { TbDownload } from "react-icons/tb"
+import { TbBrandGithub, TbDownload, TbLink } from "react-icons/tb"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -24,6 +25,12 @@ export default function App() {
   const { data: types } = useSWR(
     ['types'],
     () => apiGetTypes(),
+    { revalidateOnFocus: false, revalidateIfStale: false }
+  )
+
+  const { data: stats } = useSWR(
+    ['stats'],
+    () => apiGetStats(),
     { revalidateOnFocus: false, revalidateIfStale: false }
   )
 
@@ -193,8 +200,35 @@ export default function App() {
         </DrawerContent>
       </Drawer>
 
-      <main className={'p-4 grid xl:grid-cols-8 xl:grid-rows-1 grid-rows-8 gap-2 w-full h-[calc(100vh-2rem)] max-w-7xl mx-auto'}>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-2rem)]'}>
+      <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
+        <div className={'flex flex-row h-full items-center'}>
+          <img src={'https://mcvapi.s3.infra.rjns.dev/icons/vanilla.png'} alt={'Logo'} className={'h-12 w-12'} />
+          <div className={'flex flex-col ml-2'}>
+            <h1 className={'text-xl font-semibold'}>MCJars</h1>
+            {stats && (
+              <>
+                <p className={'text-xs -mt-1'}>{stats.builds} Total Builds, {stats.hashes} Hashes</p>
+              </>
+            )}
+          </div>
+        </div>
+        <div className={'md:flex hidden space-x-1 flex-row h-full items-center'}>
+          <a href={'https://mc.rjns.dev'} target={'_blank'} rel={'noopener noreferrer'}>
+            <Button>
+              <TbLink size={24} className={'mr-1'} />
+              API Docs
+            </Button>
+          </a>
+          <a href={'https://github.com/0x7d8/mcjar'} target={'_blank'} rel={'noopener noreferrer'}>
+            <Button>
+              <TbBrandGithub size={24} className={'mr-1'} />
+              Github
+            </Button>
+          </a>
+        </div>
+      </nav>
+      <main className={'p-4 pt-0 grid xl:grid-cols-8 xl:grid-rows-1 grid-rows-8 gap-2 w-full h-[calc(100vh-5rem)] max-w-7xl mx-auto'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
           {types ? (
             <>
               {types.map((t) => (
@@ -225,7 +259,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll pr-4 xl:h-[calc(100vh-2rem)]'}>
+        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
           {!validatingVersions && versions && types ? (
             <>
               {versions.some((v) => v.type === 'SNAPSHOT') && (
@@ -260,7 +294,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-2rem)]'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
           {!validatingBuilds && builds && versions && types ? (
             <>
               {builds.map((b) => (
