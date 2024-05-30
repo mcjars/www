@@ -8,6 +8,8 @@ type MinecraftType = {
 	description: string
 	deprecated: boolean
 	experimental: boolean
+	categories: string[]
+	compatibility: string[]
 
 	builds: number
 	versions: {

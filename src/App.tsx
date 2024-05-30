@@ -234,16 +234,23 @@ export default function App() {
                   key={t.identifier}
                   disabled={t.identifier === type}
                   onClick={() => setType(t.identifier)}
-                  className={'h-16 my-1 flex flex-row items-center justify-between w-full text-right'}
+                  className={'h-fit my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
-                  <img src={t.icon} alt={t.name} className={'h-12 w-12 mr-2 rounded-md'} />
+                  <img src={t.icon} alt={t.name} className={'h-16 w-16 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{t.name}</h1>
-                    <p>
+                    <p className={'mb-[6px]'}>
+                      {t.categories.map((c) => (
+                        <span key={t.name + c} className={'text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
+                      ))}
                       {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>Experimental</span>}
                       {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>Deprecated</span>}
                       {t.builds} Build{t.builds === 1 ? '' : 's'}
                     </p>
+                    {t.compatibility.map((c) => (
+                      <span key={t.name + c} className={'text-xs mr-1 bg-green-500 text-white h-6 p-1 rounded-md'}>{c}</span>
+                    ))}
+                    {t.compatibility.length > 0 && 'compatibility'}
                   </span>
                 </Button>
               ))}
