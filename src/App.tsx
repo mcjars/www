@@ -206,9 +206,7 @@ export default function App() {
           <div className={'flex flex-col ml-2'}>
             <h1 className={'text-xl font-semibold'}>MCJars</h1>
             {stats && (
-              <>
-                <p className={'text-xs -mt-1'}>{stats.builds} Total Builds, {stats.hashes} Hashes</p>
-              </>
+              <p className={'text-xs -mt-1'}>{stats.builds} Total Builds, {stats.hashes} Hashes</p>
             )}
           </div>
         </div>
