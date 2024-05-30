@@ -210,6 +210,9 @@ export default function App() {
             )}
           </div>
         </div>
+        <p className={'xl:block hidden'}>
+          You can drag in your server jar to detect it!
+        </p>
         <div className={'md:flex hidden space-x-1 flex-row h-full items-center'}>
           <a href={'https://mc.rjns.dev'} target={'_blank'} rel={'noopener noreferrer'}>
             <Button>
