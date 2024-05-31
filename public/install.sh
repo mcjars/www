@@ -72,9 +72,11 @@ if [ -d "libraries" ]; then
 	rm -rf libraries
 fi
 
-echo "Downloading $JAR_URL to $JAR_LOCATION..."
-curl -s -o $JAR_LOCATION $JAR_URL
-echo "Downloading $JAR_URL to $JAR_LOCATION... Done"
+if [ -n "$JAR_URL" ]; then
+	echo "Downloading $JAR_URL to $JAR_LOCATION..."
+	curl -s -o $JAR_LOCATION $JAR_URL
+	echo "Downloading $JAR_URL to $JAR_LOCATION... Done"
+fi
 
 if [ -n "$ZIP_URL" ]; then
 	echo "Downloading $ZIP_URL..."
