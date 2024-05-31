@@ -68,6 +68,10 @@ if [ "$CONFIRM" != "y" ]; then
 	exit 1
 fi
 
+if [ -d "libraries" ]; then
+	rm -rf libraries
+fi
+
 echo "Downloading $JAR_URL to $JAR_LOCATION..."
 curl -s -o $JAR_LOCATION $JAR_URL
 echo "Downloading $JAR_URL to $JAR_LOCATION... Done"
