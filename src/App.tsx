@@ -210,7 +210,7 @@ export default function App() {
             )}
           </div>
         </div>
-        <p className={'xl:block hidden'}>
+        <p className={'xl:block hidden text-xs'}>
           You can drag in your server jar to detect it!
         </p>
         <div className={'md:flex hidden space-x-1 flex-row h-full items-center'}>
@@ -244,16 +244,18 @@ export default function App() {
                     <h1 className={'text-xl font-semibold'}>{t.name}</h1>
                     <p className={'mb-[6px]'}>
                       {t.categories.map((c) => (
-                        <span key={t.name + c} className={'text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
+                        <span key={t.name + c} className={'md:visible invisible text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
                       ))}
                       {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>Experimental</span>}
                       {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>Deprecated</span>}
                       {t.builds} Build{t.builds === 1 ? '' : 's'}
                     </p>
-                    {t.compatibility.map((c) => (
-                      <span key={t.name + c} className={'text-xs mr-1 bg-green-500 text-white h-6 p-1 rounded-md'}>{c}</span>
-                    ))}
-                    {t.compatibility.length > 0 && 'compatibility'}
+                    <span className={'md:block hidden'}>
+                      {t.compatibility.map((c) => (
+                        <span key={t.name + c} className={'text-xs mr-1 bg-green-500 text-white h-6 p-1 rounded-md'}>{c}</span>
+                      ))}
+                      {t.compatibility.length > 0 && 'compatibility'}
+                    </span>
                   </span>
                 </Button>
               ))}
