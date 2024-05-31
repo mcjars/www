@@ -170,7 +170,12 @@ export default function App() {
                     <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
                   </>
                 )}
-                <code className={'mt-1 md:block hidden text-xs'}>bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}</code>
+                <code
+                  className={'mt-1 select-text md:block hidden text-xs hover:font-semibold cursor-pointer'}
+                  onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
+                >
+                  bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}
+                </code>
               </span>
               <div className={'flex flex-col items-center w-48 space-y-1 h-full'}>
                 {build.jarUrl && (
