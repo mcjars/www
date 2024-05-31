@@ -152,7 +152,7 @@ export default function App() {
           {build && (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
-              <span className={'text-left w-96 self-start'}>
+              <span className={'text-left w-[26rem] self-start'}>
                 <h1 className={'font-semibold text-xl'}>Installation</h1>
                 {build.zipUrl && (
                   <>
@@ -170,6 +170,7 @@ export default function App() {
                     <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
                   </>
                 )}
+                <code className={'mt-1 md:block hidden text-xs'}>bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}</code>
               </span>
               <div className={'flex flex-col items-center w-48 space-y-1 h-full'}>
                 {build.jarUrl && (
