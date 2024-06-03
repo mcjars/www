@@ -156,6 +156,7 @@ export default function App() {
                 <h1 className={'font-semibold text-xl'}>Installation</h1>
                 {build.zipUrl && (
                   <>
+                    <p className={'text-xs flex flex-row flex-wrap'}>Delete the <p className={'mx-1 font-bold'}>libraries</p> folder if it exists.</p>
                     <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
                     {build.jarUrl && (
                       <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'ml-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
@@ -235,7 +236,7 @@ export default function App() {
         </div>
       </nav>
       <main className={'p-4 pt-0 grid xl:grid-cols-8 xl:grid-rows-1 grid-rows-8 gap-2 w-full h-[calc(100vh-5rem)] max-w-7xl mx-auto'}>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
           {types ? (
             <>
               {types.map((t) => (
@@ -250,7 +251,7 @@ export default function App() {
                     <h1 className={'text-xl font-semibold'}>{t.name}</h1>
                     <p className={'mb-[6px]'}>
                       {t.categories.map((c) => (
-                        <span key={t.name + c} className={'md:visible invisible text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
+                        <span key={t.name + c} className={'-md:hidden text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
                       ))}
                       {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>Experimental</span>}
                       {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>Deprecated</span>}
@@ -275,7 +276,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
           {!validatingVersions && versions && types ? (
             <>
               {versions.some((v) => v.type === 'SNAPSHOT') && (
@@ -310,7 +311,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-4 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
           {!validatingBuilds && builds && versions && types ? (
             <>
               {builds.map((b) => (
