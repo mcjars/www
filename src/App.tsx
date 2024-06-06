@@ -54,7 +54,9 @@ export default function App() {
 
   useEffect(() => {
     if (versions && !versions.find((v) => (v.latest.versionId ?? v.latest.projectVersionId) === version)) {
-      setVersion(versions[0].latest.versionId ?? versions[0].latest.projectVersionId)
+      const index = versions.findIndex((v) => v.type === 'RELEASE' || !v.type)
+
+      setVersion(versions[index].latest.versionId ?? versions[index].latest.projectVersionId)
     }
   }, [ versions, version ])
 

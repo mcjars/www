@@ -19,7 +19,6 @@ if echo $DATA | grep -q '"success":false'; then
 	exit 1
 fi
 
-# extract json key versionId (string) without jq
 TYPE=$(echo $DATA | sed -n 's/.*"type":"\([^"]*\)".*/\1/p')
 VERSION_ID=$(echo $DATA | sed -n 's/.*"versionId":"\([^"]*\)".*/\1/p')
 PROJECT_VERSION_ID=$(echo $DATA | sed -n 's/.*"projectVersionId":"\([^"]*\)".*/\1/p')
