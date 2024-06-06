@@ -62,7 +62,7 @@ echo ""
 echo "[y]es or [n]o"
 read -r CONFIRM
 
-if [ "$CONFIRM" != "y" ]; then
+if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "yes" ]; then
 	echo "Installation cancelled"
 	exit 1
 fi
