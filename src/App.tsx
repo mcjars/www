@@ -323,7 +323,7 @@ export default function App() {
         <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll xl:h-[calc(100vh-5rem)]'}>
           {!validatingBuilds && builds && versions && types ? (
             <>
-              {builds.some((b) => b.experimental) && (
+              {builds.some((b) => b.experimental) && !builds.every((b) => b.experimental) && (
                 <Button
                   onClick={() => setIncludeExperimental(!includeExperimental)}
                   className={cn('my-1', includeExperimental ? 'bg-green-500 hover:bg-green-400' : 'bg-red-500 hover:bg-red-400')}
@@ -331,7 +331,7 @@ export default function App() {
                   Include Experimental
                 </Button>
               )}
-              {builds.filter((b) => b.experimental ? includeExperimental : true).map((b) => (
+              {builds.filter((b) => b.experimental && !builds.every((b) => b.experimental) ? includeExperimental : true).map((b) => (
                 <Button
                   key={b.id}
                   disabled={b.id === build?.id}
