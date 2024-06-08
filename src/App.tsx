@@ -16,6 +16,7 @@ import { FoliaFlowchart } from "@/components/folia-flowchart"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
+  const [ includeExperimental, setIncludeExperimental ] = useQueryParam('experimental', BooleanParam)
   const [ type, setType ] = useQueryParam('type', StringParam)
   const [ version, setVersion ] = useQueryParam('version', StringParam)
   const [ build, setBuild ] = useState<PartialMinecraftBuild>()
@@ -322,19 +323,34 @@ export default function App() {
         <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll xl:h-[calc(100vh-5rem)]'}>
           {!validatingBuilds && builds && versions && types ? (
             <>
-              {builds.map((b) => (
+              {builds.some((b) => b.experimental) && (
+                <Button
+                  onClick={() => setIncludeExperimental(!includeExperimental)}
+                  className={cn('my-1', includeExperimental ? 'bg-green-500 hover:bg-green-400' : 'bg-red-500 hover:bg-red-400')}
+                >
+                  Include Experimental
+                </Button>
+              )}
+              {builds.filter((b) => b.experimental ? includeExperimental : true).map((b) => (
                 <Button
                   key={b.id}
                   disabled={b.id === build?.id}
                   onClick={() => setBuild(b)}
-                  className={'h-16 my-1 flex flex-row items-center justify-between w-full text-right'}
+                  className={'h-20 my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{b.buildNumber === 1 && b.projectVersionId ? `Version ${b.projectVersionId}` : `Build #${b.buildNumber}`}</h1>
-                    <span className={'grid w-60 grid-cols-2'}>
+                    <p className={'mb-[2px]'}>
+                      {b.experimental
+                        ? <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>experimental</span>
+                        : <span className={'text-xs mr-1 bg-green-500 text-white h-6 p-1 rounded-md'}>stable</span>
+                      }
+
+                      {bytes(b.jarSize ?? b.zipSize ?? 0)}
+                    </p>
+                    <span>
                       <p>{b.created}</p>
-                      <p>{bytes(b.jarSize ?? b.zipSize ?? 0)}</p>
                     </span>
                   </span>
                 </Button>

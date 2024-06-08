@@ -32,6 +32,18 @@ const questions: Question[] = [
 		answers: [
 			'Yes', 'No'
 		], answer: 0
+	},
+	{
+		text: 'Do you agree that issues with plugins are papers responsibility?',
+		answers: [
+			'Yes', 'No'
+		], answer: 1
+	},
+	{
+		text: 'What is Folia for?',
+		answers: [
+			'many spread players', 'a Lobby'
+		], answer: 0
 	}
 ]
 
@@ -42,8 +54,7 @@ export function FoliaFlowchart({ open, onClose }: FoliaFlowchartProps) {
 
 	useEffect(() => {
 		if (answers.length === questions.length && answers.every((answer, index) => answer === questions[index].answer)) {
-			console.log('You are ready for Folia!')
-			setDone(true)
+			setTimeout(() => setDone(true), 1000)
 		}
 	}, [answers])
 
@@ -74,7 +85,7 @@ export function FoliaFlowchart({ open, onClose }: FoliaFlowchartProps) {
 							</div>
 						) : (
 							<div className={'mt-4 w-full flex-col'}>
-								<h1 className={'text-white font-semibold text-xl'}>You are not ready for Folia!</h1>
+								<h1 className={'text-white font-semibold text-xl'}>You are{!answers.every((answer, index) => answer === questions[index].answer) && ' not'} ready for Folia!</h1>
 							</div>
 						)}
 					</DialogDescription>
