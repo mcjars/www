@@ -299,7 +299,10 @@ export default function App() {
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{v.latest.versionId ?? v.latest.projectVersionId}</h1>
-                    <p>{v.builds} Build{v.builds === 1 ? '' : 's'}</p>
+                    <span className={'grid grid-cols-2'}>
+                      <p>{v.builds} Build{v.builds === 1 ? '' : 's'}</p>
+                      <p className={'w-28 text-right pr-1'}>Requires Java {v.java}</p>
+                    </span>
                   </span>
                 </Button>
               ))}

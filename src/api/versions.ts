@@ -2,8 +2,9 @@ import axios from "axios"
 
 type MinecraftVersion = {
 	type?: 'RELEASE' | 'SNAPSHOT'
-	supported: boolean
-	created: string
+	supported?: boolean
+	created?: string
+	java?: number
 	builds: number
 	latest: {
 		id: number
