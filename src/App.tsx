@@ -336,7 +336,7 @@ export default function App() {
                   key={b.id}
                   disabled={b.id === build?.id}
                   onClick={() => setBuild(b)}
-                  className={'h-20 my-1 flex flex-row items-center justify-between w-full text-right'}
+                  className={'h-fit my-1 flex flex-row items-center justify-between w-full text-right'}
                 >
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
