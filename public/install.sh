@@ -36,7 +36,7 @@ fi
 if [ "$JAR_URL" = "null," ]; then
 	JAR_URL=""
 fi
-if [ "$JAR_LOCATION" = "null," ]; then
+if [ "$JAR_LOCATION" = "null," ] || [ -z "$JAR_LOCATION" ]; then
 	JAR_LOCATION="server.jar"
 fi
 if [ "$ZIP_URL" = "null," ]; then
@@ -62,7 +62,7 @@ echo ""
 echo "[y]es or [n]o"
 read -r CONFIRM
 
-if [ "$CONFIRM" != "y" ]; then
+if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "yes" ] && [ "$CONFIRM" != "ye" ]; then
 	echo "Installation cancelled"
 	exit 1
 fi
