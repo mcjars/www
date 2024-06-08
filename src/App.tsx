@@ -12,6 +12,7 @@ import bytes from "bytes"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { TbBrandGithub, TbDownload, TbLink } from "react-icons/tb"
+import { FoliaFlowchart } from "@/components/folia-flowchart"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -209,6 +210,8 @@ export default function App() {
         </DrawerContent>
       </Drawer>
 
+      <FoliaFlowchart open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
+
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
         <div className={'flex flex-row h-full items-center'}>
           <img src={'https://mcvapi.s3.infra.rjns.dev/icons/vanilla.png'} alt={'Logo'} className={'h-12 w-12'} />
@@ -238,7 +241,7 @@ export default function App() {
         </div>
       </nav>
       <main className={'p-4 pt-0 grid xl:grid-cols-8 xl:grid-rows-1 grid-rows-8 gap-2 w-full h-[calc(100vh-5rem)] max-w-7xl mx-auto'}>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll xl:h-[calc(100vh-5rem)]'}>
           {types ? (
             <>
               {types.map((t) => (
@@ -255,8 +258,8 @@ export default function App() {
                       {t.categories.map((c) => (
                         <span key={t.name + c} className={'-md:hidden text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
                       ))}
-                      {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>Experimental</span>}
-                      {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>Deprecated</span>}
+                      {t.experimental && <span className={'text-xs mr-1 bg-yellow-500 text-white h-6 p-1 rounded-md'}>experimental</span>}
+                      {t.deprecated && <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>deprecated</span>}
                       {t.builds} Build{t.builds === 1 ? '' : 's'}
                     </p>
                     <span className={'md:block hidden'}>
@@ -278,7 +281,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-2 xl:row-span-1 row-span-2 overflow-scroll xl:h-[calc(100vh-5rem)]'}>
           {!validatingVersions && versions && types ? (
             <>
               {versions.some((v) => v.type === 'SNAPSHOT') && (
@@ -299,9 +302,9 @@ export default function App() {
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
                     <h1 className={'text-xl font-semibold'}>{v.latest.versionId ?? v.latest.projectVersionId}</h1>
-                    <span className={'grid grid-cols-2'}>
+                    <span className={'grid grid-cols-2 mr-0'}>
                       <p>{v.builds} Build{v.builds === 1 ? '' : 's'}</p>
-                      <p className={'w-28 text-right pr-1'}>Requires Java {v.java}</p>
+                      <p className={'w-fit text-right pl-2'}>Requires Java {v.java}</p>
                     </span>
                   </span>
                 </Button>
@@ -316,7 +319,7 @@ export default function App() {
             </>
           )}
         </div>
-        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll pr-5 xl:h-[calc(100vh-5rem)]'}>
+        <div className={'flex flex-col xl:col-span-3 xl:row-span-1 row-span-3 overflow-scroll xl:h-[calc(100vh-5rem)]'}>
           {!validatingBuilds && builds && versions && types ? (
             <>
               {builds.map((b) => (
