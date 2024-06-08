@@ -22,8 +22,8 @@ type MinecraftVersion = {
 
 export default async function apiGetVersions(type: string): Promise<MinecraftVersion[]> {
 	const { data } = await axios.get<{
-		versions: Record<string, MinecraftVersion>
-	}>(`https://mc.rjns.dev/api/v1/builds/${type.toUpperCase()}`)
+		builds: Record<string, MinecraftVersion>
+	}>(`https://mc.rjns.dev/api/v2/builds/${type.toUpperCase()}`)
 
-	return Object.values(data.versions).reverse()
+	return Object.values(data.builds).reverse()
 }

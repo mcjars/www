@@ -19,7 +19,7 @@ export type PartialMinecraftBuild = {
 export default async function apiGetBuilds(type: string, version: string): Promise<PartialMinecraftBuild[]> {
 	const { data } = await axios.get<{
 		builds: PartialMinecraftBuild[]
-	}>(`https://mc.rjns.dev/api/v1/builds/${type.toUpperCase()}/${version}`)
+	}>(`https://mc.rjns.dev/api/v2/builds/${type.toUpperCase()}/${version}`)
 
 	return data.builds
 }
