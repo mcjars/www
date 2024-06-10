@@ -156,56 +156,58 @@ export default function App() {
           {build && (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
-              <span className={'text-left w-[26rem] self-start'}>
-                <h1 className={'font-semibold text-xl'}>Installation</h1>
-                {build.zipUrl && (
-                  <>
-                    <p className={'text-xs flex flex-row flex-wrap'}>Delete the <p className={'mx-1 font-bold'}>libraries</p> folder if it exists.</p>
-                    <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
-                    {build.jarUrl && (
-                      <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'ml-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
-                    )}
-                    <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>{build.zipUrl?.split('/').pop()?.slice(0, -4)}</p>.</p>
-                  </>
-                )}
-                {build.jarUrl && !build.zipUrl && (
-                  <>
-                    <p className={'text-xs'}>Download the Jar file and place it in your server's root folder.</p>
-                    <p className={'text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
-                    <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
-                  </>
-                )}
-                <code
-                  className={'mt-1 select-text md:block hidden text-xs hover:font-semibold cursor-pointer'}
-                  onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
-                >
-                  bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}
-                </code>
+              <span className={'flex md:flex-row flex-col items-start w-full'}>
+                <span className={'text-left w-full self-start mb-1'}>
+                  <h1 className={'font-semibold text-xl'}>Installation</h1>
+                  {build.zipUrl && (
+                    <>
+                      <p className={'text-xs flex flex-row flex-wrap'}>Delete the <p className={'mx-1 font-bold'}>libraries</p> folder if it exists.</p>
+                      <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
+                      {build.jarUrl && (
+                        <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'ml-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
+                      )}
+                      <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>{build.zipUrl?.split('/').pop()?.slice(0, -4)}</p>.</p>
+                    </>
+                  )}
+                  {build.jarUrl && !build.zipUrl && (
+                    <>
+                      <p className={'text-xs'}>Download the Jar file and place it in your server's root folder.</p>
+                      <p className={'text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
+                      <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
+                    </>
+                  )}
+                  <code
+                    className={'mt-1 select-text md:block hidden text-xs hover:font-semibold cursor-pointer'}
+                    onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
+                  >
+                    bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}
+                  </code>
+                </span>
+                <span className={'flex md:flex-col flex-row items-center justify-center w-full md:w-48 md:h-24'}>
+                  {build.jarUrl && (
+                    <a href={build.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full'}>
+                      <Button className={'w-full h-full'}>
+                        <TbDownload size={24} className={'mr-1'} />
+                        <span className={'flex flex-col items-center'}>
+                          <p className={'font-semibold'}>Jar</p>
+                          <p className={'text-xs -mt-1'}>{bytes(build.jarSize ?? 0)}</p>
+                        </span>
+                      </Button>
+                    </a>
+                  )}
+                  {build.zipUrl && (
+                    <a href={build.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full'}>
+                      <Button className={'w-full h-full'}>
+                        <TbDownload size={24} className={'mr-1'} />
+                        <span className={'flex flex-col items-center'}>
+                          <p className={'font-semibold'}>Zip</p>
+                          <p className={'text-xs -mt-1'}>{bytes(build.zipSize ?? 0)}</p>
+                        </span>
+                      </Button>
+                    </a>
+                  )}
+                </span>
               </span>
-              <div className={'flex flex-col items-center w-48 space-y-1 h-full'}>
-                {build.jarUrl && (
-                  <a href={build.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'}>
-                    <Button className={'w-full h-full'}>
-                      <TbDownload size={24} className={'mr-1'} />
-                      <span className={'flex flex-col items-center'}>
-                        <p className={'font-semibold'}>Download Jar</p>
-                        <p className={'text-xs -mt-1'}>{bytes(build.jarSize ?? 0)}</p>
-                      </span>
-                    </Button>
-                  </a>
-                )}
-                {build.zipUrl && (
-                  <a href={build.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'}>
-                    <Button className={'w-full h-full'}>
-                      <TbDownload size={24} className={'mr-1'} />
-                      <span className={'flex flex-col items-center'}>
-                        <p className={'font-semibold'}>Download Zip</p>
-                        <p className={'text-xs -mt-1'}>{bytes(build.zipSize ?? 0)}</p>
-                      </span>
-                    </Button>
-                  </a>
-                )}
-              </div>
             </div>
           )}
         </DrawerContent>
