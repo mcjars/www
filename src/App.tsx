@@ -11,8 +11,9 @@ import { BooleanParam, StringParam, useQueryParam } from "use-query-params"
 import bytes from "bytes"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import { TbBrandGithub, TbDownload, TbLink } from "react-icons/tb"
+import { TbBrandGithub, TbDownload, TbExternalLink, TbLink } from "react-icons/tb"
 import { FoliaFlowchart } from "@/components/folia-flowchart"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -185,7 +186,7 @@ export default function App() {
                 </span>
                 <span className={'flex md:flex-col flex-row items-center justify-center w-full md:w-48 md:h-24'}>
                   {build.jarUrl && (
-                    <a href={build.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full'}>
+                    <a href={build.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full h-full'}>
                       <Button className={'w-full h-full'}>
                         <TbDownload size={24} className={'mr-1'} />
                         <span className={'flex flex-col items-center'}>
@@ -196,7 +197,7 @@ export default function App() {
                     </a>
                   )}
                   {build.zipUrl && (
-                    <a href={build.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full'}>
+                    <a href={build.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full h-full'}>
                       <Button className={'w-full h-full'}>
                         <TbDownload size={24} className={'mr-1'} />
                         <span className={'flex flex-col items-center'}>
@@ -205,6 +206,26 @@ export default function App() {
                         </span>
                       </Button>
                     </a>
+                  )}
+                  {build.changes.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger>
+                        <Button className={'w-full h-full'}>
+                          <TbExternalLink size={24} className={'mr-1'} />
+                          <span className={'flex flex-col items-center'}>
+                            <p className={'font-semibold'}>View Changes</p>
+                            <p className={'text-xs -mt-1'}>{build.changes.length} Change{build.changes.length === 1 ? '' : 's'}</p>
+                          </span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <div className={'flex flex-col'}>
+                          {build.changes.map((c, i) => (
+                            <p key={i} className={'text-xs'}>- {c}</p>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </span>
               </span>
@@ -350,6 +371,7 @@ export default function App() {
                       }
 
                       {bytes(b.jarSize ?? b.zipSize ?? 0)}
+                      {b.changes.length > 0 && ` ${b.changes.length} Change${b.changes.length === 1 ? '' : 's'}`}
                     </p>
                     <span>
                       <p>{b.created}</p>
