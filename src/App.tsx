@@ -213,7 +213,7 @@ export default function App() {
                         <Button className={'w-full h-full'}>
                           <TbExternalLink size={24} className={'mr-1'} />
                           <span className={'flex flex-col items-center'}>
-                            <p className={'font-semibold'}>View Changes</p>
+                            <p className={'font-semibold'}>View</p>
                             <p className={'text-xs -mt-1'}>{build.changes.length} Change{build.changes.length === 1 ? '' : 's'}</p>
                           </span>
                         </Button>
