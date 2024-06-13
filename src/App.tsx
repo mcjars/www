@@ -208,8 +208,8 @@ export default function App() {
                     </a>
                   )}
                   {build.changes.length > 0 && (
-                    <Popover>
-                      <PopoverTrigger>
+                    <Popover modal>
+                      <PopoverTrigger className={'w-full h-full'}>
                         <Button className={'w-full h-full'}>
                           <TbExternalLink size={24} className={'mr-1'} />
                           <span className={'flex flex-col items-center'}>
@@ -218,7 +218,7 @@ export default function App() {
                           </span>
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent>
+                      <PopoverContent align={'start'} className={'max-h-32 overflow-y-scroll'}>
                         <div className={'flex flex-col'}>
                           {build.changes.map((c, i) => (
                             <p key={i} className={'text-xs'}>- {c}</p>
