@@ -252,7 +252,7 @@ export default function App() {
           You can drag in your server jar to detect it!
         </p>
         <div className={'md:flex hidden space-x-1 flex-row h-full items-center'}>
-          <a href={'https://mc.rjns.dev'} target={'_blank'} rel={'noopener noreferrer'}>
+          <a href={'https://versions.mcjars.app'} target={'_blank'} rel={'noopener noreferrer'}>
             <Button>
               <TbLink size={24} className={'mr-1'} />
               API Docs
