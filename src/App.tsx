@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils"
 import { TbBrandGithub, TbDownload, TbExternalLink, TbLink } from "react-icons/tb"
 import { FoliaFlowchart } from "@/components/folia-flowchart"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import Ad from "@/components/ad"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -236,7 +235,6 @@ export default function App() {
       </Drawer>
 
       <FoliaFlowchart open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
-      <Ad />
 
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
         <div className={'flex flex-row h-full items-center'}>
