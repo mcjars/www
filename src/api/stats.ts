@@ -9,7 +9,7 @@ type APIStats = {
 export default async function apiGetStats(): Promise<APIStats> {
 	const { data } = await axios.get<{
 		stats: APIStats
-	}>('https://mc.rjns.dev/api/v1/stats')
+	}>('https://versions.mcjars.app/api/v1/stats')
 
 	return data.stats
 }
