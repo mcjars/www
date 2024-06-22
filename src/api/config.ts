@@ -19,7 +19,7 @@ export default async function apiGetConfig(file: File): Promise<{
 			build: PartialMinecraftBuild
 		}[]
 	}>('https://versions.mcjars.app/api/v2/config', {
-		file: file.name,
+		file: file.name.replace(/\(\d+\)/g, ''),
 		config: await file.text()
 	})
 
