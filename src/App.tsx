@@ -173,7 +173,8 @@ export default function App() {
                     rightTitle={`Remote Match (${configDropMatch.accuracy}% Match)`}
                     styles={{
                       diffContainer: {
-                        position: 'absolute'
+                        position: 'absolute',
+                        height: '100%'
                       }
                     }}
                   />
