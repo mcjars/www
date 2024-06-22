@@ -1,5 +1,22 @@
 import axios from "axios"
 
+export type InstallStep = {
+	type: 'download'
+
+	file: string
+	url: string
+	size: number
+} | {
+	type: 'unzip'
+
+	file: string
+	location: string
+} | {
+	type: 'remove'
+
+	location: string
+}
+
 export type PartialMinecraftBuild = {
 	id: number
 	type: string
@@ -7,13 +24,14 @@ export type PartialMinecraftBuild = {
 	versionId: string | null
 	buildNumber: number
 	experimental: boolean
-	created: string
+	created: string | null
 	jarUrl: string | null
 	jarSize: number | null
 	jarLocation: string | null
 	zipUrl: string | null
 	zipSize: number | null
 	changes: string[]
+	installation: InstallStep[][]
 }
 
 export default async function apiGetBuilds(type: string, version: string): Promise<PartialMinecraftBuild[]> {

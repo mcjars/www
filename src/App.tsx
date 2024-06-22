@@ -6,6 +6,7 @@ import apiGetVersions from "@/api/versions"
 import apiGetBuilds, { PartialMinecraftBuild } from "@/api/builds"
 import apiGetBuild from "@/api/build"
 import apiGetStats from "@/api/stats"
+import apiGetConfig from "@/api/config"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BooleanParam, StringParam, useQueryParam } from "use-query-params"
 import bytes from "bytes"
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils"
 import { TbBrandGithub, TbDownload, TbExternalLink, TbLink } from "react-icons/tb"
 import { FoliaFlowchart } from "@/components/folia-flowchart"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import ReactDiffViewer, { DiffMethod } from "react-diff-viewer"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -22,8 +25,10 @@ export default function App() {
   const [ version, setVersion ] = useQueryParam('version', StringParam)
   const [ build, setBuild ] = useState<PartialMinecraftBuild>()
   const [ isDragging, setIsDragging ] = useState(false)
-  const [ isJarDropLoading, setIsJarDropLoading ] = useState(false)
+  const [ isDropLoading, setIsDropLoading ] = useState(false)
   const [ jarDropBuild, setJarDropBuild ] = useState<PartialMinecraftBuild>()
+  const [ configDropMatches, setConfigDropMatches ] = useState<Awaited<ReturnType<typeof apiGetConfig>>>()
+  const [ configDropMatch, setConfigDropMatch ] = useState<Awaited<ReturnType<typeof apiGetConfig>>['configs'][number]>()
 
   const { data: types } = useSWR(
     ['types'],
@@ -48,6 +53,12 @@ export default function App() {
     () => type && version ? apiGetBuilds(type, version) : undefined,
     { revalidateOnFocus: false, revalidateIfStale: false }
   )
+
+  useEffect(() => {
+    if (configDropMatches) {
+      setConfigDropMatch(configDropMatches.configs[0])
+    }
+  }, [ configDropMatches ])
 
   useEffect(() => {
     if (types && !type) {
@@ -79,39 +90,102 @@ export default function App() {
       setIsDragging(false)
     })
 
-    window.addEventListener('drop', (e) => {
+    window.addEventListener('drop', async(e) => {
       e.preventDefault()
       setIsDragging(false)
-      setIsJarDropLoading(true)
 
       const file = e.dataTransfer?.files[0]
       if (!file) return
 
-      const reader = new FileReader()
+      if (file.name.endsWith('.jar')) {
+        setIsDropLoading(true)
 
-      reader.onload = async() => {
-        setIsJarDropLoading(true)
-        const hash = await crypto.subtle.digest('SHA-256', new Uint8Array(reader.result as ArrayBuffer))
-        const hashArray = Array.from(new Uint8Array(hash))
-        const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+        const hash = await crypto.subtle.digest('SHA-256', new Uint8Array(await file.arrayBuffer())),
+          hashArray = Array.from(new Uint8Array(hash)),
+          hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 
         try {
           const build = await apiGetBuild(hashHex)
-          setJarDropBuild(build)
-          setIsJarDropLoading(false)
-        } catch {
-          setIsJarDropLoading(false)
-        }
-      }
 
-      reader.readAsArrayBuffer(file)
+          setJarDropBuild(build)
+          setIsDropLoading(false)
+        } catch {
+          setIsDropLoading(false)
+          setJarDropBuild({
+            type: 'UNKNOWN',
+            buildNumber: 1,
+            changes: [],
+            created: null,
+            experimental: false,
+            id: 1,
+            installation: [],
+            jarLocation: null,
+            jarSize: null,
+            jarUrl: null,
+            zipSize: null,
+            zipUrl: null,
+            projectVersionId: null,
+            versionId: 'Unknown'
+          })
+        }
+      } else if (
+        file.name.endsWith('.yml') ||
+        file.name.endsWith('.properties') ||
+        file.name.endsWith('.toml') ||
+        file.name.endsWith('.conf')
+      ) {
+        setIsDropLoading(true)
+
+        const config = await apiGetConfig(file)
+
+        setIsDropLoading(false)
+        setConfigDropMatches(config)
+      }
     })
   }, [])
 
   return (
     <>
-      <Drawer open={isDragging || isJarDropLoading || Boolean(jarDropBuild)} onOpenChange={(open) => {
-        if (isJarDropLoading) return
+      <Dialog open={Boolean(configDropMatches)} onOpenChange={(open) => setConfigDropMatches((c) => open ? c : undefined)}>
+        {configDropMatches && (
+          <DialogContent className={'w-[50vw] max-w-[50vw] h-[75vh]'}>
+            <DialogHeader>
+              <DialogTitle className={'flex flex-row w-full justify-between'}>
+                {configDropMatches.configs.map((config) => (
+                  <Button disabled={config === configDropMatch} onClick={() => setConfigDropMatch(config)} key={config.build?.id ?? config.from} className={'flex flex-row justify-start items-center w-full mr-4'}>
+                    <img src={types?.find((t) => t.identifier === config.from)?.icon} alt={config.from ?? undefined} className={'h-6 w-6 mr-2 rounded-md'} />
+                    <span className={'flex flex-col'}>
+                      <p className={'text-left'}>{config.from}</p>
+                      <p className={'text-xs -mt-1'}>{config.build?.versionId} #{config.build?.buildNumber}</p>
+                    </span>
+                  </Button>
+                ))}
+              </DialogTitle>
+              <DialogDescription className={'h-full relative overflow-scroll rounded-md'}>
+                {configDropMatch && (
+                  <ReactDiffViewer
+                    splitView
+                    useDarkTheme
+                    oldValue={configDropMatches.formatted}
+                    newValue={configDropMatch.value}
+                    compareMethod={DiffMethod.LINES}
+                    leftTitle={'Original'}
+                    rightTitle={`Remote Match (${configDropMatch.accuracy}% Match)`}
+                    styles={{
+                      diffContainer: {
+                        position: 'absolute'
+                      }
+                    }}
+                  />
+                )}
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        )}
+      </Dialog>
+
+      <Drawer open={isDragging || isDropLoading || Boolean(jarDropBuild)} onOpenChange={(open) => {
+        if (isDropLoading) return
 
         setIsDragging(open)
 
@@ -120,17 +194,17 @@ export default function App() {
         }
       }}>
         <DrawerContent className={'w-full max-w-3xl mx-auto'}>
-          {!isJarDropLoading && !jarDropBuild ? (
+          {!isDropLoading && !jarDropBuild ? (
             <div className={'flex flex-col items-center justify-center h-full'}>
-              <h1 className={'text-2xl font-semibold'}>Drop Jar File</h1>
-              <p className={'text-xs'}>Drop the Jar file to check what build and type it is.</p>
+              <h1 className={'text-2xl font-semibold'}>Drop Jar File or Config File</h1>
+              <p className={'text-xs'}>Drop the Jar or Config file to check what build and type it is.</p>
             </div>
           ) : jarDropBuild ? (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <div className={'flex flex-row'}>
-                <img src={types?.find((t) => t.identifier === jarDropBuild.type)?.icon} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
+                <img src={types?.find((t) => t.identifier === jarDropBuild.type)?.icon ?? 'https://s3.mcjars.app/icons/vanilla.png'} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
                 <div className={'flex flex-col items-start'}>
-                  <h1 className={'text-xl font-semibold'}>{types?.find((t) => t.identifier === jarDropBuild.type)?.name}</h1>
+                  <h1 className={'text-xl font-semibold'}>{types?.find((t) => t.identifier === jarDropBuild.type)?.name ?? 'Unknown'}</h1>
                   {jarDropBuild.buildNumber === 1 && jarDropBuild.projectVersionId ? <h1 className={'text-xl'}>{`Version ${jarDropBuild.projectVersionId}`}</h1> : <h1 className={'text-md'}>{`Build #${jarDropBuild.buildNumber}`}</h1>}
                   <p>{bytes(jarDropBuild.jarSize ?? jarDropBuild.zipSize ?? 0)}</p>
                 </div>
