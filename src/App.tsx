@@ -166,6 +166,7 @@ export default function App() {
                   <ReactDiffViewer
                     splitView
                     useDarkTheme
+                    showDiffOnly={false}
                     oldValue={configDropMatches.formatted}
                     newValue={configDropMatch.value}
                     compareMethod={DiffMethod.LINES}
