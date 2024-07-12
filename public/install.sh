@@ -55,7 +55,7 @@ if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "yes" ] && [ "$CONFIRM" != "ye" ]; t
 	exit 1
 fi
 
-bash <(curl -s https://mc.rjns.dev/api/v1/script/$BUILD/bash)
+bash <(curl -s https://versions.mcjars.app/api/v1/script/$BUILD/bash)
 
 echo "java -Xmx4G -Xms4G -jar server.jar nogui" > start.sh
 chmod +x start.sh
