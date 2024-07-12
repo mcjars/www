@@ -12,7 +12,7 @@ import { BooleanParam, StringParam, useQueryParam } from "use-query-params"
 import bytes from "bytes"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import { TbBrandGithub, TbDownload, TbExternalLink, TbLink } from "react-icons/tb"
+import { TbArchiveFilled, TbArrowLeft, TbArrowRight, TbBrandGithub, TbDownload, TbExternalLink, TbHammer, TbLink, TbTrashFilled } from "react-icons/tb"
 import { FoliaFlowchart } from "@/components/folia-flowchart"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,6 +29,7 @@ export default function App() {
   const [ jarDropBuild, setJarDropBuild ] = useState<PartialMinecraftBuild>()
   const [ configDropMatches, setConfigDropMatches ] = useState<Awaited<ReturnType<typeof apiGetConfig>>>()
   const [ configDropMatch, setConfigDropMatch ] = useState<Awaited<ReturnType<typeof apiGetConfig>>['configs'][number]>()
+  const [ step, setStep ] = useState(0)
 
   const { data: types } = useSWR(
     ['types'],
@@ -53,6 +54,14 @@ export default function App() {
     () => type && version ? apiGetBuilds(type, version) : undefined,
     { revalidateOnFocus: false, revalidateIfStale: false }
   )
+
+  useEffect(() => {
+    if (build) {
+      setStep(1)
+    } else {
+      setStep(0)
+    }
+  }, [ build ])
 
   useEffect(() => {
     if (configDropMatches) {
@@ -229,60 +238,77 @@ export default function App() {
       </Drawer>
 
       <Drawer open={Boolean(build)} onOpenChange={(open) => setBuild(open ? build : undefined)}>
-        <DrawerContent className={'w-full max-w-3xl mx-auto h-fit'}>
+        <DrawerContent className={'w-full max-w-xl mx-auto h-fit'}>
           {build && (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <img src={types?.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
-              <span className={'flex md:flex-row flex-col items-start w-full'}>
-                <span className={'text-left w-full self-start mb-1'}>
-                  <h1 className={'font-semibold text-xl'}>Installation</h1>
-                  {build.zipUrl && (
-                    <>
-                      <p className={'text-xs flex flex-row flex-wrap'}>Delete the <p className={'mx-1 font-bold'}>libraries</p> folder if it exists.</p>
-                      <p className={'text-xs'}>Download the zip file and extract it to your server's root folder.</p>
-                      {build.jarUrl && (
-                        <p className={'text-xs flex flex-row flex-wrap'}>Download the Jar file and name it <p className={'ml-1 font-bold'}>{build.jarLocation ?? 'server.jar'}</p>.</p>
-                      )}
-                      <p className={'text-xs flex flex-row'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>{build.zipUrl?.split('/').pop()?.slice(0, -4)}</p>.</p>
-                    </>
-                  )}
-                  {build.jarUrl && !build.zipUrl && (
-                    <>
-                      <p className={'text-xs'}>Download the Jar file and place it in your server's root folder.</p>
-                      <p className={'text-xs flex flex-row flex-wrap'}>Rename the Jar file to <p className={'ml-1 font-bold'}>server.jar</p>.</p>
-                      <p className={'text-xs flex flex-row flex-wrap'}>The Jar for starting the server will be <p className={'ml-1 font-bold'}>server.jar</p>.</p>
-                    </>
-                  )}
-                  <code
-                    className={'mt-1 select-text md:block hidden text-xs hover:font-semibold cursor-pointer'}
-                    onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
-                  >
-                    bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}
-                  </code>
-                </span>
-                <span className={'flex md:flex-col flex-row items-center justify-center w-full md:w-48 md:h-24'}>
-                  {build.jarUrl && (
-                    <a href={build.jarUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full h-full'}>
-                      <Button className={'w-full h-full'}>
-                        <TbDownload size={24} className={'mr-1'} />
+              <span className={'flex flex-col h-full w-full'}>
+                <h1 className={'font-semibold text-xl'}>Installation</h1>
+                <code
+                  className={'mt-1 w-fit select-text md:block hidden text-xs hover:font-semibold cursor-pointer'}
+                  onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
+                >
+                  bash &lt;(curl -s {window.location.protocol}//{window.location.hostname}/install.sh) {build.id}
+                </code>
+                <div className={'mb-1.5 mt-5 flex flex-row items-center'}>
+                  <Popover modal>
+                    <PopoverTrigger className={'w-full h-full mr-1'}>
+                      <Button className={'mt-auto mb-0 w-full h-full'}>
+                        <TbHammer size={24} className={'mr-1'} />
                         <span className={'flex flex-col items-center'}>
-                          <p className={'font-semibold'}>Jar</p>
-                          <p className={'text-xs -mt-1'}>{bytes(build.jarSize ?? 0)}</p>
+                          <p className={'font-semibold'}>Manual Steps</p>
+                          <p className={'text-xs -mt-1'}>{build.installation.reduce((a, b) => a + b.length, 0)} Steps</p>
                         </span>
                       </Button>
-                    </a>
-                  )}
-                  {build.zipUrl && (
-                    <a href={build.zipUrl ?? undefined} target={'_blank'} rel={'noopener noreferrer'} className={'m-1 w-full h-full'}>
-                      <Button className={'w-full h-full'}>
-                        <TbDownload size={24} className={'mr-1'} />
-                        <span className={'flex flex-col items-center'}>
-                          <p className={'font-semibold'}>Zip</p>
-                          <p className={'text-xs -mt-1'}>{bytes(build.zipSize ?? 0)}</p>
-                        </span>
-                      </Button>
-                    </a>
-                  )}
+                    </PopoverTrigger>
+                    <PopoverContent align={'end'} className={'w-80 h-40'}>
+                      <div className={'flex flex-row'}>
+                        <h1 className={'font-semibold my-auto'}>Step {step}</h1>
+                        {build.installation.reduce((a, b) => a + b.length, 0) > 1 && (
+                          <div className={'flex flex-row ml-auto'}>
+                            <Button className={'mr-2'} disabled={step === 1} onClick={() => setStep(step - 1)}>
+                              <TbArrowLeft size={24} className={'mr-1'} />
+                              Previous
+                            </Button>
+                            <Button disabled={step === build.installation.reduce((a, b) => a + b.length, 0)} onClick={() => setStep(step + 1)}>
+                              <TbArrowRight size={24} className={'mr-1'} />
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {((s = build.installation.flat().at(step - 1)) => s && (
+                        <div className={'w-full h-full grid grid-cols-4 mt-4'}>
+                          <span className={'col-span-1 mx-auto'}>
+                            {s.type === 'download'
+                              ? <TbDownload size={64} />
+                              : s.type === 'unzip'
+                                ? <TbArchiveFilled size={64} />
+                                : <TbTrashFilled size={64} />}
+                          </span>
+                          {s.type === 'download' && (
+                            <span className={'col-span-3 flex flex-col'}>
+                              <h1 className={'font-semibold'}>Download</h1>
+                              <p className={'text-sm'}>Download <a href={s.url} className={'text-blue-500'}>this</a> as <code>{s.file}</code></p>
+                            </span>
+                          )}
+                          {s.type === 'unzip' && (
+                            <span className={'col-span-3 flex flex-col'}>
+                              <h1 className={'font-semibold'}>Unzip</h1>
+                              <p className={'text-sm'}>Unzip <code>{s.file}</code> in <code>{s.location}</code></p>
+                            </span>
+                          )}
+                          {s.type === 'remove' && (
+                            <span className={'col-span-3 flex flex-col'}>
+                              <h1 className={'font-semibold'}>Delete</h1>
+                              <p className={'text-sm'}>Delete <code>{s.location}</code></p>
+                            </span>
+                          )}
+                        </div>
+                      ))()}
+                    </PopoverContent>
+                  </Popover>
                   {build.changes.length > 0 && (
                     <Popover modal>
                       <PopoverTrigger className={'w-full h-full'}>
@@ -303,7 +329,7 @@ export default function App() {
                       </PopoverContent>
                     </Popover>
                   )}
-                </span>
+                </div>
               </span>
             </div>
           )}
@@ -335,7 +361,7 @@ export default function App() {
           <a href={'https://github.com/0x7d8/mcjar'} target={'_blank'} rel={'noopener noreferrer'}>
             <Button>
               <TbBrandGithub size={24} className={'mr-1'} />
-              Github
+              GitHub
             </Button>
           </a>
         </div>
@@ -353,7 +379,7 @@ export default function App() {
                 >
                   <img src={t.icon} alt={t.name} className={'h-16 w-16 mr-2 rounded-md'} />
                   <span>
-                    <h1 className={'text-xl font-semibold'}>{t.name}</h1>
+                    <h1 className={'md:text-xl text-lg font-semibold'}>{t.name}</h1>
                     <p className={'mb-[6px]'}>
                       {t.categories.map((c) => (
                         <span key={t.name + c} className={'-md:hidden text-xs mr-1 bg-blue-500 text-white h-6 p-1 rounded-md'}>{c}</span>
@@ -401,7 +427,7 @@ export default function App() {
                 >
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
-                    <h1 className={'text-xl font-semibold'}>{v.latest.versionId ?? v.latest.projectVersionId}</h1>
+                    <h1 className={'md:text-xl text-lg font-semibold'}>{v.latest.versionId ?? v.latest.projectVersionId}</h1>
                     <span className={'grid grid-cols-2 mr-0'}>
                       <p>{v.builds} Build{v.builds === 1 ? '' : 's'}</p>
                       <p className={'w-fit text-right pl-2'}>Requires Java {v.java}</p>
@@ -439,7 +465,7 @@ export default function App() {
                 >
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
-                    <h1 className={'text-xl font-semibold'}>{b.buildNumber === 1 && b.projectVersionId ? `Version ${b.projectVersionId}` : `Build #${b.buildNumber}`}</h1>
+                    <h1 className={'md:text-xl text-lg font-semibold'}>{b.buildNumber === 1 && b.projectVersionId ? b.projectVersionId : `Build #${b.buildNumber}`}</h1>
                     <p className={'mb-[2px]'}>
                       {b.experimental
                         ? <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>experimental</span>
