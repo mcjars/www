@@ -1,6 +1,6 @@
 # www - Minecraft Jar Downloading/Lookup Website
 
-www is a explorer-like website for downnloading Minecraft server versions. It allows you to easily download, install, and lookup versions of the Minecraft server software and their Configs.
+www is a explorer-like website for downloading Minecraft server versions. It allows you to easily download, install, and lookup versions of the Minecraft server software and their Configs.
 
 ## Features
 
