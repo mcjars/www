@@ -358,7 +358,7 @@ export default function App() {
               API Docs
             </Button>
           </a>
-          <a href={'https://github.com/0x7d8/mcjar'} target={'_blank'} rel={'noopener noreferrer'}>
+          <a href={'https://github.com/mcjars/www'} target={'_blank'} rel={'noopener noreferrer'}>
             <Button>
               <TbBrandGithub size={24} className={'mr-1'} />
               GitHub

@@ -25,3 +25,6 @@ pnpm i
 # start the dev server on port 9000
 pnpm dev
 ```
+
+> [!NOTE]
+> NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
