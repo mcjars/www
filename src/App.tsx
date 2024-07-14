@@ -486,8 +486,6 @@ export default function App() {
             <>
               <Skeleton className={'h-16 my-1'} />
               <Skeleton className={'h-16 my-1'} />
-              <Skeleton className={'h-16 my-1'} />
-              <Skeleton className={'h-16 my-1'} />
             </>
           )}
         </div>
