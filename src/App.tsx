@@ -180,7 +180,7 @@ export default function App() {
                     newValue={configDropMatch.value}
                     compareMethod={DiffMethod.LINES}
                     leftTitle={'Original'}
-                    rightTitle={`Remote Match (${configDropMatch.accuracy}% Match)`}
+                    rightTitle={'Remote Match'}
                     styles={{
                       diffContainer: {
                         position: 'absolute',

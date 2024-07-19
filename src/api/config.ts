@@ -6,7 +6,6 @@ export default async function apiGetConfig(file: File): Promise<{
 	configs: {
 		from: string
 		value: string
-		accuracy: number
 		build: PartialMinecraftBuild | null
 	}[]
 }> {
