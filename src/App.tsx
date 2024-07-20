@@ -256,7 +256,7 @@ export default function App() {
                       <Button className={'mt-auto mb-0 w-full h-full'}>
                         <TbHammer size={24} className={'mr-1'} />
                         <span className={'flex flex-col items-center'}>
-                          <p className={'font-semibold'}>Manual Steps</p>
+                          <p className={'font-semibold'}>Install</p>
                           <p className={'text-xs -mt-1'}>{build.installation.reduce((a, b) => a + b.length, 0)} Steps</p>
                         </span>
                       </Button>
@@ -340,7 +340,7 @@ export default function App() {
 
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
         <div className={'flex flex-row h-full items-center'}>
-          <img src={'https://mcvapi.s3.infra.rjns.dev/icons/vanilla.png'} alt={'Logo'} className={'h-12 w-12'} />
+          <img src={'https://s3.mcjars.app/icons/vanilla.png'} alt={'Logo'} className={'h-12 w-12'} />
           <div className={'flex flex-col ml-2'}>
             <h1 className={'text-xl font-semibold'}>MCJars</h1>
             {stats && (
@@ -358,7 +358,7 @@ export default function App() {
               API Docs
             </Button>
           </a>
-          <a href={'https://github.com/mcjars/www'} target={'_blank'} rel={'noopener noreferrer'}>
+          <a href={'https://github.com/mcjars'} target={'_blank'} rel={'noopener noreferrer'}>
             <Button>
               <TbBrandGithub size={24} className={'mr-1'} />
               GitHub
@@ -400,6 +400,7 @@ export default function App() {
             </>
           ) : (
             <>
+              <Skeleton className={'h-16 my-1'} />
               <Skeleton className={'h-16 my-1'} />
               <Skeleton className={'h-16 my-1'} />
               <Skeleton className={'h-16 my-1'} />
@@ -472,7 +473,7 @@ export default function App() {
                         : <span className={'text-xs mr-1 bg-green-500 text-white h-6 p-1 rounded-md'}>stable</span>
                       }
 
-                      {bytes(b.jarSize ?? b.zipSize ?? 0)}
+                      {bytes(b.installation.flat().filter((i) => i.type === 'download').reduce((a, b) => a + b.size, 0))}
                       {b.changes.length > 0 && ` ${b.changes.length} Change${b.changes.length === 1 ? '' : 's'}`}
                     </p>
                     <span>
