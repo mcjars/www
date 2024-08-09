@@ -122,17 +122,12 @@ export default function App() {
           setIsDropLoading(false)
           setJarDropBuild({
             type: 'UNKNOWN',
-            buildNumber: 1,
+            name: '???',
             changes: [],
             created: null,
             experimental: false,
             id: 1,
             installation: [],
-            jarLocation: null,
-            jarSize: null,
-            jarUrl: null,
-            zipSize: null,
-            zipUrl: null,
             projectVersionId: null,
             versionId: 'Unknown'
           })
@@ -165,7 +160,7 @@ export default function App() {
                     <img src={types?.find((t) => t.identifier === config.from)?.icon} alt={config.from ?? undefined} className={'h-6 w-6 mr-2 rounded-md'} />
                     <span className={'flex flex-col'}>
                       <p className={'text-left'}>{config.from}</p>
-                      <p className={'text-xs -mt-1'}>{config.build?.versionId} #{config.build?.buildNumber}</p>
+                      <p className={'text-xs -mt-1'}>{config.build?.versionId} #{config.build?.name}</p>
                     </span>
                   </Button>
                 ))}
@@ -216,8 +211,8 @@ export default function App() {
                 <img src={types?.find((t) => t.identifier === jarDropBuild.type)?.icon ?? 'https://s3.mcjars.app/icons/vanilla.png'} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
                 <div className={'flex flex-col items-start'}>
                   <h1 className={'text-xl font-semibold'}>{types?.find((t) => t.identifier === jarDropBuild.type)?.name ?? 'Unknown'}</h1>
-                  {jarDropBuild.buildNumber === 1 && jarDropBuild.projectVersionId ? <h1 className={'text-xl'}>{`Version ${jarDropBuild.projectVersionId}`}</h1> : <h1 className={'text-md'}>{`Build #${jarDropBuild.buildNumber}`}</h1>}
-                  <p>{bytes(jarDropBuild.jarSize ?? jarDropBuild.zipSize ?? 0)}</p>
+                  <h1 className={'text-xl'}>{jarDropBuild.name}</h1>
+                  <p>{bytes(jarDropBuild.installation.flat().filter((i) => i.type === 'download').reduce((a, b) => a + b.size, 0))}</p>
                 </div>
               </div>
               <div className={'flex flex-col items-end w-48 h-full mr-2'}>
@@ -466,7 +461,7 @@ export default function App() {
                 >
                   <img src={types.find((t) => t.identifier === type)?.icon} alt={type ?? undefined} className={'h-12 w-12 mr-2 rounded-md'} />
                   <span>
-                    <h1 className={'md:text-xl text-lg font-semibold'}>{b.buildNumber === 1 && b.projectVersionId ? b.projectVersionId : `Build #${b.buildNumber}`}</h1>
+                    <h1 className={'md:text-xl text-lg font-semibold'}>{b.name}</h1>
                     <p className={'mb-[2px]'}>
                       {b.experimental
                         ? <span className={'text-xs mr-1 bg-red-500 text-white h-6 p-1 rounded-md'}>experimental</span>

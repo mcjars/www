@@ -22,14 +22,9 @@ export type PartialMinecraftBuild = {
 	type: string
 	projectVersionId: string | null
 	versionId: string | null
-	buildNumber: number
+	name: string
 	experimental: boolean
 	created: string | null
-	jarUrl: string | null
-	jarSize: number | null
-	jarLocation: string | null
-	zipUrl: string | null
-	zipSize: number | null
 	changes: string[]
 	installation: InstallStep[][]
 }
@@ -37,7 +32,7 @@ export type PartialMinecraftBuild = {
 export default async function apiGetBuilds(type: string, version: string): Promise<PartialMinecraftBuild[]> {
 	const { data } = await axios.get<{
 		builds: PartialMinecraftBuild[]
-	}>(`https://versions.mcjars.app/api/v2/builds/${type.toUpperCase()}/${version}`)
+	}>(`https://versions.mcjars.app/api/v2/builds/${type.toUpperCase()}/${version}?fields=id,type,projectVersionId,versionId,name,experimental,created,changes,installation`)
 
 	return data.builds
 }
