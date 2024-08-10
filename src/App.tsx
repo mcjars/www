@@ -148,6 +148,12 @@ export default function App() {
     })
   }, [])
 
+  useEffect(() => {
+    const name = types?.find((t) => t.identifier === type)?.name
+
+    document.title = `MCJars${name ? ` - ${name}` : ''}${version ? ` ${version}` : ''}`
+  }, [ types, type, version ])
+
   return (
     <>
       <Dialog open={Boolean(configDropMatches)} onOpenChange={(open) => setConfigDropMatches((c) => open ? c : undefined)}>
