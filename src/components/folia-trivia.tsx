@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 
-type FoliaFlowchartProps = {
+type FoliaTriviaProps = {
 	open: boolean
 	onClose: () => void
 }
@@ -47,7 +47,7 @@ const questions: Question[] = [
 	}
 ]
 
-export function FoliaFlowchart({ open, onClose }: FoliaFlowchartProps) {
+export function FoliaTrivia({ open, onClose }: FoliaTriviaProps) {
 	const [ step, setStep ] = useState(0)
 	const [ done, setDone ] = useState(false)
 	const [ answers, setAnswers ] = useState<number[]>([])

@@ -13,10 +13,11 @@ import bytes from "bytes"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { TbArchiveFilled, TbArrowLeft, TbArrowRight, TbBrandGithub, TbDownload, TbExternalLink, TbHammer, TbLink, TbTrashFilled } from "react-icons/tb"
-import { FoliaFlowchart } from "@/components/folia-flowchart"
+import { FoliaTrivia } from "@/components/folia-trivia"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer"
+import { SpigotWarning } from "./components/spigot-warning"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -337,7 +338,8 @@ export default function App() {
         </DrawerContent>
       </Drawer>
 
-      <FoliaFlowchart open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
+      <FoliaTrivia open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
+      <SpigotWarning open={type?.toUpperCase() === 'SPIGOT'} onGoToPaper={() => setType('PAPER')} />
 
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
         <div className={'flex flex-row h-full items-center'}>
