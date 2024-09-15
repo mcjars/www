@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer"
 import { SpigotWarning } from "@/components/spigot-warning"
+import { WaterfallWarning } from "@/components/waterfall-warning"
 import { JobStatus } from "@/components/job-status"
 
 export default function App() {
@@ -342,6 +343,7 @@ export default function App() {
 
       <FoliaTrivia open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
       <SpigotWarning open={type?.toUpperCase() === 'SPIGOT'} onGoToPaper={() => setType('PAPER')} />
+      <WaterfallWarning open={type?.toUpperCase() === 'WATERFALL'} onGoToVelocity={() => setType('VELOCITY')} onGoToBungeeCord={() => setType('BUNGEECORD')} />
       <JobStatus open={viewJobs} onClose={() => setViewJobs(false)} />
 
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
