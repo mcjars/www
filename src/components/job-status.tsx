@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import useWebSocket from "react-use-websocket"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import clsx from "clsx"
 
 type WebSocketEvent = {
 	jobs: Record<string, {
@@ -52,7 +53,14 @@ export function JobStatus({ open, onClose }: JobStatusProps) {
 											<TableCell>{status.updated}</TableCell>
 											<TableCell>{status.created}</TableCell>
 											<TableCell>
-												<Badge className={status.running ? 'bg-green-400 hover:bg-green-300' : 'bg-red-400 hover:bg-red-300'}>{status.running ? 'Running' : 'Stopped'}</Badge>
+												<Badge className={clsx(
+													'w-full text-center',
+													status.running ? 'bg-green-400 hover:bg-green-300' : 'bg-blue-400 hover:bg-blue-300'
+												)}>
+													<p className={'text-center mx-auto'}>
+														{status.running ? 'Running' : 'Idle'}
+													</p>
+												</Badge>
 											</TableCell>
 										</TableRow>
 									))
