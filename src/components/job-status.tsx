@@ -6,7 +6,7 @@ import clsx from "clsx"
 
 type WebSocketEvent = {
 	jobs: Record<string, {
-		running: boolean
+		status: 'running' | 'idle' | 'waiting'
 
 		checked: number
 		updated: number
@@ -55,10 +55,12 @@ export function JobStatus({ open, onClose }: JobStatusProps) {
 											<TableCell>
 												<Badge className={clsx(
 													'w-full text-center',
-													status.running ? 'bg-green-400 hover:bg-green-300' : 'bg-blue-400 hover:bg-blue-300'
+													status.status === 'running' ? 'bg-green-400 hover:bg-green-300'
+														: status.status === 'idle' ? 'bg-blue-400 hover:bg-blue-300'
+															: 'bg-yellow-400 hover:bg-yellow-300'
 												)}>
 													<p className={'text-center mx-auto'}>
-														{status.running ? 'Running' : 'Idle'}
+														{status.status[0].toUpperCase() + status.status.slice(1)}
 													</p>
 												</Badge>
 											</TableCell>
