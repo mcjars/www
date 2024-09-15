@@ -46,7 +46,7 @@ export function JobStatus({ open, onClose }: JobStatusProps) {
 									Object.entries(lastJsonMessage.jobs).map(([type, status]) => (
 										<TableRow key={type}>
 											<TableCell className={'flex flex-row'}>
-												<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} className={'w-6 h-6 hidden md:inline'} />
+												<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} className={'w-6 h-6 hidden md:inline rounded-md'} />
 												<p className={'font-bold md:ml-2'}>{type}</p>
 											</TableCell>
 											<TableCell>{status.checked}</TableCell>
