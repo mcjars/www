@@ -17,7 +17,8 @@ import { FoliaTrivia } from "@/components/folia-trivia"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer"
-import { SpigotWarning } from "./components/spigot-warning"
+import { SpigotWarning } from "@/components/spigot-warning"
+import { JobStatus } from "@/components/job-status"
 
 export default function App() {
   const [ includeSnapshots, setIncludeSnapshots ] = useQueryParam('snapshots', BooleanParam)
@@ -25,6 +26,7 @@ export default function App() {
   const [ type, setType ] = useQueryParam('type', StringParam)
   const [ version, setVersion ] = useQueryParam('version', StringParam)
   const [ build, setBuild ] = useState<PartialMinecraftBuild>()
+  const [ viewJobs, setViewJobs ] = useState(false)
   const [ isDragging, setIsDragging ] = useState(false)
   const [ isDropLoading, setIsDropLoading ] = useState(false)
   const [ jarDropBuild, setJarDropBuild ] = useState<PartialMinecraftBuild>()
@@ -340,10 +342,17 @@ export default function App() {
 
       <FoliaTrivia open={type?.toUpperCase() === 'FOLIA'} onClose={() => setType('PAPER')} />
       <SpigotWarning open={type?.toUpperCase() === 'SPIGOT'} onGoToPaper={() => setType('PAPER')} />
+      <JobStatus open={viewJobs} onClose={() => setViewJobs(false)} />
 
       <nav className={'flex flex-row items-center justify-between px-4 py-2 border-b-2 border-x-2 rounded-b-xl w-full max-w-7xl h-16 mx-auto'}>
         <div className={'flex flex-row h-full items-center'}>
-          <img src={'https://s3.mcjars.app/icons/vanilla.png'} alt={'Logo'} className={'h-12 w-12'} />
+          <img
+            src={'https://s3.mcjars.app/icons/vanilla.png'}
+            alt={'Logo'}
+            className={'h-12 w-12 cursor-pointer hover:h-10 hover:w-10 hover:mx-1 transition-all'}
+            onClick={() => setViewJobs(true)}
+          />
+
           <div className={'flex flex-col ml-2'}>
             <h1 className={'text-xl font-semibold'}>MCJars</h1>
             {stats && (
