@@ -27,7 +27,7 @@ export function JobStatus({ open, onClose }: JobStatusProps) {
 
 	return (
 		<Dialog open={open} onOpenChange={(open) => !open ? onClose() : undefined}>
-			<DialogContent>
+			<DialogContent className={'max-h-96 overflow-y-scroll'}>
 				<DialogHeader>
 					<DialogTitle>MCJars Job Status</DialogTitle>
 					<DialogDescription>
