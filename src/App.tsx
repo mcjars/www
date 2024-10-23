@@ -170,7 +170,7 @@ export default function App() {
                     <img src={types?.find((t) => t.identifier === config.from)?.icon} alt={config.from ?? undefined} className={'h-6 w-6 mr-2 rounded-md'} />
                     <span className={'flex flex-col'}>
                       <p className={'text-left'}>{config.from}</p>
-                      <p className={'text-xs -mt-1'}>{config.build?.versionId} #{config.build?.name}</p>
+                      <p className={'text-xs -mt-1'}>{config.build?.versionId} {config.build?.name}</p>
                     </span>
                   </Button>
                 ))}
