@@ -110,8 +110,8 @@ export default function PageIndex() {
 			<Alert className={'mb-2'}>
 				<AlertDescription>
 					Welcome to <span className={'font-semibold'}>MCJars</span>! Use the sidebar on the left
-					to navigate. This site will never have ads or tracking,
-					and is open source on <a href={'https://github.com/mcjars/www'} className={'text-blue-500 font-semibold underline'} target={'_blank'} rel={'noopener noreferrer'}>GitHub</a>.
+					to navigate. This site will never have ads, and is open source
+					on <a href={'https://github.com/mcjars/www'} className={'text-blue-500 font-semibold underline'} target={'_blank'} rel={'noopener noreferrer'}>GitHub</a>.
 				</AlertDescription>
 			</Alert>
 
