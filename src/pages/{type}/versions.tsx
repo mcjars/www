@@ -1,5 +1,7 @@
 import apiGetBuilds from "@/api/builds"
+import apiGetTypes from "@/api/types"
 import apiGetVersions from "@/api/versions"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -13,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
 import { ChevronDown, DownloadIcon, ListIcon, SearchIcon } from "lucide-react"
 import { useEffect, useMemo } from "react"
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import useSWR from "swr"
 import { StringParam, useQueryParam } from "use-query-params"
 
@@ -33,6 +35,12 @@ export default function PageTypeVersions() {
 			setDisplayMode('list')
 		}
 	}, [ mobile ])
+
+	const { data: types } = useSWR(
+		['types'],
+		() => apiGetTypes(),
+		{ revalidateOnFocus: false, revalidateIfStale: false }
+	)
 
 	const { data: versions } = useSWR(
 		['versions', type],
@@ -56,6 +64,22 @@ export default function PageTypeVersions() {
 
 	return (
 		<>
+			{(types?.find((t) => t.identifier === type)?.experimental || types?.find((t) => t.identifier === type)?.deprecated) && (
+				<Alert className={'mb-2'} variant={'destructive'}>
+					<AlertDescription>
+						Keep in mind, <span className={'font-semibold'}>{types?.find((t) => t.identifier === type)?.name}</span> is {types?.find((t) => t.identifier === type)?.experimental ? 'experimental' : 'deprecated'} and may not work as expected. Take backups!
+					</AlertDescription>
+				</Alert>
+			)}
+
+			{type === 'SPIGOT' && (
+				<Alert className={'mb-2'}>
+					<AlertDescription>
+						Hello there, <span className={'font-semibold'}>Spigot</span> is not recommended for server-use due to its worse performance and security compared to other server software. Please consider using <Link to={'/PAPER/versions'} className={'text-blue-500 font-semibold underline'}>Paper</Link> instead.
+					</AlertDescription>
+				</Alert>
+			)}
+
 			<div className={'flex flex-row items-center mb-6 md:w-1/2'}>
 				<Select value={versionType ?? 'all'} onValueChange={(value) => setVersionType(value)}>
 					<SelectTrigger className={'w-[15em]'}>
@@ -109,7 +133,7 @@ export default function PageTypeVersions() {
 												</Badge>
 											</h1>
 											<p className={'text-sm text-gray-500'}>
-												{version.builds} Build{version.builds === 1 ? '' : 's'}, {new Date(version.created).toLocaleDateString()}
+												{version.builds} Build{version.builds === 1 ? '' : 's'}, Java {version.java}, {new Date(version.created).toLocaleDateString()}
 											</p>
 										</div>
 									</div>

@@ -16,6 +16,7 @@ import useSWR from "swr"
 import { NumberParam, StringParam, useQueryParam } from "use-query-params"
 import apiGetVersions from "@/api/versions"
 import apiGetTypes from "@/api/types"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function PageIndex() {
 	const { data: types } = useSWR(
@@ -106,6 +107,14 @@ export default function PageIndex() {
 
 	return (
 		<div>
+			<Alert className={'mb-2'}>
+				<AlertDescription>
+					Welcome to <span className={'font-semibold'}>MCJars</span>! Use the sidebar on the left
+					to navigate. This site will never have ads or tracking,
+					and is open source on <a href={'https://github.com/mcjars/www'} className={'text-blue-500 font-semibold underline'} target={'_blank'} rel={'noopener noreferrer'}>GitHub</a>.
+				</AlertDescription>
+			</Alert>
+
 			<div className={'grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] w-full'}>
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<BrainIcon className={'w-8 h-8'} />
