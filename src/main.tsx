@@ -1,10 +1,17 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
-import App from "@/App"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryParamProvider } from "use-query-params"
 import { ReactRouter6Adapter } from "use-query-params/adapters/react-router-6"
-import { BrowserRouter } from "react-router-dom"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+
+import Page404 from "@/pages/404"
+import PageIndex from "@/pages/index"
+import PageLookup from "@/pages/lookup"
+import PageTypeVersions from "@/pages/{type}/versions"
+import PageTypeStatistics from "@/pages/{type}/statistics"
 
 import "@/global.css"
 
@@ -13,7 +20,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <QueryParamProvider adapter={ReactRouter6Adapter}>
         <ThemeProvider defaultTheme={'dark'}>
-          <App />
+          <SidebarProvider>
+            <AppSidebar />
+            <main className={'relative h-screen md:w-[calc(100vw-var(--sidebar-width))] w-screen md:pt-2 pt-10 px-2'}>
+              <SidebarTrigger className={'left-2 top-2 absolute md:hidden'} />
+              <Routes>
+                <Route path={'/'} element={<PageIndex />} />
+                <Route path={'/lookup'} element={<PageLookup />} />
+                <Route path={'/:type/versions'} element={<PageTypeVersions />} />
+                <Route path={'/:type/statistics'} element={<PageTypeStatistics />} />
+                <Route path={'*'} element={<Page404 />} />
+              </Routes>
+            </main>
+          </SidebarProvider>
         </ThemeProvider>
       </QueryParamProvider>
     </BrowserRouter>

@@ -4,6 +4,7 @@ type MinecraftType = {
 	identifier: string
 	name: string
 	icon: string
+	color: string
 	homepage: string
 	description: string
 	deprecated: boolean

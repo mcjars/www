@@ -4,6 +4,15 @@ type APIStats = {
 	builds: number
 	hashes: number
 	requests: number
+
+	size: {
+		database: number
+	}
+
+	total: {
+		jarSize: number
+		zipSize: number
+	}
 }
 
 export default async function apiGetStats(): Promise<APIStats> {
