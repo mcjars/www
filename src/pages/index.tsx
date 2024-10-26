@@ -373,7 +373,7 @@ export default function PageIndex() {
 
 				<Card className={'p-4 h-[500px]'}>
 					<div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
-						<h1 className={'text-xl font-semibold ml-2'}>All Time Request Statistics for {requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''}</h1>
+						<h1 className={'text-xl font-semibold ml-2'}>All Time Type Statistics for {requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''}</h1>
 
 						<div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
 							<Select value={requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''} onValueChange={(value) => setRequestVersionStatsAllTimeVersion(value)}>
