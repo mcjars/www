@@ -61,8 +61,8 @@ export const onRequest: PagesFunction = async(context) => {
 		if (data) switch (page) {
 			case "versions":
 				meta['og:title'] = `MCJars | ${data.name} Versions`
-				meta['description'] = `Download the latest ${data.name} server jars and zips with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
-				meta['og:description'] = `Download the latest ${data.name} server jars and zips with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
+				meta['description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
+				meta['og:description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
 
 				break
 			case "statistics":
