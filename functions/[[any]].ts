@@ -17,6 +17,7 @@ export const onRequest: PagesFunction = async(context) => {
 		'description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease.',
 		'og:description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease.',
 		'og:title': 'MCJars',
+		'og:image': 'https://s3.mcjars.app/icons/vanilla.png',
 		'og:url': context.request.url
 	}
 
@@ -41,22 +42,30 @@ export const onRequest: PagesFunction = async(context) => {
 		meta['og:title'] = 'MCJars | Reverse Lookup'
 		meta['description'] = 'Lookup Minecraft server jars and configs by their hash.'
 		meta['og:description'] = 'Lookup Minecraft server jars and configs by their hash.'
-		meta['og:image'] = 'https://s3.mcjars.app/icons/vanilla.png'
 	} else {
+		const { types } = await fetch('https://versions.mcjars.app/api/v1/types').then((res) => res.json() as any as {
+			types: Record<string, {
+				name: string
+				builds: number
+			}>
+		})
+
 		meta['og:image'] = `https://s3.mcjars.app/icons/${type.toLowerCase()}.png`
 
-		switch (page) {
+		const data = types[type.toUpperCase()]
+
+		if (data) switch (page) {
 			case "versions":
-				meta['og:title'] = `MCJars | ${type} Versions`
-				meta['description'] = `Download the latest ${type} server jars and zips with ease.`
-				meta['og:description'] = `Download the latest ${type} server jars and zips with ease.`
-	
+				meta['og:title'] = `MCJars | ${data.name} Versions`
+				meta['description'] = `Download the latest ${data.name} server jars and zips with ease. Browse ${data.builds} builds on our website.`
+				meta['og:description'] = `Download the latest ${data.name} server jars and zips with ease. Browse ${data.builds} builds on our website.`
+
 				break
 			case "statistics":
-				meta['og:title'] = `MCJars | ${type} Statistics`
-				meta['description'] = `View the latest statistics for ${type}.`
-				meta['og:description'] = `View the latest statistics for ${type}.`
-	
+				meta['og:title'] = `MCJars | ${data.name} Statistics`
+				meta['description'] = `View the latest statistics for ${data.name}.`
+				meta['og:description'] = `View the latest statistics for ${data.name}.`
+
 				break
 		}
 	}
