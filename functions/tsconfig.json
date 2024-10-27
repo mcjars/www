@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "node16",
+    "lib": ["esnext"],
+		"moduleResolution": "nodenext",
+		"baseUrl": ".",
+    "types": ["@cloudflare/workers-types"]
+  },
+	"include": ["html.d.ts", "./**/*.ts"],
+}
