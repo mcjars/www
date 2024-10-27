@@ -14,8 +14,8 @@ export const onRequest: PagesFunction = async(context) => {
 	const url = new URL(context.request.url)
 
 	const meta: Record<string, string> = {
-		'description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease.',
-		'og:description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease.',
+		'description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.',
+		'og:description': 'MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.',
 		'og:title': 'MCJars',
 		'og:image': 'https://s3.mcjars.app/icons/vanilla.png',
 		'og:url': context.request.url
@@ -40,8 +40,8 @@ export const onRequest: PagesFunction = async(context) => {
 
 	if (type === 'lookup') {
 		meta['og:title'] = 'MCJars | Reverse Lookup'
-		meta['description'] = 'Lookup Minecraft server jars and configs by their hash.'
-		meta['og:description'] = 'Lookup Minecraft server jars and configs by their hash.'
+		meta['description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
+		meta['og:description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
 	} else {
 		const { types } = await fetch('https://versions.mcjars.app/api/v1/types').then((res) => res.json() as any as {
 			types: Record<string, {
@@ -76,21 +76,19 @@ export const onRequest: PagesFunction = async(context) => {
 			})
 		}
 
-		meta['og:image'] = `https://s3.mcjars.app/icons/${type.toLowerCase()}.png`
-
 		const data = types[type.toUpperCase()]
 
 		if (data) switch (page) {
 			case "versions":
 				meta['og:title'] = `MCJars | ${data.name} Versions`
-				meta['description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
-				meta['og:description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website.`
+				meta['description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website. Not affiliated with Mojang AB.`
+				meta['og:description'] = `Download the latest ${data.name} server builds with ease. Browse ${data.builds} builds for ${data.versions.minecraft || data.versions.project} different versions on our website. Not affiliated with Mojang AB.`
 
 				break
 			case "statistics":
 				meta['og:title'] = `MCJars | ${data.name} Statistics`
-				meta['description'] = `View the latest statistics for ${data.name}.`
-				meta['og:description'] = `View the latest statistics for ${data.name}.`
+				meta['description'] = `View the latest statistics for ${data.name}. Not affiliated with Mojang AB.`
+				meta['og:description'] = `View the latest statistics for ${data.name}. Not affiliated with Mojang AB.`
 
 				break
 		}
