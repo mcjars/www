@@ -54,6 +54,28 @@ export const onRequest: PagesFunction = async(context) => {
 			}>
 		})
 
+		if (type === 'sitemap.xml') {
+			let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+
+			sitemap += `<url><loc>https://mcjars.app</loc></url>`
+			sitemap += `<url><loc>https://mcjars.app/lookup</loc></url>`
+
+			const mod = new Date().toISOString().split('T')[0]
+
+			for (const type in types) {
+				sitemap += `<url><loc>https://mcjars.app/${type}/versions</loc><lastmod>${mod}</lastmod></url>`
+				sitemap += `<url><loc>https://mcjars.app/${type}/statistics</loc><lastmod>${mod}</lastmod></url>`
+			}
+
+			sitemap += '</urlset>'
+
+			return new Response(sitemap, {
+				headers: {
+					'Content-Type': 'text/xml'
+				}
+			})
+		}
+
 		meta['og:image'] = `https://s3.mcjars.app/icons/${type.toLowerCase()}.png`
 
 		const data = types[type.toUpperCase()]
