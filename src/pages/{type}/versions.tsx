@@ -80,7 +80,7 @@ export default function PageTypeVersions() {
 				</Alert>
 			)}
 
-			<div className={'flex flex-row items-center mb-6 md:w-1/2'}>
+			<div className={'flex flex-row items-center mb-6 md:w-1/2 w-full'}>
 				<Select value={versionType ?? 'all'} onValueChange={(value) => setVersionType(value)}>
 					<SelectTrigger className={'w-[15em]'}>
 						<SelectValue placeholder={'All Versions'} />
