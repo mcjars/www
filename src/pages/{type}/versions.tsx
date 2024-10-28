@@ -109,14 +109,14 @@ export default function PageTypeVersions() {
 			<div className={displayMode === 'grid' ? 'grid md:grid-cols-2 grid-cols-1' : displayMode === 'list' ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fit,minmax(30rem,1fr))]'}>
 				{!filteredVersions ? (
 					<>
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem] flex-1'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
 					</>
 				) : (
 					<>
