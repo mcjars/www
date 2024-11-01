@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
-import { ChevronDown, DownloadIcon, ListIcon, SearchIcon, SettingsIcon } from "lucide-react"
+import { ChevronDown, DownloadIcon, ListIcon, SearchIcon } from "lucide-react"
 import { useEffect, useMemo } from "react"
 import { Link, useParams } from "react-router-dom"
 import useSWR from "swr"
@@ -235,14 +235,11 @@ export default function PageTypeVersions() {
 																	</Button>
 																</a>
 
-																<Button
-																	className={'w-fit'}
-																	variant={'outline'}
-																	onClick={() => navigator.clipboard.writeText(`bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`)}
-																>
-																	<SettingsIcon size={16} className={'mr-2'} />
-																	Download via script
-																</Button>
+																{step.file.endsWith('.jar') && (
+																	<Input className={'w-fit'} size={70} value={
+																		"bash <(curl -s" + " " + window.location.protocol + "//" + window.location.hostname + "/install.sh)" + " " + build.id
+																	} />
+																)}
 															</div>
 														)}
 														{step.type === 'remove' && (
