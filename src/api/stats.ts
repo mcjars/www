@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 type APIStats = {
@@ -18,7 +19,7 @@ type APIStats = {
 export default async function apiGetStats(): Promise<APIStats> {
 	const { data } = await axios.get<{
 		stats: APIStats
-	}>('https://versions.mcjars.app/api/v1/stats')
+	}>(`${BASE_URL}/api/v1/stats`)
 
 	return data.stats
 }

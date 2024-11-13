@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export default async function apiGetVersionRequestsAllTime(version: string) {
@@ -6,7 +7,7 @@ export default async function apiGetVersionRequestsAllTime(version: string) {
 			total: number
 			uniqueIps: number
 		}>
-	}>(`https://versions.mcjars.app/api/v2/requests/version/${version}`)
+	}>(`${BASE_URL}/api/v2/requests/version/${version}`)
 
 	return {
 		type: 'all-time',

@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export default async function apiGetVersionLookups() {
@@ -6,7 +7,7 @@ export default async function apiGetVersionLookups() {
 			total: number
 			uniqueIps: number
 		}>
-	}>('https://versions.mcjars.app/api/v2/lookups/versions')
+	}>(`${BASE_URL}/api/v2/lookups/versions`)
 
 	return data.versions
 }

@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export default async function apiGetTypeStats(type: string) {
@@ -10,7 +11,7 @@ export default async function apiGetTypeStats(type: string) {
 				}
 			}
 		}
-	}>(`https://versions.mcjars.app/api/v2/stats/${type.toUpperCase()}`)
+	}>(`${BASE_URL}/api/v2/stats/${type.toUpperCase()}`)
 
 	return data.stats
 }

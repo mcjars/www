@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export type InstallStep = {
@@ -32,7 +33,7 @@ export type PartialMinecraftBuild = {
 export default async function apiGetBuilds(type: string, version: string): Promise<PartialMinecraftBuild[]> {
 	const { data } = await axios.get<{
 		builds: PartialMinecraftBuild[]
-	}>(`https://versions.mcjars.app/api/v2/builds/${type.toUpperCase()}/${version}?fields=id,type,projectVersionId,versionId,name,experimental,created,changes,installation`)
+	}>(`${BASE_URL}/api/v2/builds/${type.toUpperCase()}/${version}?fields=id,type,projectVersionId,versionId,name,experimental,created,changes,installation`)
 
 	return data.builds
 }

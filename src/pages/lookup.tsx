@@ -30,7 +30,7 @@ export default function PageLookup() {
 		if (file.name.endsWith('.jar')) {
 			setIsDropLoading(true)
 
-			const hash = await crypto.subtle.digest('SHA-256', new Uint8Array(await file.arrayBuffer())),
+			const hash = await crypto.subtle.digest('SHA-256', await file.arrayBuffer()),
 				hashArray = Array.from(new Uint8Array(hash)),
 				hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 

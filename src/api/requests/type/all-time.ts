@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export default async function apiGetTypeRequestsAllTime(type: string) {
@@ -13,7 +14,7 @@ export default async function apiGetTypeRequestsAllTime(type: string) {
 				uniqueIps: number
 			}>
 		}
-	}>(`https://versions.mcjars.app/api/v2/requests/${type.toUpperCase()}`)
+	}>(`${BASE_URL}/api/v2/requests/${type.toUpperCase()}`)
 
 	return data.requests
 }

@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 import { PartialMinecraftBuild } from "@/api/builds"
 
@@ -17,7 +18,7 @@ export default async function apiGetConfig(file: File): Promise<{
 			accuracy: number
 			build: PartialMinecraftBuild
 		}[]
-	}>('https://versions.mcjars.app/api/v2/config', {
+	}>(`${BASE_URL}/api/v2/config`, {
 		file: file.name.replace(/\(\d+\)/g, ''),
 		config: await file.text()
 	})

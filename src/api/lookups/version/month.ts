@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 export default async function apiGetTypeVersionLookupsMonth(type: string, year: number, month: number) {
@@ -7,7 +8,7 @@ export default async function apiGetTypeVersionLookupsMonth(type: string, year: 
 			total: number
 			uniqueIps: number
 		}[]>
-	}>(`https://versions.mcjars.app/api/v2/lookups/versions/${type.toUpperCase()}/history/${year}/${month}`)
+	}>(`${BASE_URL}/api/v2/lookups/versions/${type.toUpperCase()}/history/${year}/${month}`)
 
 	return data.versions
 }

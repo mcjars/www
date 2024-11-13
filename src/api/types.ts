@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/api"
 import axios from "axios"
 
 type MinecraftType = {
@@ -22,7 +23,7 @@ type MinecraftType = {
 export default async function apiGetTypes(): Promise<MinecraftType[]> {
 	const { data } = await axios.get<{
 		types: Record<string, MinecraftType>
-	}>('https://versions.mcjars.app/api/v1/types')
+	}>(`${BASE_URL}/api/v1/types`)
 
 	return Object.values(data.types).map((type) => Object.assign(type, { identifier: type.name.toUpperCase() }))
 }
