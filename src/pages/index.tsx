@@ -171,9 +171,9 @@ export default function PageIndex() {
 
 					<div className={'flex flex-col text-right'}>
 						<h1 className={'text-xl font-semibold'}>
-							{stats?.size.database ? bytes(stats.size.database) : <Skeleton className={'w-32 h-7'} />}
+							{stats?.size.database ? bytes(stats.size.database) : <Skeleton className={'w-36 h-7'} />}
 						</h1>
-						<p className={'text-sm text-muted-foreground'}>D1 Database Size</p>
+						<p className={'text-sm text-muted-foreground'}>SQL Database Size</p>
 					</div>
 				</Card>
 			</div>
