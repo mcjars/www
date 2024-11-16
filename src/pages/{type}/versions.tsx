@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
-import { ChevronDown, DownloadIcon, ListIcon, SearchIcon } from "lucide-react"
+import { ChevronDown, DownloadIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useEffect, useMemo } from "react"
 import { Link, useParams } from "react-router-dom"
 import useSWR from "swr"
@@ -128,9 +128,12 @@ export default function PageTypeVersions() {
 										<div className={'flex flex-col ml-2'}>
 											<h1 className={'text-xl font-semibold flex flex-row items-center'}>
 												{version.latest.versionId ?? version.latest.projectVersionId}
-												<Badge className={'ml-2'} variant={version.type === 'RELEASE' ? 'outline' : 'destructive'}>
+												<Badge className={'ml-2 md:block hidden'} variant={version.type === 'RELEASE' ? 'outline' : 'destructive'}>
 													{version.type}
 												</Badge>
+												{version.type === 'SNAPSHOT' && (
+													<TriangleAlertIcon size={16} className={'ml-2 text-red-500 md:hidden'} />
+												)}
 											</h1>
 											<p className={'text-sm text-gray-500'}>
 												{version.builds} Build{version.builds === 1 ? '' : 's'}, Java {version.java}, {new Date(version.created).toLocaleDateString()}
