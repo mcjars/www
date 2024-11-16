@@ -109,19 +109,19 @@ export default function PageTypeVersions() {
 			<div className={displayMode === 'grid' ? 'grid md:grid-cols-2 grid-cols-1' : displayMode === 'list' ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fit,minmax(30rem,1fr))]'}>
 				{!filteredVersions ? (
 					<>
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
-						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 lg:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
+						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
 					</>
 				) : (
 					<>
 						{filteredVersions.map((version) => (
-							<Card key={version.latest.versionId ?? version.latest.projectVersionId} className={'mb-2 mx-1 p-3 pr-4 xl:min-w-[30rem] flex-1'}>
+							<Card key={version.latest.versionId ?? version.latest.projectVersionId} className={'mb-2 mx-1 p-3 pr-4 xl:min-w-[30rem]'}>
 								<div className={'flex flex-row items-center justify-between'}>
 									<div className={'flex flex-row items-center'}>
 										<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} alt={'Logo'} className={'h-12 w-12 rounded-md'} />
@@ -179,7 +179,7 @@ export default function PageTypeVersions() {
 												<div className={'flex flex-row items-center'}>
 													<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} alt={'Logo'} className={'h-12 w-12'} />
 													<div className={'flex flex-col ml-2'}>
-														<h1 className={'text-xl font-semibold flex flex-row items-center'}>
+														<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 															{build.name}
 															<Badge className={'ml-2'} variant={build.experimental ? 'destructive' : 'outline'}>
 																{build.experimental ? 'Experimental' : 'Stable'}
