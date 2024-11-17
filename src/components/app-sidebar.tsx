@@ -99,7 +99,7 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location.pathname === '/lookup'}>
+                      <SidebarMenuButton asChild>
                         <a href={'https://versions.mcjars.app'} target={'_blank'} rel={'noreferrer'}>
                           <CodeIcon className={'mr-2'} />
                           API Documentation
