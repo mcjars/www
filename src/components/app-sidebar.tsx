@@ -26,7 +26,7 @@ import { useState } from "react"
 import apiGetTypes from "@/api/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Building, ChevronDown, CodeIcon, FileIcon, HammerIcon, HomeIcon, LogInIcon, LogOutIcon, SkullIcon, TriangleAlertIcon } from "lucide-react"
+import { BarChart3Icon, Building, ChevronDown, CodeIcon, FileIcon, HammerIcon, HomeIcon, LogInIcon, LogOutIcon, SkullIcon, TriangleAlertIcon } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -96,6 +96,14 @@ export function AppSidebar() {
                       <SidebarMenuButton onClick={() => setViewJobs(true)} isActive={viewJobs}>
                         <HammerIcon className={'mr-2'} />
                         Job Status
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <a href={'https://status.mcjars.app'} target={'_blank'} rel={'noreferrer'}>
+                          <BarChart3Icon className={'mr-2'} />
+                          Status Page
+                        </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
