@@ -258,7 +258,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 															description: `${subuser.name} has been deleted from ${organization.name}.`
 														})
 
-														if (organization.owner.id === me?.id) {
+														if (subuser.id === me?.id) {
 															window.location.reload()
 															return
 														}
