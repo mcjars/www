@@ -6,10 +6,12 @@ import { ReactRouter6Adapter } from "use-query-params/adapters/react-router-6"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { Toaster } from "@/components/ui/toaster"
 
 import Page404 from "@/pages/404"
 import PageIndex from "@/pages/index"
 import PageLookup from "@/pages/lookup"
+import PageOrganizations from "@/pages/organizations"
 import PageTypeVersions from "@/pages/{type}/versions"
 import PageTypeStatistics from "@/pages/{type}/statistics"
 
@@ -27,10 +29,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Routes>
                 <Route path={'/'} element={<PageIndex />} />
                 <Route path={'/lookup'} element={<PageLookup />} />
+                <Route path={'/organizations'} element={<PageOrganizations />} />
                 <Route path={'/:type/versions'} element={<PageTypeVersions />} />
                 <Route path={'/:type/statistics'} element={<PageTypeStatistics />} />
                 <Route path={'*'} element={<Page404 />} />
               </Routes>
+              <Toaster />
             </main>
           </SidebarProvider>
         </ThemeProvider>

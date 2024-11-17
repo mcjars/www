@@ -119,7 +119,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<BrainIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.builds || <Skeleton className={'w-20 h-7'} />}
 						</h1>
@@ -129,7 +129,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<FileSearchIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.hashes || <Skeleton className={'w-20 h-7'} />}
 						</h1>
@@ -139,7 +139,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<GlobeIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.requests || <Skeleton className={'w-20 h-7'} />}
 						</h1>
@@ -149,7 +149,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<ArchiveIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.total.jarSize ? bytes(stats.total.jarSize) : <Skeleton className={'w-20 h-7'} />}
 						</h1>
@@ -159,7 +159,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<ArchiveRestoreIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.total.zipSize ? bytes(stats.total.zipSize) : <Skeleton className={'w-20 h-7'} />}
 						</h1>
@@ -169,7 +169,7 @@ export default function PageIndex() {
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<DatabaseIcon className={'w-8 h-8'} />
 
-					<div className={'flex flex-col text-right'}>
+					<div className={'flex flex-col text-right items-end'}>
 						<h1 className={'text-xl font-semibold'}>
 							{stats?.size.database ? bytes(stats.size.database) : <Skeleton className={'w-36 h-7'} />}
 						</h1>

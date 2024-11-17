@@ -13,21 +13,36 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import useSWR from "swr"
 import { JobStatus } from "@/components/job-status"
 import { useState } from "react"
 import apiGetTypes from "@/api/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, CodeIcon, FileIcon, HammerIcon, HomeIcon, SkullIcon, TriangleAlertIcon } from "lucide-react"
+import { Building, ChevronDown, CodeIcon, FileIcon, HammerIcon, HomeIcon, LogInIcon, LogOutIcon, SkullIcon, TriangleAlertIcon } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
-import { Button } from "./ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
+import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useAuth } from "@/hooks/use-auth"
+import { BASE_URL } from "@/api"
+import apiPostUserLogout from "@/api/user/logout"
+import { useToast } from "@/hooks/use-toast"
+
 
 export function AppSidebar() {
   const [ viewJobs, setViewJobs ] = useState(false)
 
-  const location = useLocation()
+  const { toast } = useToast()
+
+  const location = useLocation(),
+    [user, mutateUser, isUserLoading] = useAuth()
 
   const { data: types } = useSWR(
     ['types'],
@@ -81,6 +96,14 @@ export function AppSidebar() {
                       <SidebarMenuButton onClick={() => setViewJobs(true)} isActive={viewJobs}>
                         <HammerIcon className={'mr-2'} />
                         Job Status
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location.pathname === '/lookup'}>
+                        <a href={'https://versions.mcjars.app'} target={'_blank'} rel={'noreferrer'}>
+                          <CodeIcon className={'mr-2'} />
+                          API Documentation
+                        </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
@@ -166,12 +189,62 @@ export function AppSidebar() {
           </Collapsible>
         </SidebarContent>
         <SidebarFooter>
-          <a href={'https://versions.mcjars.app'} target={'_blank'} rel={'noreferrer'} className={'w-full'}>
-            <Button className={'w-full'}>
-              <CodeIcon className={'h-6 w-6'} />
-              <span className={'ml-2'}>API Documentation</span>
+          {isUserLoading ? (
+            <Button className={'w-full flex-row items-center justify-between'} variant={'secondary'}>
+              <Skeleton className={'h-6 w-6 rounded-full'} />
+              <Skeleton className={'h-6 w-20'} />
             </Button>
-          </a>
+          ) : (
+            user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className={'w-full flex-row items-center justify-between'} variant={'secondary'}>
+                    <img src={user.avatar} alt={user.name ?? `@${user.login}`} className={'h-6 w-6 rounded-full'} />
+                    <span className={'ml-2 truncate'}>{user.name ?? `@${user.login}`}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align={'end'}>
+                  <DropdownMenuItem asChild>
+                    <Link to={'/organizations'} className={'w-full'}>
+                      <Building size={24} />
+                      Organizations
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    toast({
+                      title: 'Logging out...',
+                      description: 'You are being logged out of MCJars.'
+                    })
+
+                    apiPostUserLogout().then(() => {
+                      toast({
+                        title: 'Logged out',
+                        description: 'You have been logged out of MCJars.'
+                      })
+
+                      mutateUser(null, false)
+                    })
+                  }}>
+                    <LogOutIcon size={24} />
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <a href={`${BASE_URL}/api/github`} className={'w-full'} onClick={() => {
+                toast({
+                  title: 'Logging in...',
+                  description: 'You are being redirected to GitHub to login to MCJars.'
+                })
+              }}>
+                <Button className={'w-full flex-row items-center justify-between'} variant={'secondary'}>
+                  <LogInIcon size={24} />
+                  <span className={'ml-2'}>Login</span>
+                </Button>
+              </a>
+            )
+          )}
         </SidebarFooter>
       </Sidebar>
     </>
