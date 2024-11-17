@@ -342,10 +342,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							{apiKeys.map((apiKey) => (
 								<Card key={apiKey.id} className={'p-4 mt-2'}>
 									<div className={'flex flex-row items-center justify-between'}>
-										<div className={'flex flex-row items-center'}>
+										<div className={'flex flex-row items-center w-[70%]'}>
 											<CodeIcon className={'w-12 h-12'} />
 											<div className={'flex flex-col ml-2'}>
-												<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
+												<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start truncate'}>
 													{apiKey.name}
 												</h1>
 												<p className={'text-sm text-gray-500'}>
