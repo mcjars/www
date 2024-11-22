@@ -92,7 +92,7 @@ export default function PageTypeVersions() {
 					</SelectContent>
 				</Select>
 
-				<Select value={displayMode ?? 'compact'} onValueChange={(value) => setDisplayMode(value)} disabled={mobile}>
+				<Select value={displayMode ?? (mobile ? 'list' : 'compact')} onValueChange={(value) => setDisplayMode(value)} disabled={mobile}>
 					<SelectTrigger className={'w-[11em] ml-2'}>
 						<SelectValue placeholder={'Compact'} />
 					</SelectTrigger>
@@ -106,7 +106,15 @@ export default function PageTypeVersions() {
 				<Input className={'ml-2'} placeholder={'Search Name'} value={search ?? ''} onChange={(e) => setSearch(e.target.value)} />
 			</div>
 
-			<div className={displayMode === 'grid' ? 'grid md:grid-cols-2 grid-cols-1' : displayMode === 'list' ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fit,minmax(30rem,1fr))]'}>
+			<div className={
+				displayMode === 'grid'
+					? 'grid md:grid-cols-2 grid-cols-1'
+					: displayMode === 'list'
+						? 'flex flex-col'
+						: mobile
+							? 'flex flex-col'
+							: 'grid grid-cols-[repeat(auto-fit,minmax(30rem,1fr))]'
+			}>
 				{!filteredVersions ? (
 					<>
 						<Skeleton className={'h-16 rounded-xl mb-2 mx-1 xl:min-w-[30rem]'} />
