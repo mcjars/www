@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
 import { ChevronDown, DownloadIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { Link, useParams } from "react-router-dom"
 import useSWR from "swr"
 import { StringParam, useQueryParam } from "use-query-params"
@@ -29,12 +29,6 @@ export default function PageTypeVersions() {
 	const [ search, setSearch ] = useQueryParam('search', StringParam)
 	const [ browse, setBrowse ] = useQueryParam('browse', StringParam)
 	const [ displayMode, setDisplayMode ] = useQueryParam('display', StringParam)
-
-	useEffect(() => {
-		if (mobile) {
-			setDisplayMode('list')
-		}
-	}, [ mobile ])
 
 	const { data: types } = useSWR(
 		['types'],
