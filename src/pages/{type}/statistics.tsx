@@ -161,7 +161,7 @@ export default function PageTypeRequestStatistics() {
 							<PieChart accessibilityLayer>
 								<ChartTooltip content={<ChartTooltipContent />} />
 								<Pie
-									data={requestStatsAllTime}
+									data={requestStatsAllTime.sort((a, b) => b.total - a.total)}
 									dataKey={'total'}
 									nameKey={'label'}
 									fillRule={'evenodd'}
