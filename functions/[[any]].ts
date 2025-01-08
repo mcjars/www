@@ -43,16 +43,16 @@ export const onRequest: PagesFunction = async(context) => {
 		meta['description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
 		meta['og:description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
 	} else {
-		const { types } = await fetch('https://versions.mcjars.app/api/v1/types').then((res) => res.json() as any as {
-			types: Record<string, {
+		const types = await fetch('https://versions.mcjars.app/api/v2/types').then((res) => res.json() as any as {
+			types: Record<string, Record<string, {
 				name: string
 				builds: number
 				versions: {
 					minecraft: number
 					project: number
 				}
-			}>
-		})
+			}>>
+		}).then((data) => Object.fromEntries(Object.values(data.types).map((type) => Object.entries(type)).flat()))
 
 		if (type === 'sitemap.xml') {
 			let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
