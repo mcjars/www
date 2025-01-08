@@ -8,7 +8,7 @@ import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import { Skeleton } from "@/components/ui/skeleton"
 import bytes from "bytes"
 import { LoaderCircle } from "lucide-react"
-import { LegacyRef, useEffect, useRef, useState } from "react"
+import { LegacyRef, useEffect, useMemo, useRef, useState } from "react"
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer"
 import useSWR from "swr"
 
@@ -113,6 +113,11 @@ export default function PageLookup() {
 		}
 	}, [])
 
+	const typeData = useMemo(
+		() => Object.values(types ?? {}).flat()?.find((t) => t.identifier === jarDropBuild?.type),
+		[ types, jarDropBuild ]
+	)
+
 	return (
 		<>
 			<input
@@ -149,7 +154,7 @@ export default function PageLookup() {
               <DialogTitle className={'flex flex-row w-full justify-between'}>
                 {configDropMatches.configs.map((config) => (
                   <Button disabled={config === configDropMatch} onClick={() => setConfigDropMatch(config)} key={config.build?.id ?? config.from} className={'flex flex-row justify-start items-center w-full mr-4'}>
-                    <img src={types?.find((t) => t.identifier === config.from)?.icon} alt={config.from ?? undefined} className={'h-6 w-6 mr-2 rounded-md'} />
+                    <img src={Object.values(types ?? {}).flat().find((t) => t.identifier === config.from)?.icon} alt={config.from ?? undefined} className={'h-6 w-6 mr-2 rounded-md'} />
                     <span className={'flex flex-col'}>
                       <p className={'text-left'}>{config.from}</p>
                       <p className={'text-xs -mt-1'}>{config.build?.versionId} {config.build?.name}</p>
@@ -195,9 +200,9 @@ export default function PageLookup() {
           {jarDropBuild ? (
             <div className={'flex flex-row justify-between items-center p-2'}>
               <div className={'flex flex-row'}>
-                <img src={types?.find((t) => t.identifier === jarDropBuild.type)?.icon ?? 'https://s3.mcjars.app/icons/vanilla.png'} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
+                <img src={typeData?.icon ?? 'https://s3.mcjars.app/icons/vanilla.png'} alt={jarDropBuild.type ?? undefined} className={'h-24 w-24 mr-2 rounded-md'} />
                 <div className={'flex flex-col items-start'}>
-                  <h1 className={'text-xl font-semibold'}>{types?.find((t) => t.identifier === jarDropBuild.type)?.name ?? 'Unknown'}</h1>
+                  <h1 className={'text-xl font-semibold'}>{typeData?.name ?? 'Unknown'}</h1>
                   <h1 className={'text-xl'}>{jarDropBuild.name}</h1>
                   <p>{bytes(jarDropBuild.installation.flat().filter((i) => i.type === 'download').reduce((a, b) => a + b.size, 0))}</p>
                 </div>

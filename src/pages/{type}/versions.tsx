@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
 import { ChevronDown, DownloadIcon, ExternalLinkIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import useSWR from "swr"
 import { StringParam, useQueryParam } from "use-query-params"
 

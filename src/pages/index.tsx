@@ -364,7 +364,7 @@ export default function PageIndex() {
 									<CartesianGrid vertical={false} />
 									<XAxis dataKey={'day'} type={'category'} />
 									<YAxis type={'number'} />
-									{types?.map((type) => (
+									{Object.values(types ?? {}).flat().map((type) => (
 										<Bar
 											key={type.identifier}
 											stackId={'types'}
