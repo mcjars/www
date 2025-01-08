@@ -120,81 +120,83 @@ export function AppSidebar() {
             </SidebarGroup>
           </Collapsible>
 
-          <Collapsible defaultOpen className={'group/collapsible-builds'}>
-            <SidebarGroup>
-              <SidebarGroupLabel asChild>
-                <CollapsibleTrigger>
-                  Types
-                  <ChevronDown className={'ml-auto transition-transform group-data-[state=open]/collapsible-builds:rotate-180'} />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {!types ? (
-                      <>
-                        <Skeleton className={'mt-2'} />
-                      </>
-                    ) : (
-                      <>
-                        {types.map((type) => (
-                          <SidebarMenuItem key={type.identifier}>
-                            <Collapsible defaultOpen={location.pathname.includes('/'.concat(type.identifier)) || type.identifier === 'VANILLA'} className={'group/collapsible-type'}>
-                              <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/${type.name.toUpperCase()}`)}>
-                                <CollapsibleTrigger className={'flex flex-row items-center'}>
-                                  <img src={type.icon} alt={type.name} className={'h-6 w-6 rounded-md'} />
-                                  {type.name}
+          {Object.entries(types ?? {}).map(([category, types]) => (
+            <Collapsible defaultOpen className={'group/collapsible-types'}>
+              <SidebarGroup>
+                <SidebarGroupLabel asChild>
+                  <CollapsibleTrigger>
+                    {category[0].toUpperCase().concat(category.slice(1))}
+                    <ChevronDown className={'ml-auto transition-transform group-data-[state=open]/collapsible-types:rotate-180'} />
+                  </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {!types ? (
+                        <>
+                          <Skeleton className={'mt-2'} />
+                        </>
+                      ) : (
+                        <>
+                          {types.map((type) => (
+                            <SidebarMenuItem key={type.identifier}>
+                              <Collapsible defaultOpen={location.pathname.includes('/'.concat(type.identifier)) || type.identifier === 'VANILLA'} className={'group/collapsible-type'}>
+                                <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/${type.name.toUpperCase()}`)}>
+                                  <CollapsibleTrigger className={'flex flex-row items-center'}>
+                                    <img src={type.icon} alt={type.name} className={'h-6 w-6 rounded-md'} />
+                                    {type.name}
 
-                                  {type.experimental && (
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <TriangleAlertIcon size={16} className={'text-yellow-500'} />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Experimental
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {type.deprecated && (
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <SkullIcon size={16} className={'text-red-500'} />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Deprecated
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
+                                    {type.experimental && (
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <TriangleAlertIcon size={16} className={'text-yellow-500'} />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Experimental
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    {type.deprecated && (
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <SkullIcon size={16} className={'text-red-500'} />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Deprecated
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
 
-                                  <div className={'ml-auto flex flex-row items-center'}>
-                                    <p className={'mr-1'}>({type.builds})</p>
+                                    <div className={'ml-auto flex flex-row items-center'}>
+                                      <p className={'mr-1'}>({type.builds})</p>
 
-                                    <ChevronDown size={16} className={'transition-transform group-data-[state=open]/collapsible-type:rotate-180'} />
-                                  </div>
-                                </CollapsibleTrigger>
-                              </SidebarMenuButton>
-                              <CollapsibleContent>
-                                <SidebarMenuSub>
-                                  <SidebarMenuSubItem>
-                                    <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/versions`}>
-                                      <Link to={`/${type.name.toUpperCase()}/versions`}>Versions</Link>
-                                    </SidebarMenuSubButton>
-                                    <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/statistics`}>
-                                      <Link to={`/${type.name.toUpperCase()}/statistics`}>Statistics</Link>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuSubItem>
-                                </SidebarMenuSub>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          </SidebarMenuItem>
-                        ))}
-                      </>
-                    )}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
+                                      <ChevronDown size={16} className={'transition-transform group-data-[state=open]/collapsible-type:rotate-180'} />
+                                    </div>
+                                  </CollapsibleTrigger>
+                                </SidebarMenuButton>
+                                <CollapsibleContent>
+                                  <SidebarMenuSub>
+                                    <SidebarMenuSubItem>
+                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/versions`}>
+                                        <Link to={`/${type.name.toUpperCase()}/versions`}>Versions</Link>
+                                      </SidebarMenuSubButton>
+                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/statistics`}>
+                                        <Link to={`/${type.name.toUpperCase()}/statistics`}>Statistics</Link>
+                                      </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                  </SidebarMenuSub>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </SidebarMenuItem>
+                          ))}
+                        </>
+                      )}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          ))}
         </SidebarContent>
         <SidebarFooter>
           {isUserLoading ? (

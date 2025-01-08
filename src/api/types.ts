@@ -20,10 +20,16 @@ type MinecraftType = {
 	}
 }
 
-export default async function apiGetTypes(): Promise<MinecraftType[]> {
+export default async function apiGetTypes(): Promise<Record<string, MinecraftType[]>> {
 	const { data } = await axios.get<{
-		types: Record<string, MinecraftType>
-	}>(`${BASE_URL}/api/v1/types`)
+		types: Record<string, Record<string, MinecraftType>>
+	}>(`${BASE_URL}/api/v2/types`)
 
-	return Object.values(data.types).map((type) => Object.assign(type, { identifier: type.name.toUpperCase() }))
+	return Object.fromEntries(
+		Object.entries(data.types)
+			.map(([key, types]) => [
+				key,
+				Object.values(types).map((type) => Object.assign(type, { identifier: type.name.toUpperCase() }))
+			])
+	)
 }

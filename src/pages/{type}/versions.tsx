@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
-import { ChevronDown, DownloadIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronDown, DownloadIcon, ExternalLinkIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo } from "react"
 import { Link, useParams } from "react-router-dom"
 import useSWR from "swr"
@@ -56,25 +56,49 @@ export default function PageTypeVersions() {
 		[ versions, browse ]
 	)
 
+	const typeData = useMemo(
+		() => Object.values(types ?? {}).flat()?.find((t) => t.identifier === type),
+		[ types, type ]
+	)
+
 	return (
 		<>
-			{(types?.find((t) => t.identifier === type)?.experimental || types?.find((t) => t.identifier === type)?.deprecated) && (
+			<Alert className={'mb-2'} variant={typeData?.deprecated || typeData?.experimental ? 'destructive' : 'default'}>
+				<AlertDescription className={'flex flex-row items-center justify-between'}>
+					<div className={'flex flex-row items-center'}>
+						<img src={typeData?.icon} alt={'Logo'} className={'h-10 w-10 rounded-md mr-3'} />
+						<div className={'flex flex-col justify-center'}>
+							<h1 className={'text-2xl font-semibold flex flex-row items-center'}>
+								{typeData?.name}
+							</h1>
+							<span className={'md:block hidden mt-1'}>
+								<Badge className={'mr-2'} variant={typeData?.experimental || typeData?.deprecated ? 'destructive' : 'outline'}>
+									{typeData?.experimental ? 'Experimental' : typeData?.deprecated ? 'Deprecated' : 'Stable'}
+								</Badge>
+
+								{typeData?.description}
+							</span>
+						</div>
+					</div>
+
+					<a href={typeData?.homepage} target={'_blank'} rel={'noreferrer'}>
+						<Button variant={'outline'}>
+							<ExternalLinkIcon size={16} className={'mr-2'} />
+							Learn More
+						</Button>
+					</a>
+				</AlertDescription>
+			</Alert>
+
+			{(typeData?.experimental || typeData?.deprecated) && (
 				<Alert className={'mb-2'} variant={'destructive'}>
 					<AlertDescription>
-						Keep in mind, <span className={'font-semibold'}>{types?.find((t) => t.identifier === type)?.name}</span> is {types?.find((t) => t.identifier === type)?.experimental ? 'experimental' : 'deprecated'} and may not work as expected. Take backups!
+						Keep in mind, <span className={'font-semibold'}>{typeData?.name}</span> is {typeData?.experimental ? 'experimental' : 'deprecated'} and may not work as expected. Take backups!
 					</AlertDescription>
 				</Alert>
 			)}
 
-			{type === 'SPIGOT' && (
-				<Alert className={'mb-2'}>
-					<AlertDescription>
-						Hello there, <span className={'font-semibold'}>Spigot</span> is not recommended for server-use due to its worse performance and security compared to other server software. Please consider using <Link to={'/PAPER/versions'} className={'text-blue-500 font-semibold underline'}>Paper</Link> instead.
-					</AlertDescription>
-				</Alert>
-			)}
-
-			<div className={'flex flex-row items-center mb-6 md:w-1/2 w-full'}>
+			<div className={'flex flex-row items-center mb-6 w-full'}>
 				<Select value={versionType ?? 'all'} onValueChange={(value) => setVersionType(value)}>
 					<SelectTrigger className={'w-[15em]'}>
 						<SelectValue placeholder={'All Versions'} />

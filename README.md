@@ -4,7 +4,7 @@ www is a explorer-like website for downloading Minecraft server versions. It all
 
 ## Features
 
-- API Ran on Cloudflare Workers
+- API Ran on 4 Hetzner Cloud VMs
 - Installation Instructions for Forge/Fabric/...
 - Use Zips for Forge installations instead of installers
 - Lookup Configs or Jars by dragging them in and comparing
