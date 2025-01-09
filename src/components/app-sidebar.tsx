@@ -21,8 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import useSWR from "swr"
-import { JobStatus } from "@/components/job-status"
-import { useState } from "react"
 import apiGetTypes from "@/api/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -37,8 +35,6 @@ import { useToast } from "@/hooks/use-toast"
 
 
 export function AppSidebar() {
-  const [ viewJobs, setViewJobs ] = useState(false)
-
   const { toast } = useToast()
 
   const location = useLocation(),
@@ -52,8 +48,6 @@ export function AppSidebar() {
 
   return (
     <>
-      <JobStatus open={viewJobs} onClose={() => setViewJobs(false)} />
-
       <Sidebar>
         <SidebarHeader>
           <Link to={'/'} className={'flex flex-row h-full w-fit items-center'}>
@@ -93,9 +87,11 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton onClick={() => setViewJobs(true)} isActive={viewJobs}>
-                        <HammerIcon className={'mr-2'} />
-                        Job Status
+                      <SidebarMenuButton asChild isActive={location.pathname === '/job-status'}>
+                        <Link to={'/job-status'}>
+                          <HammerIcon className={'mr-2'} />
+                          Job Status
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

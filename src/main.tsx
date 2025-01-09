@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/toaster"
 import Page404 from "@/pages/404"
 import PageIndex from "@/pages/index"
 import PageLookup from "@/pages/lookup"
+import PageJobStatus from "@/pages/job-status"
 import PageOrganizations from "@/pages/organizations"
 import PageTypeVersions from "@/pages/{type}/versions"
 import PageTypeStatistics from "@/pages/{type}/statistics"
@@ -24,11 +25,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider defaultTheme={'dark'}>
           <SidebarProvider>
             <AppSidebar />
-            <main className={'relative h-screen md:w-[calc(100vw-var(--sidebar-width))] w-screen md:pt-2 pt-10 px-2'}>
+            <main className={'relative h-screen md:w-[calc(100vw-var(--sidebar-width))] w-screen md:pt-2 pt-14 px-2'}>
               <SidebarTrigger className={'left-2 top-2 absolute md:hidden'} />
               <Routes>
                 <Route path={'/'} element={<PageIndex />} />
                 <Route path={'/lookup'} element={<PageLookup />} />
+                <Route path={'/job-status'} element={<PageJobStatus />} />
                 <Route path={'/organizations'} element={<PageOrganizations />} />
                 <Route path={'/:type/versions'} element={<PageTypeVersions />} />
                 <Route path={'/:type/statistics'} element={<PageTypeStatistics />} />

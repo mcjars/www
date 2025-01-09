@@ -42,6 +42,10 @@ export const onRequest: PagesFunction = async(context) => {
 		meta['og:title'] = 'MCJars | Reverse Lookup'
 		meta['description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
 		meta['og:description'] = 'Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.'
+	} else if (type === 'job-status') {
+		meta['og:title'] = 'MCJars | Job Status'
+		meta['description'] = 'View the job status for MCJars. Not affiliated with Mojang AB.'
+		meta['og:description'] = 'View the job status for MCJars. Not affiliated with Mojang AB.'
 	} else {
 		const types = await fetch('https://versions.mcjars.app/api/v2/types').then((res) => res.json() as any as {
 			types: Record<string, Record<string, {
