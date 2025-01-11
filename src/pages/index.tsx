@@ -57,7 +57,7 @@ export default function PageIndex() {
 	)
 
 	const versionLookups = useMemo(() => mergeLessThanPercent(
-		Object.entries(versionLookupsRaw ?? {}).map(([ label, data ]) => ({ label, total: data[versionLookupsType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))),
+		Object.entries(versionLookupsRaw ?? {}).map(([ label, data ]) => ({ label, total: data[versionLookupsType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))).sort((a, b) => b.total - a.total),
 		[ versionLookupsRaw, versionLookupsType ]
 	)
 
@@ -100,8 +100,7 @@ export default function PageIndex() {
 	)
 
 	const requestVersionStatsAllTime = useMemo(() => mergeLessThanPercent(
-			Object.entries(requestVersionStatsAllTimeRaw?.requests ?? {}).map(([ label, data ]) => ({ label, total: data[requestVersionStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] })
-		)),
+		Object.entries(requestVersionStatsAllTimeRaw?.requests ?? {}).map(([ label, data ]) => ({ label, total: data[requestVersionStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] })).sort((a, b) => b.total - a.total)),
 		[ requestVersionStatsAllTimeRaw, requestVersionStatsAllTimeType ]
 	)
 

@@ -34,7 +34,7 @@ export default function PageTypeRequestStatistics() {
 
 	const [ requestStatsAllTimeType, setRequestStatsAllTimeType ] = useQueryParam('requestStatsAllTimeType', StringParam)
 	const requestStatsAllTime = useMemo(() => mergeLessThanPercent(
-		Object.entries(requestStatsAllTimeRaw?.versions ?? {}).map(([ label, data ]) => ({ label, total: data[requestStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))),
+		Object.entries(requestStatsAllTimeRaw?.versions ?? {}).map(([ label, data ]) => ({ label, total: data[requestStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))).sort((a, b) => b.total - a.total),
 		[ requestStatsAllTimeRaw, requestStatsAllTimeType ]
 	)
 
@@ -46,7 +46,7 @@ export default function PageTypeRequestStatistics() {
 
 	const [ lookupVersionStatsAllTimeType, setLookupVersionStatsAllTimeType ] = useQueryParam('lookupVersionStatsAllTimeType', StringParam)
 	const lookupVersionStatsAllTime = useMemo(() => mergeLessThanPercent(
-		Object.entries(lookupVersionStatsAllTimeRaw ?? {}).map(([ label, data ]) => ({ label, total: data[lookupVersionStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))),
+		Object.entries(lookupVersionStatsAllTimeRaw ?? {}).map(([ label, data ]) => ({ label, total: data[lookupVersionStatsAllTimeType === 'uniqueIps' ? 'uniqueIps' : 'total'] }))).sort((a, b) => b.total - a.total),
 		[ lookupVersionStatsAllTimeRaw, lookupVersionStatsAllTimeType ]
 	)
 
@@ -161,7 +161,7 @@ export default function PageTypeRequestStatistics() {
 							<PieChart accessibilityLayer>
 								<ChartTooltip content={<ChartTooltipContent />} />
 								<Pie
-									data={requestStatsAllTime.sort((a, b) => b.total - a.total)}
+									data={requestStatsAllTime}
 									dataKey={'total'}
 									nameKey={'label'}
 									fillRule={'evenodd'}
