@@ -29,7 +29,7 @@ export default async function apiGetTypes(): Promise<Record<string, MinecraftTyp
 		Object.entries(data.types)
 			.map(([key, types]) => [
 				key,
-				Object.values(types).map((type) => Object.assign(type, { identifier: type.name.toUpperCase() }))
+				Object.entries(types).map(([type, value]) => Object.assign(value, { identifier: type }))
 			])
 	)
 }

@@ -12,26 +12,30 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { ArchiveIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
-import React, { useState } from "react"
+import React, { useRef, useState } from "react"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
 import apiAddUserOrganizationApiKey from "@/api/user/organization/api-keys/addApiKey"
 import apiDeleteUserOrganizationApiKey from "@/api/user/organization/api-keys/deleteApiKey"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import apiPostUserOrganizationIcon from "@/api/user/organization/icon"
 
 type OrganizationRowProps = {
 	organization: Organization
 	currentOrganization: Organization | null
 	setCurrentOrganization: React.Dispatch<React.SetStateAction<Organization | null>>
+	updateIcon: (url: string) => void
 }
 
-function OrganizationRow({ organization, currentOrganization, setCurrentOrganization }: OrganizationRowProps) {
+function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateIcon }: OrganizationRowProps) {
 	const [view, setView] = useState<'subusers' | 'api-keys'>()
 	const [loading, setLoading] = useState(false)
 	const [user, setUser] = useState('')
 	const [name, setName] = useState('')
 	const [key, setKey] = useState('')
 	const [me] = useAuth()
+	const inputRef = useRef<HTMLInputElement>(null)
 
 	const { toast, toastError } = useToast()
 
@@ -55,6 +59,29 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 
 	return (
 		<>
+			<input type={'file'} accept={'image/*'} onChange={(e) => {
+				const t = toast({
+					title: 'Updating Organization Icon...',
+					description: `Updating the icon for ${organization.name}.`
+				})
+
+				apiPostUserOrganizationIcon(organization.id, e.target.files?.[0]!)
+					.then((url) => {
+						t.update(toast({
+							title: 'Organization Icon Updated',
+							description: `The icon for ${organization.name} has been updated.`
+						}))
+
+						updateIcon(url)
+					})
+					.catch((error) => {
+						t.update(toastError({
+							title: 'Failed to Update Organization Icon',
+							error
+						}))
+					})
+			}} ref={inputRef} hidden />
+
 			<Dialog open={key !== ''} onOpenChange={(open) => !open && setKey('')}>
 				<DialogContent className={'md:min-w-[40rem]'}>
 					API Key has been created. Please copy it and store it in a safe place.
@@ -68,7 +95,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 				<Collapsible open={currentOrganization?.id === organization.id} className={'group/collapsible-build'} onOpenChange={(open) => setCurrentOrganization(open ? organization : null)}>
 					<div className={'flex flex-row items-center justify-between'}>
 						<div className={'flex flex-row items-center'}>
-							<img src={organization.icon ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg'} />
+							<img src={organization.icon ?? ''} alt={'Logo'} className={cn('h-12 w-12 rounded-lg', currentOrganization?.id === organization.id && 'hover:opacity-85 cursor-pointer')} onClick={() => currentOrganization?.id === organization.id && inputRef.current?.click()} />
 							<div className={'flex flex-col ml-2'}>
 								<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 									{organization.name}
@@ -189,26 +216,26 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 
 								setLoading(true)
 
-								toast({
+								const t = toast({
 									title: 'Adding Subuser...',
 									description: `Adding @${user} to ${organization.name}.`
 								})
 
 								apiAddUserOrganizationSubuser(organization.id, user)
 									.then(() => {
-										toast({
+										t.update(toast({
 											title: 'Subuser Added',
 											description: `@${user} has been added to ${organization.name}.`
-										})
+										}))
 
 										setUser('')
 										mutateSubusers()
 									})
 									.catch((error) => {
-										toastError({
+										t.update(toastError({
 											title: 'Failed to Add Subuser',
 											error
-										})
+										}))
 									})
 									.finally(() => setLoading(false))
 							}}>
@@ -246,17 +273,17 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 
-												toast({
+												const t = toast({
 													title: 'Deleting Subuser...',
 													description: `Deleting ${subuser.name} from ${organization.name}.`
 												})
 
 												apiDeleteUserOrganizationSubuser(organization.id, subuser.login)
 													.then(() => {
-														toast({
+														t.update(toast({
 															title: 'Subuser Deleted',
 															description: `${subuser.name} has been deleted from ${organization.name}.`
-														})
+														}))
 
 														if (subuser.id === me?.id) {
 															window.location.reload()
@@ -266,10 +293,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 														mutateSubusers((subusers) => !subusers ? null : subusers.filter((s) => s.id !== subuser.id), false)
 													})
 													.catch((error) => {
-														toastError({
+														t.update(toastError({
 															title: 'Failed to Delete Subuser',
 															error
-														})
+														}))
 													})
 													.finally(() => setLoading(false))
 											}}>
@@ -299,17 +326,17 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 
 								setLoading(true)
 
-								toast({
+								const t = toast({
 									title: 'Adding API Key...',
 									description: `Adding Key to ${organization.name}.`
 								})
 
 								apiAddUserOrganizationApiKey(organization.id, name)
 									.then((key) => {
-										toast({
+										t.update(toast({
 											title: 'API Key Added',
 											description: `Key has been added to ${organization.name}.`
-										})
+										}))
 
 										setKey(key)
 
@@ -317,10 +344,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										mutateApiKeys()
 									})
 									.catch((error) => {
-										toastError({
+										t.update(toastError({
 											title: 'Failed to Add API Key',
 											error
-										})
+										}))
 									})
 									.finally(() => setLoading(false))
 							}}>
@@ -358,25 +385,25 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 
-												toast({
+												const t = toast({
 													title: 'Deleting API Key...',
 													description: `Deleting ${apiKey.name} from ${organization.name}.`
 												})
 
 												apiDeleteUserOrganizationApiKey(organization.id, apiKey.id)
 													.then(() => {
-														toast({
+														t.update(toast({
 															title: 'API Key Deleted',
 															description: `${apiKey.name} has been deleted from ${organization.name}.`
-														})
+														}))
 
 														mutateApiKeys((keys) => !keys ? null : keys.filter((k) => k.id !== apiKey.id), false)
 													})
 													.catch((error) => {
-														toastError({
+														t.update(toastError({
 															title: 'Failed to Delete API Key',
 															error
-														})
+														}))
 													})
 													.finally(() => setLoading(false))
 											}}>
@@ -401,7 +428,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 export default function PageOrganizations() {
 	const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
 
-	const { data: organizations } = useSWR(
+	const { data: organizations, mutate } = useSWR(
 		['organizations'],
 		() => apiGetUserOrganizations(),
 		{ revalidateOnFocus: false, revalidateIfStale: false }
@@ -413,11 +440,24 @@ export default function PageOrganizations() {
 		</div>
 	)
 
+	const updateIcon = (organization: number) => {
+		return (url: string) => {
+			mutate((organizations) => {
+				if (!organizations) return
+
+				const org = organizations.owned.find((o) => o.id === organization) ?? organizations.member.find((o) => o.id === organization)
+				if (org) org.icon = url
+
+				return { ...organizations }
+			})
+		}
+	}
+
 	return (
 		<>
 			<h1 className={'text-2xl font-semibold'}>Owned Organizations</h1>
 			{organizations?.owned.map((organization) => (
-				<OrganizationRow key={organization.id} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.owned.length && (
 				<p className={'text-gray-400 text-sm'}>You do not own any organizations.</p>
@@ -425,7 +465,7 @@ export default function PageOrganizations() {
 
 			<h1 className={'text-2xl font-semibold mt-4'}>Member Organizations</h1>
 			{organizations?.member.map((organization) => (
-				<OrganizationRow key={organization.id} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.member.length && (
 				<p className={'text-gray-400 text-sm'}>You are not a member of any organizations.</p>
