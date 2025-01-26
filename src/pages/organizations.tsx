@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, ExternalLinkIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
+import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
 import React, { useRef, useState } from "react"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
@@ -20,10 +20,10 @@ import apiDeleteUserOrganizationApiKey from "@/api/user/organization/api-keys/de
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import apiPostUserOrganizationIcon from "@/api/user/organization/icon"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import apiPostUserIniteAccept from "@/api/user/invite/accept"
 import apiPostUserIniteDecline from "@/api/user/invite/decline"
+import UserTooltip from "@/components/user-tooltip"
 
 type OrganizationRowProps = {
 	organization: Organization
@@ -108,21 +108,9 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								</h1>
 								<p className={'text-sm text-gray-500 flex flex-row'}>
 									{new Date(organization.created).toLocaleDateString()}
-									<Tooltip>
-										<TooltipContent className={'flex flex-row items-center'}>
-											<img src={organization.owner.avatar ?? ''} alt={'Owner'} className={'h-12 w-12 rounded-lg'} />
-											<div className={'flex flex-col ml-1.5 text-left'}>
-												<a className={'text-lg flex flex-row items-center hover:underline cursor-pointer'} href={`https://github.com/${organization.owner.login}`} target={'_blank'} rel={'noreferrer'}>
-													{organization.owner.name ?? organization.owner.login}
-													<ExternalLinkIcon size={16} className={'ml-1.5'} />
-												</a>
-												<p className={'text-sm text-gray-500'}>{organization.owner.email}</p>
-											</div>
-										</TooltipContent>
-										<TooltipTrigger>
-											, <span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
-										</TooltipTrigger>
-									</Tooltip>
+									<UserTooltip user={organization.owner}>
+										, <span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
+									</UserTooltip>
 								</p>
 							</div>
 						</div>
@@ -339,9 +327,9 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							{subUsers.map((subuser) => (
 								<Card key={subuser.user.id} className={'p-4 mt-2'}>
 									<div className={'flex flex-row items-center justify-between'}>
-										<div className={'flex flex-row items-center'}>
+										<div className={'flex flex-row items-center text-left'}>
 											<img src={subuser.user.avatar ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg'} />
-											<div className={'flex flex-col ml-2'}>
+											<UserTooltip user={subuser.user} className={'flex flex-col ml-2'}>
 												<h1 className={'text-xl font-semibold flex flex-row items-center'}>
 													{subuser.user.name}
 													{subuser.pending && <Badge className={'ml-2'} variant={'destructive'}>Pending</Badge>}
@@ -349,7 +337,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 												<p className={'text-sm text-gray-500'}>
 													@{subuser.user.login}
 												</p>
-											</div>
+											</UserTooltip>
 										</div>
 
 										<div className={'flex flex-row items-center'}>
