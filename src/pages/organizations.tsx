@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { ArchiveIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
+import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, ExternalLinkIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
 import React, { useRef, useState } from "react"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
@@ -20,15 +20,21 @@ import apiDeleteUserOrganizationApiKey from "@/api/user/organization/api-keys/de
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import apiPostUserOrganizationIcon from "@/api/user/organization/icon"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
+import apiPostUserIniteAccept from "@/api/user/invite/accept"
+import apiPostUserIniteDecline from "@/api/user/invite/decline"
 
 type OrganizationRowProps = {
 	organization: Organization
 	currentOrganization: Organization | null
 	setCurrentOrganization: React.Dispatch<React.SetStateAction<Organization | null>>
 	updateIcon: (url: string) => void
+	mutate: () => void
+	isPending?: boolean
 }
 
-function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateIcon }: OrganizationRowProps) {
+function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateIcon, isPending, mutate }: OrganizationRowProps) {
 	const [view, setView] = useState<'subusers' | 'api-keys'>()
 	const [loading, setLoading] = useState(false)
 	const [user, setUser] = useState('')
@@ -100,20 +106,96 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 									{organization.name}
 								</h1>
-								<p className={'text-sm text-gray-500'}>
+								<p className={'text-sm text-gray-500 flex flex-row'}>
 									{new Date(organization.created).toLocaleDateString()}
+									<Tooltip>
+										<TooltipContent className={'flex flex-row items-center'}>
+											<img src={organization.owner.avatar ?? ''} alt={'Owner'} className={'h-12 w-12 rounded-lg'} />
+											<div className={'flex flex-col ml-1.5 text-left'}>
+												<a className={'text-lg flex flex-row items-center hover:underline cursor-pointer'} href={`https://github.com/${organization.owner.login}`} target={'_blank'} rel={'noreferrer'}>
+													{organization.owner.name ?? organization.owner.login}
+													<ExternalLinkIcon size={16} className={'ml-1.5'} />
+												</a>
+												<p className={'text-sm text-gray-500'}>{organization.owner.email}</p>
+											</div>
+										</TooltipContent>
+										<TooltipTrigger>
+											, <span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
+										</TooltipTrigger>
+									</Tooltip>
 								</p>
 							</div>
 						</div>
 
-						<div className={'flex flex-row items-center'}>
-							<CollapsibleTrigger>
-								<Button>
-									View
-									<ChevronDown size={16} className={'ml-2 transition-transform group-data-[state=open]/collapsible-build:rotate-180'} />
+						{!isPending ? (
+							<div className={'flex flex-row items-center'}>
+								<CollapsibleTrigger>
+									<Button>
+										View
+										<ChevronDown size={16} className={'ml-2 transition-transform group-data-[state=open]/collapsible-build:rotate-180'} />
+									</Button>
+								</CollapsibleTrigger>
+							</div>
+						) : (
+							<div className={'flex flex-row items-center'}>
+								<Button disabled={loading} onClick={() => {
+									setLoading(true)
+
+									const t = toast({
+										title: 'Accepting Organization Invite...',
+										description: `Accepting invite to ${organization.name}.`
+									})
+
+									apiPostUserIniteAccept(organization.id)
+										.then(() => {
+											t.update(toast({
+												title: 'Organization Invite Accepted',
+												description: `You have accepted the invite to ${organization.name}.`
+											}))
+
+											mutate()
+										})
+										.catch((error) => {
+											t.update(toastError({
+												title: 'Failed to Accept Organization Invite',
+												error
+											}))
+										})
+										.finally(() => setLoading(false))
+								}}>
+									<CheckIcon className={'w-6 h-6 mr-2'} />
+									Accept
 								</Button>
-							</CollapsibleTrigger>
-						</div>
+								<Button disabled={loading} variant={'destructive'} className={'ml-2'} onClick={() => {
+									setLoading(true)
+
+									const t = toast({
+										title: 'Declining Organization Invite...',
+										description: `Declining invite to ${organization.name}.`
+									})
+
+									apiPostUserIniteDecline(organization.id)
+										.then(() => {
+											t.update(toast({
+												title: 'Organization Invite Declined',
+												description: `You have declined the invite to ${organization.name}.`
+											}))
+
+											mutate()
+										})
+										.catch((error) => {
+											t.update(toastError({
+												title: 'Failed to Decline Organization Invite',
+												error
+											}))
+										})
+										.finally(() => setLoading(false))
+								}}>
+									<TrashIcon className={'w-6 h-6 mr-2'} />
+									Decline
+								</Button>
+							</div>
+						)}
 					</div>
 
 					<CollapsibleContent className={'mt-3'}>
@@ -255,42 +337,47 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 					) : (
 						<div className={'flex flex-col p-4'}>
 							{subUsers.map((subuser) => (
-								<Card key={subuser.id} className={'p-4 mt-2'}>
+								<Card key={subuser.user.id} className={'p-4 mt-2'}>
 									<div className={'flex flex-row items-center justify-between'}>
 										<div className={'flex flex-row items-center'}>
-											<img src={subuser.avatar ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg'} />
+											<img src={subuser.user.avatar ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg'} />
 											<div className={'flex flex-col ml-2'}>
-												<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
-													{subuser.name}
+												<h1 className={'text-xl font-semibold flex flex-row items-center'}>
+													{subuser.user.name}
+													{subuser.pending && <Badge className={'ml-2'} variant={'destructive'}>Pending</Badge>}
 												</h1>
 												<p className={'text-sm text-gray-500'}>
-													@{subuser.login}
+													@{subuser.user.login}
 												</p>
 											</div>
 										</div>
 
 										<div className={'flex flex-row items-center'}>
+											<p className={'text-sm text-gray-500 mr-2'}>
+												{new Date(subuser.created).toLocaleDateString()}
+											</p>
+
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 
 												const t = toast({
 													title: 'Deleting Subuser...',
-													description: `Deleting ${subuser.name} from ${organization.name}.`
+													description: `Deleting ${subuser.user.name} from ${organization.name}.`
 												})
 
-												apiDeleteUserOrganizationSubuser(organization.id, subuser.login)
+												apiDeleteUserOrganizationSubuser(organization.id, subuser.user.login)
 													.then(() => {
 														t.update(toast({
 															title: 'Subuser Deleted',
-															description: `${subuser.name} has been deleted from ${organization.name}.`
+															description: `${subuser.user.name} has been deleted from ${organization.name}.`
 														}))
 
-														if (subuser.id === me?.id) {
+														if (subuser.user.id === me?.id) {
 															window.location.reload()
 															return
 														}
 
-														mutateSubusers((subusers) => !subusers ? null : subusers.filter((s) => s.id !== subuser.id), false)
+														mutateSubusers((subusers) => !subusers ? null : subusers.filter((s) => s.user.id !== subuser.user.id), false)
 													})
 													.catch((error) => {
 														t.update(toastError({
@@ -457,7 +544,7 @@ export default function PageOrganizations() {
 		<>
 			<h1 className={'text-2xl font-semibold'}>Owned Organizations</h1>
 			{organizations?.owned.map((organization) => (
-				<OrganizationRow key={organization.id} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.owned.length && (
 				<p className={'text-gray-400 text-sm'}>You do not own any organizations.</p>
@@ -465,10 +552,18 @@ export default function PageOrganizations() {
 
 			<h1 className={'text-2xl font-semibold mt-4'}>Member Organizations</h1>
 			{organizations?.member.map((organization) => (
-				<OrganizationRow key={organization.id} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.member.length && (
 				<p className={'text-gray-400 text-sm'}>You are not a member of any organizations.</p>
+			)}
+
+			<h1 className={'text-2xl font-semibold mt-4'}>Organization Invites</h1>
+			{organizations?.invites.map((organization) => (
+				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} isPending />
+			))}
+			{!organizations?.invites.length && (
+				<p className={'text-gray-400 text-sm'}>You do not have any organization invites.</p>
 			)}
 		</>
 	)

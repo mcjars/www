@@ -11,9 +11,9 @@ export type Organization = {
 	owner: User
 }
 
-export default async function apiGetUserOrganizations(): Promise<Record<'owned' | 'member', Organization[]>> {
+export default async function apiGetUserOrganizations(): Promise<Record<'owned' | 'member' | 'invites', Organization[]>> {
 	const { data } = await axios.get<{
-		organizations: Record<'owned' | 'member', Organization[]>
+		organizations: Record<'owned' | 'member' | 'invites', Organization[]>
 	}>(`${BASE_URL}/api/user/organizations`, {
 		withCredentials: true
 	})
