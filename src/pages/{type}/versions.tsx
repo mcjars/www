@@ -248,6 +248,15 @@ export default function PageTypeVersions() {
 												</div>
 											</div>
 
+											<br></br>
+
+											<div>
+												<p>Install via script</p>
+												<Input className={'w-fit'} size={70} value={
+													"bash <(curl -s" + " " + window.location.protocol + "//" + window.location.hostname + "/install.sh)" + " " + build.id
+												} />
+											</div>
+
 											<CollapsibleContent className={'mt-2'}>
 												{build.installation.flat().map((step, i) => (
 													<div key={i} className={'flex flex-row items-center mt-2'}>
@@ -263,12 +272,6 @@ export default function PageTypeVersions() {
 																		{step.file}
 																	</Button>
 																</a>
-
-																{step.file.endsWith('.jar') && (
-																	<Input className={'w-fit'} size={70} value={
-																		"bash <(curl -s" + " " + window.location.protocol + "//" + window.location.hostname + "/install.sh)" + " " + build.id
-																	} />
-																)}
 															</div>
 														)}
 														{step.type === 'remove' && (
