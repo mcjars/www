@@ -151,8 +151,8 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										})
 										.finally(() => setLoading(false))
 								}}>
-									<CheckIcon className={'w-6 h-6 mr-2'} />
-									Accept
+									<CheckIcon className={'w-6 h-6 md:mr-2'} />
+									<span className={'hidden md:inline'}>Accept</span>
 								</Button>
 								<Button disabled={loading} variant={'destructive'} className={'ml-2'} onClick={() => {
 									setLoading(true)
@@ -179,8 +179,8 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										})
 										.finally(() => setLoading(false))
 								}}>
-									<XIcon className={'w-6 h-6 mr-2'} />
-									Decline
+									<XIcon className={'w-6 h-6 md:mr-2'} />
+									<span className={'hidden md:inline'}>Decline</span>
 								</Button>
 							</div>
 						)}
