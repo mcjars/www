@@ -25,7 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider defaultTheme={'dark'}>
           <SidebarProvider>
             <AppSidebar />
-            <main className={'relative h-screen md:w-[calc(100vw-var(--sidebar-width))] w-screen md:pt-2 pt-14 px-2'}>
+            <main className={'relative h-screen md:w-[calc(100vw-var(--sidebar-width))] w-screen md:pt-2 pb-2 pt-14 px-2'}>
               <SidebarTrigger className={'left-2 top-2 absolute md:hidden'} />
               <Routes>
                 <Route path={'/'} element={<PageIndex />} />
