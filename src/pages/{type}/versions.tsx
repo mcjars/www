@@ -248,6 +248,15 @@ export default function PageTypeVersions() {
 												</div>
 											</div>
 
+											<br></br>
+
+											<div>
+												<p>Install via script</p>
+												<Input className={'w-fit'} size={70} value={
+													"bash <(curl -s" + " " + window.location.protocol + "//" + window.location.hostname + "/install.sh)" + " " + build.id
+												} />
+											</div>
+
 											<CollapsibleContent className={'mt-2'}>
 												{build.installation.flat().map((step, i) => (
 													<div key={i} className={'flex flex-row items-center mt-2'}>
@@ -256,12 +265,14 @@ export default function PageTypeVersions() {
 														<div className={'mx-1'} />
 
 														{step.type === 'download' && (
-															<a href={step.url} download>
-																<Button className={'w-fit'} variant={'outline'}>
-																	<DownloadIcon size={16} className={'mr-2'} />
-																	{step.file}
-																</Button>
-															</a>
+															<div>
+																<a href={step.url} download>
+																	<Button className={'w-fit'} variant={'outline'}>
+																		<DownloadIcon size={16} className={'mr-2'} />
+																		{step.file}
+																	</Button>
+																</a>
+															</div>
 														)}
 														{step.type === 'remove' && (
 															<code className={'border rounded-md p-1 px-3 w-fit'}>
