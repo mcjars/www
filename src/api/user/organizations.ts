@@ -7,6 +7,8 @@ export type Organization = {
 	name: string
 	icon: string | null
 	types: string[]
+	public: boolean
+	verified: boolean
 	created: string
 	owner: User
 }

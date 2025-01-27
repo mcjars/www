@@ -11,13 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon, XIcon } from "lucide-react"
+import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, SettingsIcon, TrashIcon, UsersIcon, WebhookIcon, XIcon } from "lucide-react"
 import React, { useRef, useState } from "react"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
 import apiAddUserOrganizationApiKey from "@/api/user/organization/api-keys/addApiKey"
 import apiDeleteUserOrganizationApiKey from "@/api/user/organization/api-keys/deleteApiKey"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import apiPostUserOrganizationIcon from "@/api/user/organization/icon"
 import { Badge } from "@/components/ui/badge"
@@ -25,24 +25,41 @@ import apiPostUserIniteAccept from "@/api/user/invite/accept"
 import apiPostUserIniteDecline from "@/api/user/invite/decline"
 import UserTooltip from "@/components/user-tooltip"
 import clsx from "clsx"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import apiGetTypes from "@/api/types"
+import apiPatchUserOrganization from "@/api/user/organization"
 
 type OrganizationRowProps = {
 	organization: Organization
 	currentOrganization: Organization | null
 	setCurrentOrganization: React.Dispatch<React.SetStateAction<Organization | null>>
-	updateIcon: (url: string) => void
+	updateOrg: (data: Partial<Organization>) => void
 	mutate: () => void
 	isPending?: boolean
+	types: string[]
 }
 
-function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateIcon, isPending, mutate }: OrganizationRowProps) {
-	const [view, setView] = useState<'subusers' | 'api-keys'>()
+function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateOrg, isPending, mutate, types }: OrganizationRowProps) {
+	const [view, setView] = useState<'subusers' | 'api-keys' | 'settings'>()
 	const [loading, setLoading] = useState(false)
 	const [user, setUser] = useState('')
 	const [name, setName] = useState('')
 	const [key, setKey] = useState('')
 	const [me] = useAuth()
 	const inputRef = useRef<HTMLInputElement>(null)
+
+	const [organizationEditData, setOrganizationEditData] = useState<{
+		name: string
+		owner: string
+		types: string[]
+		public: boolean
+	}>({
+		name: organization.name,
+		owner: organization.owner.login,
+		types: organization.types,
+		public: organization.public
+	})
 
 	const { toast, toastError } = useToast()
 
@@ -73,17 +90,18 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 				})
 
 				apiPostUserOrganizationIcon(organization.id, e.target.files?.[0]!)
-					.then((url) => {
+					.then((icon) => {
 						t.update(toast({
 							title: 'Organization Icon Updated',
 							description: `The icon for ${organization.name} has been updated.`
 						}))
 
-						updateIcon(url)
+						updateOrg({ icon })
 					})
 					.catch((error) => {
 						t.update(toastError({
 							title: 'Failed to Update Organization Icon',
+							variant: 'destructive',
 							error
 						}))
 					})
@@ -98,6 +116,75 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 				</DialogContent>
 			</Dialog>
 
+			<Dialog open={view === 'settings'} onOpenChange={(open) => !open && setView(undefined)}>
+				<DialogContent className={'md:min-w-[40rem]'}>
+					<DialogTitle>
+						Settings
+					</DialogTitle>
+
+					<div className={'w-full grid grid-cols-1 md:grid-cols-2 gap-2'}>
+						<span className={'flex flex-col'}>
+							<Label htmlFor={`${organization.id}.name`}>Organization Name</Label>
+							<Input id={`${organization.id}.name`} disabled={loading} className={'mt-2'} placeholder={'Organization Name'} value={organizationEditData.name} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, name: e.target.value })} />
+						</span>
+						<span className={'flex flex-col'}>
+							<Label htmlFor={`${organization.id}.owner`}>Organization Owner</Label>
+							<Input id={`${organization.id}.owner`} disabled={loading} className={'mt-2'} placeholder={'Organization Owner (@user}'} value={organizationEditData.owner} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, owner: e.target.value })} />
+						</span>
+						<span className={'flex flex-col col-span-full'}>
+							<Label htmlFor={`${organization.id}.types`}>Organization Types</Label>
+							<Input id={`${organization.id}.types`} disabled={loading} className={'mt-2'} placeholder={'Organization Types'} value={organizationEditData.types.join(', ')} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, types: e.target.value.toUpperCase().split(',').map((t) => t.trim()).filter((t, i, arr) => i !== arr.length - 1 ? types.includes(t) : true) })} />
+						</span>
+						<span className={'flex flex-col'}>
+							<Label htmlFor={`${organization.id}.public`}>Public Organization</Label>
+							<div className={'mt-2 w-full h-full flex flex-row items-center'}>
+								<Switch id={`${organization.id}.public`} disabled={loading || !organization.verified} checked={organizationEditData.public} onCheckedChange={(checked) => setOrganizationEditData({ ...organizationEditData, public: checked })} />
+							</div>
+						</span>
+						<Button className={'h-full'} disabled={loading} onClick={() => {
+							setLoading(true)
+
+							apiPatchUserOrganization(organization.id, {
+								name: organizationEditData.name === organization.name ? undefined : organizationEditData.name,
+								owner: organizationEditData.owner.replace('@', '') === organization.owner.login ? undefined : organizationEditData.owner.replace('@', ''),
+								types: organizationEditData.types.filter(Boolean).join(',') === organization.types.join(',') ? undefined : organizationEditData.types.filter(Boolean),
+								public: organizationEditData.public === organization.public ? undefined : organizationEditData.public
+							})
+								.then(() => {
+									toast({
+										title: 'Organization Updated',
+										description: 'Organization settings have been updated.'
+									})
+
+									if (organizationEditData.owner !== organization.owner.login) {
+										setCurrentOrganization(null)
+										mutate()
+
+										return
+									}
+
+									updateOrg({
+										name: organizationEditData.name,
+										types: organizationEditData.types.filter(Boolean),
+										public: organizationEditData.public
+									})
+
+									setView(undefined)
+								})
+								.catch((error) => {
+									toastError({
+										title: 'Failed to Update Organization',
+										error
+									})
+								})
+								.finally(() => setLoading(false))
+						}}>
+							Save
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			<Card className={'mt-2 p-3 pr-4'}>
 				<Collapsible open={currentOrganization?.id === organization.id} className={'group/collapsible-build'} onOpenChange={(open) => setCurrentOrganization(open ? organization : null)}>
 					<div className={'flex flex-row items-center justify-between'}>
@@ -109,7 +196,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								</h1>
 								<p className={'text-sm text-gray-500 flex flex-col md:flex-row md:items-center items-start'}>
 									{new Date(organization.created).toLocaleDateString()}
-									<UserTooltip user={organization.owner} className={'md:ml-2'}>
+									<UserTooltip user={organization.owner} className={'md:ml-1'}>
 										<span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
 									</UserTooltip>
 								</p>
@@ -118,6 +205,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 
 						{!isPending ? (
 							<div className={'flex flex-row items-center'}>
+								<Button variant={'outline'} size={'icon'} className={'mr-2'} onClick={() => setView('settings')}>
+									<SettingsIcon className={'w-6 h-6'} />
+								</Button>
+
 								<CollapsibleTrigger>
 									<Button>
 										View
@@ -175,6 +266,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										.catch((error) => {
 											t.update(toastError({
 												title: 'Failed to Decline Organization Invite',
+												variant: 'destructive',
 												error
 											}))
 										})
@@ -305,6 +397,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 									.catch((error) => {
 										t.update(toastError({
 											title: 'Failed to Add Subuser',
+											variant: 'destructive',
 											error
 										}))
 									})
@@ -343,7 +436,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 											</div>
 										</div>
 
-										<div className={clsx('flex flex-row items-center', me?.id !== organization.owner.id && 'hidden')}>
+										<div className={clsx('flex flex-row items-center', (me?.id !== organization.owner.id && me?.id !== subuser.user.id) && 'hidden')}>
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 
@@ -360,7 +453,9 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 														}))
 
 														if (subuser.user.id === me?.id) {
-															window.location.reload()
+															setCurrentOrganization(null)
+															mutate()
+
 															return
 														}
 
@@ -369,6 +464,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 													.catch((error) => {
 														t.update(toastError({
 															title: 'Failed to Delete Subuser',
+															variant: 'destructive',
 															error
 														}))
 													})
@@ -420,6 +516,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 									.catch((error) => {
 										t.update(toastError({
 											title: 'Failed to Add API Key',
+											variant: 'destructive',
 											error
 										}))
 									})
@@ -476,6 +573,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 													.catch((error) => {
 														t.update(toastError({
 															title: 'Failed to Delete API Key',
+															variant: 'destructive',
 															error
 														}))
 													})
@@ -508,30 +606,38 @@ export default function PageOrganizations() {
 		{ revalidateOnFocus: false, revalidateIfStale: false }
 	)
 
+	const { data: rawTypes } = useSWR(
+		['types'],
+		() => apiGetTypes(),
+		{ revalidateOnFocus: false, revalidateIfStale: false }
+	)
+
 	if (!organizations) return (
 		<div className={'w-full mt-8 flex flex-row items-center justify-center'}>
 			<LoaderCircle className={'animate-spin'} />
 		</div>
 	)
 
-	const updateIcon = (organization: number) => {
-		return (url: string) => {
+	const updateOrg = (organization: number) => {
+		return (data: Partial<Organization>) => {
 			mutate((organizations) => {
 				if (!organizations) return
 
 				const org = organizations.owned.find((o) => o.id === organization) ?? organizations.member.find((o) => o.id === organization)
-				if (org) org.icon = url
+				if (org) Object.assign(org, data)
 
 				return { ...organizations }
-			})
+			}, false)
 		}
 	}
+
+	const types = Object.values(rawTypes ?? {}).flat().map((t) => t.identifier)
 
 	return (
 		<div className={'w-full pb-2 flex flex-col'}>
 			<h1 className={'text-2xl font-semibold'}>Owned Organizations</h1>
 			{organizations?.owned.map((organization) => (
-				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} types={types} mutate={mutate} updateOrg={updateOrg(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.owned.length && (
 				<p className={'text-gray-400 text-sm'}>You do not own any organizations.</p>
@@ -539,7 +645,7 @@ export default function PageOrganizations() {
 
 			<h1 className={'text-2xl font-semibold mt-4'}>Member Organizations</h1>
 			{organizations?.member.map((organization) => (
-				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
+				<OrganizationRow key={organization.id} types={types} mutate={mutate} updateOrg={updateOrg(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
 			{!organizations?.member.length && (
 				<p className={'text-gray-400 text-sm'}>You are not a member of any organizations.</p>
@@ -547,7 +653,7 @@ export default function PageOrganizations() {
 
 			<h1 className={'text-2xl font-semibold mt-4'}>Organization Invites</h1>
 			{organizations?.invites.map((organization) => (
-				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} isPending />
+				<OrganizationRow key={organization.id} types={types} mutate={mutate} updateOrg={updateOrg(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} isPending />
 			))}
 			{!organizations?.invites.length && (
 				<p className={'text-gray-400 text-sm'}>You do not have any organization invites.</p>
