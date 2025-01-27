@@ -5,6 +5,7 @@ export type User = {
 	id: number
 	name: string | null
 	email: string
+	admin: boolean
 	login: string
 	avatar: string
 }

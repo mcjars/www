@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge"
 import apiPostUserIniteAccept from "@/api/user/invite/accept"
 import apiPostUserIniteDecline from "@/api/user/invite/decline"
 import UserTooltip from "@/components/user-tooltip"
+import clsx from "clsx"
 
 type OrganizationRowProps = {
 	organization: Organization
@@ -342,7 +343,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 											</div>
 										</div>
 
-										<div className={'flex flex-row items-center'}>
+										<div className={clsx('flex flex-row items-center', me?.id !== organization.owner.id && 'hidden')}>
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 

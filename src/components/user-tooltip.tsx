@@ -1,6 +1,6 @@
 import { User } from "@/api/user/infos"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { ExternalLinkIcon } from "lucide-react"
+import { ExternalLinkIcon, ShieldPlusIcon } from "lucide-react"
 
 export default function UserTooltip({ user, children, className }: { user: User, children?: React.ReactNode, className?: string }) {
 	return (
@@ -12,7 +12,10 @@ export default function UserTooltip({ user, children, className }: { user: User,
 						{user.name ?? user.login}
 						<ExternalLinkIcon size={16} className={'ml-1.5'} />
 					</a>
-					<p className={'text-sm text-gray-500'}>{user.email}</p>
+					<p className={'text-sm text-gray-500 flex flex-row items-center'}>
+						{user.admin && <ShieldPlusIcon size={16} className={'mr-1.5'} />}
+						{user.email}
+					</p>
 				</div>
 			</TooltipContent>
 			<TooltipTrigger className={className}>
