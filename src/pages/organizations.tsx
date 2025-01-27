@@ -529,7 +529,7 @@ export default function PageOrganizations() {
 	}
 
 	return (
-		<>
+		<div className={'w-full pb-2 flex flex-col'}>
 			<h1 className={'text-2xl font-semibold'}>Owned Organizations</h1>
 			{organizations?.owned.map((organization) => (
 				<OrganizationRow key={organization.id} mutate={mutate} updateIcon={updateIcon(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
@@ -553,6 +553,6 @@ export default function PageOrganizations() {
 			{!organizations?.invites.length && (
 				<p className={'text-gray-400 text-sm'}>You do not have any organization invites.</p>
 			)}
-		</>
+		</div>
 	)
 }

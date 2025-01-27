@@ -113,7 +113,7 @@ export default function PageTypeRequestStatistics() {
 
 	return (
 		<>
-			<div className={'grid xl:grid-cols-2 grid-cols-1 gap-2 mb-2'}>
+			<div className={'grid xl:grid-cols-2 grid-cols-1 gap-2 pb-2'}>
 				<Card className={'p-4 flex-1 min-w-40 flex flex-row items-center justify-between'}>
 					<ArchiveIcon className={'w-8 h-8'} />
 
