@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon } from "lucide-react"
+import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, TrashIcon, UsersIcon, WebhookIcon, XIcon } from "lucide-react"
 import React, { useRef, useState } from "react"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
@@ -106,10 +106,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 									{organization.name}
 								</h1>
-								<p className={'text-sm text-gray-500 flex flex-row'}>
+								<p className={'text-sm text-gray-500 flex flex-col md:flex-row'}>
 									{new Date(organization.created).toLocaleDateString()}
-									<UserTooltip user={organization.owner}>
-										, <span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
+									<UserTooltip user={organization.owner} className={'md:ml-2'}>
+										<span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
 									</UserTooltip>
 								</p>
 							</div>
@@ -179,7 +179,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										})
 										.finally(() => setLoading(false))
 								}}>
-									<TrashIcon className={'w-6 h-6 mr-2'} />
+									<XIcon className={'w-6 h-6 mr-2'} />
 									Decline
 								</Button>
 							</div>
@@ -376,7 +376,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 													.finally(() => setLoading(false))
 											}}>
 												<TrashIcon className={'w-6 h-6 mr-2'} />
-												Delete
+												<span className={'hidden md:inline'}>Delete</span>
 											</Button>
 										</div>
 									</div>
