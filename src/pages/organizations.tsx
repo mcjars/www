@@ -341,7 +341,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 										</div>
 
 										<div className={'flex flex-row items-center'}>
-											<p className={'text-sm text-gray-500 mr-2'}>
+											<p className={'text-sm text-gray-500 mr-2 hidden md:inline'}>
 												{new Date(subuser.created).toLocaleDateString()}
 											</p>
 
@@ -375,7 +375,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 													})
 													.finally(() => setLoading(false))
 											}}>
-												<TrashIcon className={'w-6 h-6 mr-2'} />
+												<TrashIcon className={'w-6 h-6 md:mr-2'} />
 												<span className={'hidden md:inline'}>Delete</span>
 											</Button>
 										</div>
