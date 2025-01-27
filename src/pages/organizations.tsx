@@ -129,7 +129,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 						</span>
 						<span className={'flex flex-col'}>
 							<Label htmlFor={`${organization.id}.owner`}>Organization Owner</Label>
-							<Input id={`${organization.id}.owner`} disabled={loading} className={'mt-2'} placeholder={'Organization Owner (@user}'} value={organizationEditData.owner} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, owner: e.target.value })} />
+							<Input id={`${organization.id}.owner`} disabled={loading || me?.id !== organization.owner.id} className={'mt-2'} placeholder={'Organization Owner (@user}'} value={organizationEditData.owner} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, owner: e.target.value })} />
 						</span>
 						<span className={'flex flex-col col-span-full'}>
 							<Label htmlFor={`${organization.id}.types`}>Organization Types</Label>
