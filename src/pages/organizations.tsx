@@ -106,7 +106,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 									{organization.name}
 								</h1>
-								<p className={'text-sm text-gray-500 flex flex-col md:flex-row'}>
+								<p className={'text-sm text-gray-500 flex flex-col md:flex-row md:items-center items-start'}>
 									{new Date(organization.created).toLocaleDateString()}
 									<UserTooltip user={organization.owner} className={'md:ml-2'}>
 										<span className={'text-blue-400 cursor-pointer'}>@{organization.owner.login}</span>
