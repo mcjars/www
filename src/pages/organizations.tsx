@@ -329,22 +329,20 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 									<div className={'flex flex-row items-center justify-between'}>
 										<div className={'flex flex-row items-center text-left'}>
 											<img src={subuser.user.avatar ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg'} />
-											<UserTooltip user={subuser.user} className={'flex flex-col ml-2'}>
-												<h1 className={'text-xl font-semibold flex flex-row items-center'}>
-													{subuser.user.name}
+											<div className={'flex flex-col ml-2'}>
+												<h1 className={'flex flex-row items-center'}>
+													<UserTooltip user={subuser.user}>
+														<span className={'text-blue-400 cursor-pointer text-xl font-semibold'}>@{subuser.user.login}</span>
+													</UserTooltip>
 													{subuser.pending && <Badge className={'ml-2'} variant={'destructive'}>Pending</Badge>}
 												</h1>
 												<p className={'text-sm text-gray-500'}>
-													@{subuser.user.login}
+													{new Date(subuser.created).toLocaleDateString()}
 												</p>
-											</UserTooltip>
+											</div>
 										</div>
 
 										<div className={'flex flex-row items-center'}>
-											<p className={'text-sm text-gray-500 mr-2 hidden md:inline'}>
-												{new Date(subuser.created).toLocaleDateString()}
-											</p>
-
 											<Button variant={'destructive'} disabled={loading} onClick={() => {
 												setLoading(true)
 
