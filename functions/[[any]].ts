@@ -80,7 +80,7 @@ export const onRequest: PagesFunction = async(context) => {
 			})
 		}
 
-		const data = types[type.toUpperCase()]
+		const data = types[type.toUpperCase().replaceAll(' ', '_')]
 
 		if (data) switch (page) {
 			case "versions":

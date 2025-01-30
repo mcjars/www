@@ -137,7 +137,7 @@ export function AppSidebar() {
                           {types.map((type) => (
                             <SidebarMenuItem key={type.identifier}>
                               <Collapsible defaultOpen={location.pathname.includes('/'.concat(type.identifier)) || type.identifier === 'VANILLA'} className={'group/collapsible-type'}>
-                                <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/${type.name.toUpperCase()}`)}>
+                                <SidebarMenuButton asChild isActive={location.pathname.startsWith(`/${type.identifier}`)}>
                                   <CollapsibleTrigger className={'flex flex-row items-center'}>
                                     <img src={type.icon} alt={type.name} className={'h-6 w-6 rounded-md'} />
                                     {type.name}
@@ -173,11 +173,11 @@ export function AppSidebar() {
                                 <CollapsibleContent>
                                   <SidebarMenuSub>
                                     <SidebarMenuSubItem>
-                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/versions`}>
-                                        <Link to={`/${type.name.toUpperCase()}/versions`}>Versions</Link>
+                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.identifier}/versions`}>
+                                        <Link to={`/${type.identifier}/versions`}>Versions</Link>
                                       </SidebarMenuSubButton>
-                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.name.toUpperCase()}/statistics`}>
-                                        <Link to={`/${type.name.toUpperCase()}/statistics`}>Statistics</Link>
+                                      <SidebarMenuSubButton asChild isActive={location.pathname === `/${type.identifier}/statistics`}>
+                                        <Link to={`/${type.identifier}/statistics`}>Statistics</Link>
                                       </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                   </SidebarMenuSub>
