@@ -114,7 +114,7 @@ export default function PageIndex() {
 				</AlertDescription>
 			</Alert>
 
-			<div className={'grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] w-full'}>
+			<div className={'grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] w-full pb-2'}>
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<BrainIcon className={'w-8 h-8'} />
 
