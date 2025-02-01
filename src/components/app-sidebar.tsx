@@ -120,9 +120,13 @@ export function AppSidebar() {
             <Collapsible defaultOpen className={'group/collapsible-types'}>
               <SidebarGroup>
                 <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger>
+                  <CollapsibleTrigger className={'flex flex-row items-center justify-between'}>
                     {category[0].toUpperCase().concat(category.slice(1))}
-                    <ChevronDown className={'ml-auto transition-transform group-data-[state=open]/collapsible-types:rotate-180'} />
+
+                    <span className={'flex flex-row items-center'}>
+                      ({types.reduce((acc, type) => acc + type.builds, 0)})
+                      <ChevronDown size={16} className={'ml-1 transition-transform group-data-[state=open]/collapsible-types:rotate-180'} />
+                    </span>
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
