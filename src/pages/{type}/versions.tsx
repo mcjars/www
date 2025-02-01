@@ -206,7 +206,7 @@ export default function PageTypeVersions() {
 										<Collapsible defaultOpen={i === 0} className={'group/collapsible-build'}>
 											<div className={'flex flex-row items-center justify-between'}>
 												<div className={'flex flex-row items-center'}>
-													<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} alt={'Logo'} className={'h-12 w-12'} />
+													<img src={`https://s3.mcjars.app/icons/${type.toLowerCase()}.png`} alt={'Logo'} className={'h-12 w-12 rounded-md'} />
 													<div className={'flex flex-col ml-2'}>
 														<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
 															{build.name}
