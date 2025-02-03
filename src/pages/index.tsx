@@ -114,7 +114,7 @@ export default function PageIndex() {
 				</AlertDescription>
 			</Alert>
 
-			<div className={'grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] w-full pb-2'}>
+			<div className={'grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(30rem,1fr))] w-full'}>
 				<Card className={'p-4 min-w-40 flex flex-row items-center justify-between'}>
 					<BrainIcon className={'w-8 h-8'} />
 
@@ -176,7 +176,7 @@ export default function PageIndex() {
 					</div>
 				</Card>
 			</div>
-			<div className={'my-2 grid xl:grid-cols-2 grid-cols-1 gap-2 w-full'}>
+			<div className={'my-2 grid xl:grid-cols-2 grid-cols-1 gap-2 w-full pb-2'}>
 				<Card className={'p-4 h-[500px]'}>
 					<div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
 						<h1 className={'text-xl font-semibold ml-2'}>All Time Lookup Statistics for Types</h1>
