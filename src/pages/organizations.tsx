@@ -668,12 +668,6 @@ export default function PageOrganizations() {
 		{ revalidateOnFocus: false, revalidateIfStale: false }
 	)
 
-	if (!organizations) return (
-		<div className={'w-full mt-8 flex flex-row items-center justify-center'}>
-			<LoaderCircle className={'animate-spin'} />
-		</div>
-	)
-
 	const updateOrg = (organization: number) => {
 		return (data: Partial<Organization>) => {
 			mutate((organizations) => {
@@ -689,6 +683,12 @@ export default function PageOrganizations() {
 
 	const types = Object.values(rawTypes ?? {}).flat().map((t) => t.identifier)
 	const { toast, toastError } = useToast()
+
+	if (!organizations) return (
+		<div className={'w-full mt-8 flex flex-row items-center justify-center'}>
+			<LoaderCircle className={'animate-spin'} />
+		</div>
+	)
 
 	return (
 		<div className={'w-full pb-2 flex flex-col'}>
