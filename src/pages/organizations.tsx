@@ -18,7 +18,6 @@ import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiK
 import apiAddUserOrganizationApiKey from "@/api/user/organization/api-keys/addApiKey"
 import apiDeleteUserOrganizationApiKey from "@/api/user/organization/api-keys/deleteApiKey"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
 import apiPostUserOrganizationIcon from "@/api/user/organization/icon"
 import { Badge } from "@/components/ui/badge"
 import apiPostUserIniteAccept from "@/api/user/invite/accept"
@@ -28,7 +27,9 @@ import clsx from "clsx"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import apiGetTypes from "@/api/types"
-import apiPatchUserOrganization from "@/api/user/organization"
+import apiPatchUserOrganization from "@/api/user/organization/patch"
+import apiDeleteUserOrganization from "@/api/user/organization/delete"
+import apiCreateUserOrganization from "@/api/user/organization/create"
 
 type OrganizationRowProps = {
 	organization: Organization
@@ -41,8 +42,9 @@ type OrganizationRowProps = {
 }
 
 function OrganizationRow({ organization, currentOrganization, setCurrentOrganization, updateOrg, isPending, mutate, types }: OrganizationRowProps) {
-	const [view, setView] = useState<'subusers' | 'api-keys' | 'settings'>()
+	const [view, setView] = useState<'subusers' | 'api-keys' | 'settings' | 'delete'>()
 	const [loading, setLoading] = useState(false)
+	const [confirmName, setConfirmName] = useState('')
 	const [user, setUser] = useState('')
 	const [name, setName] = useState('')
 	const [key, setKey] = useState('')
@@ -144,6 +146,11 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 						<Button className={'h-full'} disabled={loading} onClick={() => {
 							setLoading(true)
 
+							const t = toast({
+								title: 'Updating Organization...',
+								description: `Updating settings for ${organization.name}.`
+							})
+
 							apiPatchUserOrganization(organization.id, {
 								name: organizationEditData.name === organization.name ? undefined : organizationEditData.name,
 								owner: organizationEditData.owner.replace('@', '') === organization.owner.login ? undefined : organizationEditData.owner.replace('@', ''),
@@ -151,10 +158,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 								public: organizationEditData.public === organization.public ? undefined : organizationEditData.public
 							})
 								.then(() => {
-									toast({
+									t.update(toast({
 										title: 'Organization Updated',
 										description: 'Organization settings have been updated.'
-									})
+									}))
 
 									if (organizationEditData.owner !== organization.owner.login) {
 										setCurrentOrganization(null)
@@ -172,10 +179,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 									setView(undefined)
 								})
 								.catch((error) => {
-									toastError({
+									t.update(toastError({
 										title: 'Failed to Update Organization',
 										error
-									})
+									}))
 								})
 								.finally(() => setLoading(false))
 						}}>
@@ -185,14 +192,57 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 				</DialogContent>
 			</Dialog>
 
+			<Dialog open={view === 'delete'} onOpenChange={(open) => !open && setView(undefined)}>
+				<DialogContent className={'md:min-w-[40rem]'}>
+					<DialogTitle>
+						Delete Organization
+					</DialogTitle>
+
+					<p className={'text-sm text-gray-500'}>
+						Are you sure you want to delete <b>{organization.name}</b>? This action is irreversible and will delete all data associated with this organization.
+					</p>
+
+					<form className={'grid grid-cols-3 gap-2 mt-4'} onSubmit={(e) => {
+						e.preventDefault()
+
+						setLoading(true)
+
+						apiDeleteUserOrganization(organization.id)
+							.then(() => {
+								toast({
+									title: 'Organization Deleted',
+									description: `${organization.name} has been deleted.`
+								})
+
+								setCurrentOrganization(null)
+								mutate()
+							})
+							.catch((error) => {
+								toastError({
+									title: 'Failed to Delete Organization',
+									error
+								})
+							})
+							.finally(() => setLoading(false))
+					}}>
+						<Input className={'col-span-2'} placeholder={'Organization Name'} disabled={loading} value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
+
+						<Button type={'submit'} variant={'destructive'} disabled={loading || confirmName !== organization.name}>
+							Delete
+						</Button>
+					</form>
+				</DialogContent>
+			</Dialog>
+
 			<Card className={'mt-2 p-3 pr-4'}>
 				<Collapsible open={currentOrganization?.id === organization.id} className={'group/collapsible-build'} onOpenChange={(open) => setCurrentOrganization(open ? organization : null)}>
 					<div className={'flex flex-row items-center justify-between'}>
 						<div className={'flex flex-row items-center'}>
-							<img src={organization.icon ?? ''} alt={'Logo'} className={cn('h-12 w-12 rounded-lg', currentOrganization?.id === organization.id && 'hover:opacity-85 cursor-pointer')} onClick={() => currentOrganization?.id === organization.id && inputRef.current?.click()} />
+							<img src={organization.icon ?? ''} alt={'Logo'} className={'h-12 w-12 rounded-lg hover:opacity-85 cursor-pointer'} onClick={() => inputRef.current?.click()} />
 							<div className={'flex flex-col ml-2'}>
-								<h1 className={'text-xl font-semibold flex md:flex-row flex-col md:items-center items-start'}>
+								<h1 className={'text-xl font-semibold flex flex-row items-center'}>
 									{organization.name}
+									{organization.verified && <CheckIcon size={12} className={'ml-1.5'} />}
 								</h1>
 								<p className={'text-sm text-gray-500 flex flex-col md:flex-row md:items-center items-start'}>
 									{new Date(organization.created).toLocaleDateString()}
@@ -207,6 +257,10 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							<div className={'flex flex-row items-center'}>
 								<Button variant={'outline'} size={'icon'} className={'mr-2'} onClick={() => setView('settings')}>
 									<SettingsIcon className={'w-6 h-6'} />
+								</Button>
+
+								<Button variant={'destructive'} size={'icon'} className={'mr-2'} onClick={() => setView('delete')} disabled={organization.verified || organization.owner.id !== me?.id}>
+									<TrashIcon className={'w-6 h-6'} />
 								</Button>
 
 								<CollapsibleTrigger>
@@ -599,6 +653,8 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 
 export default function PageOrganizations() {
 	const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
+	const [name, setName] = useState('')
+	const [loading, setLoading] = useState(false)
 
 	const { data: organizations, mutate } = useSWR(
 		['organizations'],
@@ -632,10 +688,49 @@ export default function PageOrganizations() {
 	}
 
 	const types = Object.values(rawTypes ?? {}).flat().map((t) => t.identifier)
+	const { toast, toastError } = useToast()
 
 	return (
 		<div className={'w-full pb-2 flex flex-col'}>
-			<h1 className={'text-2xl font-semibold'}>Owned Organizations</h1>
+			<h1 className={'text-2xl font-semibold flex flex-row justify-between'}>
+				<span className={'w-96'}>Owned Organizations</span>
+
+				<form className={'flex flex-row'} onSubmit={(e) => {
+					e.preventDefault()
+
+					setLoading(true)
+
+					const t = toast({
+						title: 'Creating Organization...',
+						description: `Creating ${name}.`
+					})
+
+					apiCreateUserOrganization({ name })
+						.then(() => {
+							t.update(toast({
+								title: 'Organization Created',
+								description: `${name} has been created.`
+							}))
+
+							mutate()
+							setName('')
+						})
+						.catch((error) => {
+							t.update(toastError({
+								title: 'Failed to Create Organization',
+								error
+							}))
+						})
+						.finally(() => setLoading(false))
+				}}>
+					<Input placeholder={'Name'} value={name} onChange={(e) => setName(e.target.value)} disabled={loading} />
+
+					<Button type={'submit'} disabled={loading || !name} className={'ml-2'}>
+						<PlusIcon className={'w-6 h-6 md:mr-2'} />
+						<span className={'hidden md:inline'}>Create Organization</span>
+					</Button>
+				</form>
+			</h1>
 			{organizations?.owned.map((organization) => (
 				<OrganizationRow key={organization.id} types={types} mutate={mutate} updateOrg={updateOrg(organization.id)} organization={organization} currentOrganization={currentOrganization} setCurrentOrganization={setCurrentOrganization} />
 			))}
