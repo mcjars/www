@@ -110,6 +110,14 @@ export function AppSidebar() {
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <a href={'https://github.com/mcjars/mcvcli'} target={'_blank'} rel={'noreferrer'}>
+                          <CodeIcon className={'mr-2'} />
+                          CLI Application
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </CollapsibleContent>
