@@ -7,7 +7,25 @@ function insertMetadata(data: Record<string, string>) {
 		meta += `<meta name="${key}" content="${data[key]}">`
 	}
 
-	return Html.replace('<!-- META -->', meta)
+	return Html.replace('<!-- META -->', meta + generateStructuredData(data))
+}
+
+function generateStructuredData(data: Record<string, string>) {
+  const structuredData = {
+    "@context": 'https://schema.org',
+    "@type": 'SoftwareApplication',
+    "name": data['og:title'] || 'MCJars',
+    "description": data['description'],
+    "operatingSystem": 'Cross-platform',
+    "applicationCategory": 'GameApplication',
+    "offers": {
+      "@type": 'Offer',
+      "price": '0',
+      "priceCurrency": 'USD'
+    }
+  }
+  
+  return `<script type="application/ld+json">${JSON.stringify(structuredData)}</script>`
 }
 
 export const onRequest: PagesFunction = async(context) => {
