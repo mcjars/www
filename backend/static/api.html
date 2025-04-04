@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<script defer data-domain="versions.mcjars.app" src="https://cat.rjns.dev/js/script.js"></script>
+		<link rel="icon" type="image/png" href="https://s3.mcjars.app/icons/vanilla.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="darkreader-lock" />
+		<title>MCJars API Docs</title>
+		<meta property="og:type" content="website">
+		<meta property="og:title" content="MCJars">
+		<meta property="og:url" content="https://versions.mcjars.app">
+		<meta property="og:image" content="${env.S3_URL}/icons/vanilla.png">
+		<meta property="og:description" content="MCJars is a Minecraft Server Jar Website which allows you to download versions or reverse lookup for your favourite projects easily.">
+		<meta name="description" content="MCJars is a Minecraft Server Jar Website which allows you to download versions or reverse lookup for your favourite projects easily.">
+	</head>
+	<body>
+		<script id="api-reference" data-url="/openapi.json"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+		<script>
+			const query = new URLSearchParams(window.location.search)
+
+			if (query.has('warn')) {
+				alert('IMPORTANT NOTICE:\n\nIf you want to use the api for automated tasks such as collecting data, please either contact me@rjns.dev or add ?tracking=none at the end of your urls. This is to prevent unnecessary tracking of automated tasks.')
+
+				query.delete('warn')
+				window.history.replaceState({}, document.title, `${window.location.pathname}${query.toString() ? '?' : ''}${query.toString()}${window.location.hash}`)
+			}
+		</script>
+	</body>
+</html>

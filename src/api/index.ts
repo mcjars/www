@@ -1,1 +1,0 @@
-export const BASE_URL = localStorage.getItem('api_url') ?? 'https://versions.mcjars.app'

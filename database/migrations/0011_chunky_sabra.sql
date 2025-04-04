@@ -1,0 +1,1 @@
+ALTER TABLE "organization_keys" ADD COLUMN "created" timestamp DEFAULT now() NOT NULL;

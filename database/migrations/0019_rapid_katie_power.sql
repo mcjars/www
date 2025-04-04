@@ -1,0 +1,1 @@
+ALTER TABLE "configs" ADD CONSTRAINT "configs_location_unique" UNIQUE("location");

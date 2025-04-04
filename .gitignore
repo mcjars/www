@@ -1,5 +1,2 @@
-node_modules
-/lib
-/lib-ssr
-.DS_Store
-.wrangler
+.env
+/target
