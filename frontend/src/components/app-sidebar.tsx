@@ -104,7 +104,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild>
-                        <a href={'https://versions.mcjars.app?warn'} target={'_blank'} rel={'noreferrer'}>
+                        <a href={'/api?warn'} target={'_blank'} rel={'noreferrer'}>
                           <CodeIcon className={'mr-2'} />
                           API Documentation
                         </a>
