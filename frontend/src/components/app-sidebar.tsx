@@ -55,6 +55,7 @@ export function AppSidebar() {
 
             <div className={'flex flex-col ml-2'}>
               <h1 className={'text-xl font-semibold'}>MCJars</h1>
+              <p className={'text-sm text-muted-foreground'}>{(window as any).mcjars_version}</p>
             </div>
           </Link>
         </SidebarHeader>

@@ -37,7 +37,7 @@ const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
 const BLACKLISTED_HEADERS: [&str; 3] = ["content-encoding", "transfer-encoding", "connection"];
 const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
-fn render_index(meta: &HashMap<&str, String>) -> (StatusCode, HeaderMap, String) {
+fn render_index(meta: &HashMap<&str, String>, state: GetState) -> (StatusCode, HeaderMap, String) {
     let index = FRONTEND_ASSETS
         .get_file("index.html")
         .unwrap()
@@ -56,7 +56,9 @@ fn render_index(meta: &HashMap<&str, String>) -> (StatusCode, HeaderMap, String)
     (
         StatusCode::OK,
         headers,
-        index.replace("<!-- META -->", &metadata),
+        index
+            .replace("<!-- META -->", &metadata)
+            .replace("{{VERSION}}", &state.version),
     )
 }
 
@@ -323,7 +325,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta)
+                render_index(&meta, state)
             }))
             .route("/lookup", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -334,7 +336,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta)
+                render_index(&meta, state)
             }))
             .route("/job-status", get(|state: GetState| async move {
                 let meta = HashMap::from([
@@ -345,7 +347,7 @@ async fn main() {
                     ("og:url", "https://mcjars.app/job-status".to_string()),
                 ]);
 
-                render_index(&meta)
+                render_index(&meta, state)
             }))
             .route("/{type}/versions", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let types = ServerType::all(&state.database, &state.cache).await;
@@ -369,7 +371,7 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
                 ]);
 
-                render_index(&meta)
+                render_index(&meta, state)
             }))
             .route("/{type}/statistics", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let data = r#type.infos();
@@ -382,7 +384,7 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
                 ]);
 
-                render_index(&meta)
+                render_index(&meta, state)
             }))
             .route("/sitemap.xml", get(|| async move {
                 let mut headers = HeaderMap::new();
