@@ -272,27 +272,27 @@ mod post {
                         data.push(serde_json::to_value(primary).unwrap());
                     }
                     if let Some(sha1) = &hash.sha1 {
-                        where_clause.push(format!("build_hashes.sha1 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.sha1 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(sha1).unwrap());
                     }
                     if let Some(sha224) = &hash.sha224 {
-                        where_clause.push(format!("build_hashes.sha224 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.sha224 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(sha224).unwrap());
                     }
                     if let Some(sha256) = &hash.sha256 {
-                        where_clause.push(format!("build_hashes.sha256 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.sha256 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(sha256).unwrap());
                     }
                     if let Some(sha384) = &hash.sha384 {
-                        where_clause.push(format!("build_hashes.sha384 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.sha384 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(sha384).unwrap());
                     }
                     if let Some(sha512) = &hash.sha512 {
-                        where_clause.push(format!("build_hashes.sha512 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.sha512 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(sha512).unwrap());
                     }
                     if let Some(md5) = &hash.md5 {
-                        where_clause.push(format!("build_hashes.md5 = $1->>{}", data.len()));
+                        where_clause.push(format!("build_hashes.md5 = decode($1->>{}, 'hex')", data.len()));
                         data.push(serde_json::to_value(md5).unwrap());
                     }
                 }
