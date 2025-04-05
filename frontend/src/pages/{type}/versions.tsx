@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
-import { ChevronDown, DownloadIcon, ExternalLinkIcon, ListIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronDown, DownloadIcon, ExternalLinkIcon, ListIcon, RefreshCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useParams } from "react-router-dom"
 import useSWR from "swr"
 import { StringParam, useQueryParam } from "use-query-params"
+import { useLocalStorage } from "usehooks-ts"
 
 export default function PageTypeVersions() {
 	const { type } = useParams<{ type: string }>()
@@ -29,6 +30,7 @@ export default function PageTypeVersions() {
 	const [ search, setSearch ] = useQueryParam('search', StringParam)
 	const [ browse, setBrowse ] = useQueryParam('browse', StringParam)
 	const [ displayMode, setDisplayMode ] = useQueryParam('display', StringParam)
+	const [ installScript, setInstallScript ] = useLocalStorage<'bash' | 'mcvcli'>('install-script', 'bash')
 
 	const { data: types } = useSWR(
 		['types'],
@@ -248,41 +250,56 @@ export default function PageTypeVersions() {
 												</div>
 											</div>
 
-											<CollapsibleContent className={'mt-2'}>
-												{build.installation.flat().map((step, i) => (
-													<div key={i} className={'flex flex-row items-center mt-2'}>
-														{step.type[0].toUpperCase() + step.type.slice(1)}
+											<CollapsibleContent className={'mt-2 flex flex-row items-end justify-between'}>
+												<div className={'flex flex-col'}>
+													{build.installation.flat().map((step, i) => (
+														<div key={i} className={'flex flex-row items-center mt-2'}>
+															{step.type[0].toUpperCase() + step.type.slice(1)}
 
-														<div className={'mx-1'} />
+															<div className={'mx-1'} />
 
-														{step.type === 'download' && (
-															<a href={step.url} download>
-																<Button className={'w-fit'} variant={'outline'}>
-																	<DownloadIcon size={16} className={'mr-2'} />
-																	{step.file}
-																</Button>
-															</a>
-														)}
-														{step.type === 'remove' && (
-															<code className={'border rounded-md p-1 px-3 w-fit'}>
-																{step.location}
-															</code>
-														)}
-														{step.type === 'unzip' && (
-															<div className={'flex flex-row items-center'}>
-																<code className={'border rounded-md p-1 px-3 w-fit'}>
-																	{step.file}
-																</code>
-
-																<p className={'mx-2'}>to</p>
-
+															{step.type === 'download' && (
+																<a href={step.url} download>
+																	<Button className={'w-fit'} variant={'outline'}>
+																		<DownloadIcon size={16} className={'mr-2'} />
+																		{step.file}
+																	</Button>
+																</a>
+															)}
+															{step.type === 'remove' && (
 																<code className={'border rounded-md p-1 px-3 w-fit'}>
 																	{step.location}
 																</code>
-															</div>
-														)}
-													</div>
-												))}
+															)}
+															{step.type === 'unzip' && (
+																<div className={'flex flex-row items-center'}>
+																	<code className={'border rounded-md p-1 px-3 w-fit'}>
+																		{step.file}
+																	</code>
+
+																	<p className={'mx-2'}>to</p>
+
+																	<code className={'border rounded-md p-1 px-3 w-fit'}>
+																		{step.location}
+																	</code>
+																</div>
+															)}
+														</div>
+													))}
+												</div>
+
+												<div className={'w-3/5 flex flex-row items-center'}>
+													<Input
+														className={'hidden md:block'}
+														value={installScript === 'bash'
+															? `bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`
+															: `mcvcli install --file=install --build=${build.id}`
+														} disabled
+													/>
+													<Button variant={'outline'} className={'ml-2'} onClick={() => setInstallScript((prev) => prev === 'bash' ? 'mcvcli' : 'bash')}>
+														<RefreshCwIcon size={16} />
+													</Button>
+												</div>
 											</CollapsibleContent>
 										</Collapsible>
 									</Card>

@@ -12,7 +12,7 @@ if ! [ "$BUILD" -eq "$BUILD" ] 2> /dev/null; then
 	exit 1
 fi
 
-DATA=$(curl -s -H "Accept: application/json" https://versions.mcjars.app/api/v1/build/$BUILD)
+DATA=$(curl -s -H "Accept: application/json" https://mcjars.app/api/v1/build/$BUILD)
 
 if echo $DATA | grep -q '"success":false'; then
 	echo "Build $BUILD not found"
@@ -31,7 +31,7 @@ if [ "$PROJECT_VERSION_ID" = "null," ]; then
 	PROJECT_VERSION_ID=""
 fi
 
-echo "Install MCVAPI build $BUILD into current location?"
+echo "Install build $BUILD into current location?"
 echo ""
 
 echo "Type: $TYPE"
@@ -55,7 +55,7 @@ if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "yes" ] && [ "$CONFIRM" != "ye" ]; t
 	exit 1
 fi
 
-bash <(curl -s https://versions.mcjars.app/api/v1/script/$BUILD/bash)
+bash <(curl -s https://mcjars.app/api/v1/script/$BUILD/bash)
 
 echo "java -Xmx4G -Xms4G -jar server.jar nogui" > start.sh
 chmod +x start.sh

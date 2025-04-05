@@ -471,7 +471,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							<LoaderCircle className={'animate-spin'} />
 						</div>
 					) : (
-						<div className={'flex flex-col p-4'}>
+						<div className={'flex flex-col p-4 h-full max-h-96 overflow-y-auto'}>
 							{subUsers.map((subuser) => (
 								<Card key={subuser.user.id} className={'p-4 mt-2'}>
 									<div className={'flex flex-row items-center justify-between'}>
@@ -590,7 +590,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							<LoaderCircle className={'animate-spin'} />
 						</div>
 					) : (
-						<div className={'flex flex-col p-4'}>
+						<div className={'flex flex-col p-4 h-full max-h-96 overflow-y-auto'}>
 							{apiKeys.map((apiKey) => (
 								<Card key={apiKey.id} className={'p-4 mt-2'}>
 									<div className={'flex flex-row items-center justify-between'}>
