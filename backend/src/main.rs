@@ -338,13 +338,24 @@ async fn main() {
 
                 render_index(&meta, state)
             }))
-            .route("/job-status", get(|state: GetState| async move {
+            .route("/job-status", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
                     ("description", "View the job status for MCJars. Not affiliated with Mojang AB.".to_string()),
                     ("og:description", "View the job status for MCJars. Not affiliated with Mojang AB.".to_string()),
                     ("og:title", "MCJars | Job Status".to_string()),
                     ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
-                    ("og:url", "https://mcjars.app/job-status".to_string()),
+                    ("og:url", req.uri().to_string()),
+                ]);
+
+                render_index(&meta, state)
+            }))
+            .route("/organizations", get(|state: GetState, req: Request<Body>| async move {
+                let meta = HashMap::from([
+                    ("description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
+                    ("og:description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
+                    ("og:title", "MCJars".to_string()),
+                    ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
+                    ("og:url", req.uri().to_string()),
                 ]);
 
                 render_index(&meta, state)
