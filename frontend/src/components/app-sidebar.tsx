@@ -27,7 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { BarChart3Icon, Building, ChevronDown, CodeIcon, FileIcon, HammerIcon, HomeIcon, LogInIcon, LogOutIcon, SkullIcon, TriangleAlertIcon } from "lucide-react"
 import { Link, LinkProps, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/hooks/use-auth"
 import { BASE_URL } from "@/api"
 import apiPostUserLogout from "@/api/user/logout"
@@ -172,24 +172,28 @@ export function AppSidebar() {
 																		{type.name}
 
 																		{type.experimental && (
-																			<Tooltip>
-																				<TooltipTrigger>
-																					<TriangleAlertIcon size={16} className={'text-yellow-500'} />
-																				</TooltipTrigger>
-																				<TooltipContent>
-																					Experimental
-																				</TooltipContent>
-																			</Tooltip>
+																			<ResponsiveTooltip>
+																				<Tooltip>
+																					<TooltipTrigger>
+																						<TriangleAlertIcon size={16} className={'text-yellow-500'} />
+																					</TooltipTrigger>
+																					<TooltipContent>
+																						Experimental
+																					</TooltipContent>
+																				</Tooltip>
+																			</ResponsiveTooltip>
 																		)}
 																		{type.deprecated && (
-																			<Tooltip>
-																				<TooltipTrigger>
-																					<SkullIcon size={16} className={'text-red-500'} />
-																				</TooltipTrigger>
-																				<TooltipContent>
-																					Deprecated
-																				</TooltipContent>
-																			</Tooltip>
+																			<ResponsiveTooltip>
+																				<Tooltip>
+																					<TooltipTrigger>
+																						<SkullIcon size={16} className={'text-red-500'} />
+																					</TooltipTrigger>
+																					<TooltipContent>
+																						Deprecated
+																					</TooltipContent>
+																				</Tooltip>
+																			</ResponsiveTooltip>
 																		)}
 
 																		<div className={'ml-auto flex flex-row items-center'}>
