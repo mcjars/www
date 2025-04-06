@@ -47,7 +47,7 @@ mod get {
     ) -> axum::Json<serde_json::Value> {
         let organization = organization.as_ref().unwrap().clone();
 
-        let (requests, user_agents, origins) = state
+        let stats = state
             .cache
             .cached(
                 &format!("organization::{}::stats", organization.id),
@@ -56,33 +56,30 @@ mod get {
                     let (requests, user_agents, origins) = tokio::join!(
                         sqlx::query(
                             r#"
-                    SELECT
-                        COUNT(*) AS requests
-                    FROM requests
-                    WHERE requests.organization_id = $1
-                    "#,
+                            SELECT COUNT(*)
+                            FROM requests
+                            WHERE requests.organization_id = $1
+                            "#,
                         )
                         .bind(organization.id)
                         .fetch_one(state.database.read()),
                         sqlx::query(
                             r#"
-                    SELECT
-                        requests.user_agent
-                    FROM requests
-                    WHERE requests.organization_id = $1
-                    GROUP BY requests.user_agent
-                    "#,
+                            SELECT requests.user_agent
+                            FROM requests
+                            WHERE requests.organization_id = $1
+                            GROUP BY requests.user_agent
+                            "#,
                         )
                         .bind(organization.id)
                         .fetch_all(state.database.read()),
                         sqlx::query(
                             r#"
-                    SELECT
-                        requests.origin
-                    FROM requests
-                    WHERE requests.organization_id = $1 AND requests.origin IS NOT NULL
-                    GROUP BY requests.origin
-                    "#,
+                            SELECT requests.origin
+                            FROM requests
+                            WHERE requests.organization_id = $1 AND requests.origin IS NOT NULL
+                            GROUP BY requests.origin
+                            "#,
                         )
                         .bind(organization.id)
                         .fetch_all(state.database.read())
@@ -92,15 +89,15 @@ mod get {
                     let user_agents = user_agents
                         .unwrap()
                         .into_iter()
-                        .map(|row| row.get("user_agent"))
+                        .map(|row| row.get(0))
                         .collect();
-                    let origins = origins
-                        .unwrap()
-                        .into_iter()
-                        .map(|row| row.get("origin"))
-                        .collect();
+                    let origins = origins.unwrap().into_iter().map(|row| row.get(0)).collect();
 
-                    (requests.get("requests"), user_agents, origins)
+                    Stats {
+                        requests: requests.get(0),
+                        user_agents,
+                        origins,
+                    }
                 },
             )
             .await;
@@ -113,11 +110,7 @@ mod get {
                     name: organization.name,
                     types: organization.types,
                 },
-                stats: Stats {
-                    requests,
-                    user_agents,
-                    origins,
-                },
+                stats,
             })
             .unwrap(),
         )

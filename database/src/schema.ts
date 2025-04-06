@@ -7,16 +7,16 @@ export const bytea = customType<{ data: string; notNull: false; default: false }
   },
 
   toDriver(val: string) {
-    let newVal = val;
-    if (val.startsWith("0x")) {
-      newVal = val.slice(2);
+    let newVal = val
+    if (val.startsWith('0x')) {
+      newVal = val.slice(2)
     }
 
-    return Buffer.from(newVal, "hex");
+    return Buffer.from(newVal, 'hex')
   },
 
   fromDriver(val: unknown) {
-    return (val as Buffer).toString("hex");
+    return (val as Buffer).toString('hex')
   }
 })
 
