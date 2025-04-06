@@ -298,9 +298,8 @@ export default function PageTypeVersions() {
 													))}
 												</div>
 
-												<div className={'w-3/5 flex flex-row items-center'}>
+												<div className={'w-3/5 hidden md:flex flex-row items-center'}>
 													<Input
-														className={'hidden md:block'}
 														value={installScript === 'bash'
 															? `bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`
 															: `mcvcli install --file=install --build=${build.id}`
