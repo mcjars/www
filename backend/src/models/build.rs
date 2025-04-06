@@ -270,7 +270,7 @@ impl Build {
             "#,
             Self::columns_sql(None, None),
             if let Some(hash) = hash {
-                format!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {} = $1", hash)
+                format!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {} = decode($1, 'hex')", hash)
             } else {
                 "builds WHERE builds.id = $1::int".to_string()
             },

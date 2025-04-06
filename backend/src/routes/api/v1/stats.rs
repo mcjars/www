@@ -46,49 +46,35 @@ mod get {
         let stats = state
             .cache
             .cached("stats::all", 3600, || async {
-                let (hashes, requests, builds) = tokio::join!(
-                    sqlx::query(
-                        r#"
-                        SELECT
-                            COUNT(*)
-                        FROM build_hashes
-                        "#
-                    )
-                    .fetch_one(state.database.read()),
-                    sqlx::query(
-                        r#"
-                        SELECT
-                            COUNT(*),
-                            pg_database_size(current_database())
-                        FROM requests
-                        "#
-                    )
-                    .fetch_one(state.database.read()),
-                    sqlx::query(
-                        r#"
-                        SELECT
-                            COUNT(*),
-                            SUM(DISTINCT jar_size),
-                            SUM(DISTINCT zip_size)
-                        FROM builds
-                        "#
-                    )
-                    .fetch_one(state.database.read())
-                );
-
-                let (hashes, requests, builds) =
-                    (hashes.unwrap(), requests.unwrap(), builds.unwrap());
+                let data = sqlx::query(
+                    r#"
+                    SELECT 
+                        COUNT(*), SUM(DISTINCT jar_size), SUM(DISTINCT zip_size)
+                    FROM builds
+                    UNION ALL
+                    SELECT
+                        COUNT(*), 0, 0
+                    FROM build_hashes
+                    UNION ALL
+                    SELECT 
+                        COUNT(*), pg_database_size(current_database()), 0
+                    FROM requests
+                    "#,
+                )
+                .fetch_all(state.database.read())
+                .await
+                .unwrap();
 
                 Stats {
-                    builds: builds.get(0),
-                    hashes: hashes.get(0),
-                    requests: requests.get(0),
+                    builds: data[0].get(0),
+                    hashes: data[1].get(0),
+                    requests: data[2].get(0),
                     size: StatsSize {
-                        database: requests.get(1),
+                        database: data[2].get(1),
                     },
                     total: StatsTotal {
-                        jar_size: builds.get(1),
-                        zip_size: builds.get(2),
+                        jar_size: data[0].get(1),
+                        zip_size: data[0].get(2),
                     },
                 }
             })

@@ -29,10 +29,10 @@ mod get {
         axum::Json(
             serde_json::to_value(&Response {
                 success: true,
-                types: if !organization.types.is_empty() {
-                    ServerType::extract(&data, &organization.types)
-                } else {
+                types: if organization.types.is_empty() {
                     data
+                } else {
+                    ServerType::extract(&data, &organization.types)
                 },
             })
             .unwrap(),
@@ -61,12 +61,6 @@ mod patch {
 
     #[utoipa::path(patch, path = "/", responses(
         (status = OK, body = inline(Response)),
-    ), params(
-        (
-            "organization" = u32,
-            description = "The organization ID",
-            example = 1,
-        ),
     ), request_body = inline(Payload))]
     pub async fn route(
         state: GetState,

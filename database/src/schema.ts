@@ -1,5 +1,24 @@
 import { isNotNull, relations, sql } from "drizzle-orm"
-import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text } from "drizzle-orm/pg-core"
+import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType } from "drizzle-orm/pg-core"
+
+export const bytea = customType<{ data: string; notNull: false; default: false }>({
+  dataType() {
+    return 'bytea'
+  },
+
+  toDriver(val: string) {
+    let newVal = val
+    if (val.startsWith('0x')) {
+      newVal = val.slice(2)
+    }
+
+    return Buffer.from(newVal, 'hex')
+  },
+
+  fromDriver(val: unknown) {
+    return (val as Buffer).toString('hex')
+  }
+})
 
 export const types = [
 	'VANILLA',
@@ -267,21 +286,21 @@ export const buildHashes = pgTable('build_hashes', {
 
 	primary: boolean('primary').notNull(),
 
-	sha1: char('sha1', { length: 40 }).notNull(),
-	sha224: char('sha224', { length: 56 }).notNull(),
-	sha256: char('sha256', { length: 64 }).notNull(),
-	sha384: char('sha384', { length: 96 }).notNull(),
-	sha512: char('sha512', { length: 128 }).notNull(),
-	md5: char('md5', { length: 32 }).notNull()
+	sha1: bytea('sha1').notNull(),
+	sha224: bytea('sha224').notNull(),
+	sha256: bytea('sha256').notNull(),
+	sha384: bytea('sha384').notNull(),
+	sha512: bytea('sha512').notNull(),
+	md5: bytea('md5').notNull()
 }, (hashes) => [
 	index('buildHashes_build_idx').on(hashes.buildId),
 	index('buildHashes_primary_idx').on(hashes.primary),
-	index('buildHashes_sha1_idx').on(hashes.sha1),
-	index('buildHashes_sha224_idx').on(hashes.sha224),
-	index('buildHashes_sha256_idx').on(hashes.sha256),
-	index('buildHashes_sha384_idx').on(hashes.sha384),
-	index('buildHashes_sha512_idx').on(hashes.sha512),
-	index('buildHashes_md5_idx').on(hashes.md5)
+	index('buildHashes_sha1_idx').on(hashes.sha1).with({ fillfactor: 100 }),
+	index('buildHashes_sha224_idx').on(hashes.sha224).with({ fillfactor: 100 }),
+	index('buildHashes_sha256_idx').on(hashes.sha256).with({ fillfactor: 100 }),
+	index('buildHashes_sha384_idx').on(hashes.sha384).with({ fillfactor: 100 }),
+	index('buildHashes_sha512_idx').on(hashes.sha512).with({ fillfactor: 100 }),
+	index('buildHashes_md5_idx').on(hashes.md5).with({ fillfactor: 100 })
 ])
 
 export const buildHashesRelations = relations(buildHashes, ({ one }) => ({
