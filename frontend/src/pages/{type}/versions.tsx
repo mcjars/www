@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
@@ -26,11 +27,11 @@ export default function PageTypeVersions() {
 
 	const mobile = useIsMobile(1280)
 
-	const [ versionType, setVersionType ] = useQueryParam('type', StringParam)
-	const [ search, setSearch ] = useQueryParam('search', StringParam)
-	const [ browse, setBrowse ] = useQueryParam('browse', StringParam)
-	const [ displayMode, setDisplayMode ] = useQueryParam('display', StringParam)
-	const [ installScript, setInstallScript ] = useLocalStorage<'bash' | 'mcvcli'>('install-script', 'bash')
+	const [versionType, setVersionType] = useQueryParam('type', StringParam)
+	const [search, setSearch] = useQueryParam('search', StringParam)
+	const [browse, setBrowse] = useQueryParam('browse', StringParam)
+	const [displayMode, setDisplayMode] = useQueryParam('display', StringParam)
+	const [installScript, setInstallScript] = useLocalStorage<'bash' | 'mcvcli'>('install-script', 'bash')
 
 	const { data: types } = useSWR(
 		['types'],
@@ -55,12 +56,12 @@ export default function PageTypeVersions() {
 
 	const expectedBuildCount = useMemo(
 		() => !browse ? 0 : versions?.find((version) => version.latest.versionId === browse)?.builds ?? 0,
-		[ versions, browse ]
+		[versions, browse]
 	)
 
 	const typeData = useMemo(
 		() => Object.values(types ?? {}).flat()?.find((t) => t.identifier === type),
-		[ types, type ]
+		[types, type]
 	)
 
 	return (
@@ -160,7 +161,16 @@ export default function PageTypeVersions() {
 													{version.type}
 												</Badge>
 												{version.type === 'SNAPSHOT' && (
-													<TriangleAlertIcon size={16} className={'ml-2 text-red-500 md:hidden'} />
+													<ResponsiveTooltip>
+														<Tooltip>
+															<TooltipTrigger>
+																<TriangleAlertIcon size={16} className={'ml-2 text-red-500 md:hidden'} />
+															</TooltipTrigger>
+															<TooltipContent>
+																<p>SNAPSHOT</p>
+															</TooltipContent>
+														</Tooltip>
+													</ResponsiveTooltip>
 												)}
 											</h1>
 											<p className={'text-sm text-gray-500'}>
@@ -288,9 +298,8 @@ export default function PageTypeVersions() {
 													))}
 												</div>
 
-												<div className={'w-3/5 flex flex-row items-center'}>
+												<div className={'w-3/5 hidden md:flex flex-row items-center'}>
 													<Input
-														className={'hidden md:block'}
 														value={installScript === 'bash'
 															? `bash <(curl -s ${window.location.protocol}//${window.location.hostname}/install.sh) ${build.id}`
 															: `mcvcli install --file=install --build=${build.id}`
