@@ -37,7 +37,8 @@ const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
 const BLACKLISTED_HEADERS: [&str; 3] = ["content-encoding", "transfer-encoding", "connection"];
 const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
-fn render_index(meta: &HashMap<&str, String>, state: GetState) -> (StatusCode, HeaderMap, String) {
+#[inline(always)]
+fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, HeaderMap, String) {
     let index = FRONTEND_ASSETS
         .get_file("index.html")
         .unwrap()
@@ -46,7 +47,7 @@ fn render_index(meta: &HashMap<&str, String>, state: GetState) -> (StatusCode, H
         .to_string();
     let mut metadata = String::new();
 
-    for (key, value) in meta.iter() {
+    for (key, value) in meta.into_iter() {
         metadata.push_str(&format!("<meta name=\"{}\" content=\"{}\">", key, value));
     }
 
@@ -325,7 +326,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/lookup", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -336,7 +337,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/job-status", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -347,7 +348,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/organizations", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -358,7 +359,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/{type}/versions", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let types = ServerType::all(&state.database, &state.cache).await;
@@ -382,7 +383,7 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/{type}/statistics", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let data = r#type.infos();
@@ -395,7 +396,7 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
                 ]);
 
-                render_index(&meta, state)
+                render_index(meta, state)
             }))
             .route("/sitemap.xml", get(|| async move {
                 let mut headers = HeaderMap::new();
@@ -427,7 +428,7 @@ async fn main() {
 
                 (StatusCode::OK, headers, sitemap)
             }))
-            .fallback(|req: Request<Body>| async move {
+            .fallback(|state: GetState, req: Request<Body>| async move {
                 if !req.uri().path().starts_with("/api") {
                     let path = &req.uri().path()[1..];
 
@@ -443,6 +444,11 @@ async fn main() {
                         })
                     };
 
+                    let mut content = file.contents_utf8().unwrap().to_string();
+                    if file.path().extension() == Some("html".as_ref()) {
+                        content = content.replace("{{VERSION}}", &state.version);
+                    }
+
                     return Response::builder()
                         .header("Content-Type", match file.path().extension() {
                             Some(ext) if ext == "js" => "application/javascript",
@@ -450,7 +456,7 @@ async fn main() {
                             Some(ext) if ext == "html" => "text/html",
                             _ => "text/plain",
                         })
-                        .body(file.contents_utf8().unwrap().to_string())
+                        .body(content)
                         .unwrap();
                 }
 
