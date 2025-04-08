@@ -144,7 +144,7 @@ export const configs: Record<string, {
 		type: 'NANOLIMBO',
 		format: 'YAML',
 		aliases: ['settings.yml']
-	}
+	},
 
 	// Loohp Limbo // TODO: Find better way to handle this
 	// 'server.properties': {
@@ -152,6 +152,13 @@ export const configs: Record<string, {
 	// 	format: 'PROPERTIES',
 	// 	aliases: ['server.properties']
 	// }
+
+	// Magma
+	'magma.yml': {
+		type: 'MAGMA',
+		format: 'YAML',
+		aliases: ['magma.yml']
+	}
 }
 
 const pool = new Pool({

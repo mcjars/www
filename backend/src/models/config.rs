@@ -390,5 +390,13 @@ pub static CONFIGS: LazyLock<IndexMap<String, Config>> = LazyLock::new(|| {
                 aliases: vec!["settings.yml".to_string()],
             },
         ),
+        (
+            "magma.yml".to_string(),
+            Config {
+                r#type: ServerType::Magma,
+                format: Format::Yaml,
+                aliases: vec!["magma.yml".to_string()],
+            },
+        ),
     ])
 });
