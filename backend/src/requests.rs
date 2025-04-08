@@ -5,7 +5,10 @@ use rand::distr::SampleString;
 use rustis::commands::{ExpireOption, GenericCommands, StringCommands};
 use serde::{Deserialize, Serialize};
 use sqlx::types::ipnetwork::IpNetwork;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 
 use crate::models::organization::Organization;
@@ -189,7 +192,7 @@ impl RequestLogger {
     async fn lookup_ips(
         &self,
         ips: &[String],
-    ) -> Result<HashMap<String, (String, String)>, reqwest::Error> {
+    ) -> Result<HashMap<String, [String; 2]>, reqwest::Error> {
         let mut result = HashMap::new();
 
         let data = self
@@ -204,7 +207,7 @@ impl RequestLogger {
                             "fields": "continentCode,countryCode,query"
                         })
                     })
-                    .collect::<Vec<_>>(),
+                    .collect::<HashSet<_>>(),
             )
             .send()
             .await?
@@ -218,10 +221,10 @@ impl RequestLogger {
 
             result.insert(
                 entry["query"].as_str().unwrap().to_string(),
-                (
+                [
                     entry["continentCode"].as_str().unwrap().to_string(),
                     entry["countryCode"].as_str().unwrap().to_string(),
-                ),
+                ],
             );
         }
 
@@ -252,7 +255,7 @@ impl RequestLogger {
             .unwrap_or_default();
 
         for r in requests.iter_mut() {
-            if let Some((continent, country)) = ips.get(&r.ip.to_string()) {
+            if let Some([continent, country]) = ips.get(&r.ip.to_string()) {
                 r.continent = Some(continent.clone());
                 r.country = Some(country.clone());
             }

@@ -74,6 +74,7 @@ mod get {
                         &[
                             ServerType::Arclight,
                             ServerType::Mohist,
+                            ServerType::Magma,
                             ServerType::Leaves,
                             ServerType::Aspaper,
                             ServerType::LegacyFabric,

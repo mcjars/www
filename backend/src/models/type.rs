@@ -79,13 +79,14 @@ pub enum ServerType {
     LoohpLimbo,
     Nanolimbo,
     Divinemc,
+    Magma,
 }
 
 impl FromStr for ServerType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().replace("%20", "_").as_str() {
+        match s.to_uppercase().replace(" ", "_").as_str() {
             "VANILLA" => Ok(ServerType::Vanilla),
             "PAPER" => Ok(ServerType::Paper),
             "PUFFERFISH" => Ok(ServerType::Pufferfish),
@@ -113,6 +114,7 @@ impl FromStr for ServerType {
             "NANO_LIMBO" => Ok(ServerType::Nanolimbo),
             "DIVINEMC" => Ok(ServerType::Divinemc),
             "DIVINE_MC" => Ok(ServerType::Divinemc),
+            "MAGMA" => Ok(ServerType::Magma),
             _ => Err(format!("Unknown server type: {}", s)),
         }
     }
@@ -641,6 +643,25 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
                 description: "A high-performance Purpur fork focused on maximizing server performance while maintaining plugin compatibility.".to_string(),
                 categories: vec!["plugins".to_string()],
                 compatibility: vec!["spigot".to_string(), "paper".to_string(), "purpur".to_string()],
+                builds: 0,
+                versions: ServerTypeVersions {
+                    minecraft: 0,
+                    project: 0,
+                },
+            },
+        ),
+        (
+            ServerType::Magma,
+            ServerTypeInfo {
+                name: "Magma".to_string(),
+                icon: format!("{}/icons/magma.png", env.s3_url),
+                color: "#FE974E".to_string(),
+                homepage: "https://github.com/magmamaintained".to_string(),
+                deprecated: true,
+                experimental: false,
+                description: "Magma is the next generation of hybrid minecraft server softwares.".to_string(),
+                categories: vec!["plugins".to_string(), "modded".to_string()],
+                compatibility: vec!["spigot".to_string(), "forge".to_string()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,

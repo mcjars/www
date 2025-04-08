@@ -43,7 +43,8 @@ export const types = [
 	'LEGACY_FABRIC',
 	'LOOHP_LIMBO',
 	'NANOLIMBO',
-	'DIVINEMC'
+	'DIVINEMC',
+	'MAGMA'
 ] as const
 
 export const formats = [
