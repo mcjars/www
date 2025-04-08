@@ -3,11 +3,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
     use crate::{models::user::UserSession, routes::GetState};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use tower_cookies::{Cookie, Cookies};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }

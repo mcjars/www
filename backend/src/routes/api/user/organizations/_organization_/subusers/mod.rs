@@ -8,12 +8,10 @@ mod get {
         models::organization::OrganizationSubuser,
         routes::{GetState, api::user::organizations::_organization_::GetOrganization},
     };
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    #[schema(rename_all = "camelCase")]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         users: Vec<OrganizationSubuser>,
@@ -55,12 +53,12 @@ mod post {
     use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Payload {
         login: String,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }

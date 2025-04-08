@@ -40,7 +40,7 @@ mod get {
         size: Size,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

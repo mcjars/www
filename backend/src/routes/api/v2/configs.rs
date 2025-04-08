@@ -4,10 +4,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::models::config::{CONFIGS, Config};
     use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         configs: IndexMap<String, Config>,

@@ -12,7 +12,7 @@ mod get {
     use sqlx::Row;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Infos {
         icon: String,
         name: String,
@@ -28,7 +28,7 @@ mod get {
         origins: Vec<String>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

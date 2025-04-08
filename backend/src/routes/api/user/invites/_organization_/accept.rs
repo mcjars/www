@@ -7,10 +7,10 @@ mod post {
         routes::{ApiError, GetState, api::user::GetUser},
     };
     use axum::extract::Path;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }

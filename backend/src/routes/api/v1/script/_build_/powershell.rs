@@ -8,10 +8,10 @@ mod get {
     };
     use axum::extract::{Path, Query};
     use reqwest::StatusCode;
-    use serde::{Deserialize, Serialize};
+    use serde::Deserialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Params {
         #[serde(default)]
         echo: bool,

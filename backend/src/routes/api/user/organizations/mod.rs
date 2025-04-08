@@ -9,17 +9,17 @@ mod get {
         routes::{GetState, api::user::GetUser},
     };
     use indexmap::IndexSet;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Organizations {
         owned: Vec<Organization>,
         member: Vec<Organization>,
         invites: Vec<Organization>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

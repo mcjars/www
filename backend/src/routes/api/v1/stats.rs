@@ -31,7 +31,7 @@ mod get {
         total: StatsTotal,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

@@ -77,10 +77,10 @@ async fn auth(
 mod get {
     use super::GetOrganization;
     use crate::models::organization::Organization;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         organization: Organization,
@@ -120,7 +120,7 @@ mod patch {
     use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Payload {
         pub name: Option<String>,
         pub owner: Option<String>,
@@ -128,7 +128,7 @@ mod patch {
         pub types: Option<Vec<ServerType>>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }
@@ -210,10 +210,10 @@ mod delete {
         routes::{ApiError, GetState, api::user::GetUser},
     };
     use axum::http::StatusCode;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }

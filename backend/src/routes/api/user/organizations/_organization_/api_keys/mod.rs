@@ -8,10 +8,10 @@ mod get {
         models::organization::OrganizationKey,
         routes::{GetState, api::user::organizations::_organization_::GetOrganization},
     };
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     #[serde(rename_all = "camelCase")]
     #[schema(rename_all = "camelCase")]
     struct Response {
@@ -52,12 +52,12 @@ mod post {
     use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Payload {
         name: String,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         key: String,

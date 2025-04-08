@@ -7,10 +7,10 @@ mod get {
         routes::GetState,
     };
     use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         types: IndexMap<ServerType, ServerTypeInfo>,

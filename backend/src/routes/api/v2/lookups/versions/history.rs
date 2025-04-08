@@ -18,7 +18,7 @@ mod get {
         unique_ips: i64,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

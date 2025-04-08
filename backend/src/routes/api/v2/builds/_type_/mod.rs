@@ -10,11 +10,11 @@ mod get {
     };
     use axum::extract::Path;
     use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use serde_json::json;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         builds: IndexMap<String, Version>,

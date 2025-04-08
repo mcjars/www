@@ -467,7 +467,7 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
                 icon: format!("{}/icons/mohist.png", env.s3_url),
                 color: "#2A3294".to_string(),
                 homepage: "https://mohistmc.com/software/mohist".to_string(),
-                deprecated: true,
+                deprecated: false,
                 experimental: false,
                 description: "A variation of Forge/NeoForge that allows loading Spigot plugins next to mods.".to_string(),
                 categories: vec!["modded".to_string(), "plugins".to_string()],

@@ -7,10 +7,10 @@ mod get {
         routes::{GetState, api::organization::GetOrganization},
     };
     use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         types: IndexMap<ServerType, ServerTypeInfo>,
@@ -49,12 +49,12 @@ mod patch {
     use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Payload {
         types: Vec<ServerType>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }

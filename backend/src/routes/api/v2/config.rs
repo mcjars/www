@@ -25,7 +25,7 @@ mod post {
         build: Option<Build>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         formatted: String,

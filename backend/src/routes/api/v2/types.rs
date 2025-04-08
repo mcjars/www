@@ -7,10 +7,10 @@ mod get {
         routes::{ApiError, GetState},
     };
     use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Types {
         recommended: IndexMap<ServerType, ServerTypeInfo>,
         established: IndexMap<ServerType, ServerTypeInfo>,
@@ -19,7 +19,7 @@ mod get {
         limbos: IndexMap<ServerType, ServerTypeInfo>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

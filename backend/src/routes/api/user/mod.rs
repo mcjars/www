@@ -80,10 +80,10 @@ async fn auth(
 mod get {
     use super::GetUser;
     use crate::models::user::ApiUser;
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         user: ApiUser,

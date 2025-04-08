@@ -7,10 +7,10 @@ mod get {
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
         build: Build,

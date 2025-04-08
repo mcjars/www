@@ -36,7 +36,7 @@ mod get {
         versions: IndexMap<String, TypeStats>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
 

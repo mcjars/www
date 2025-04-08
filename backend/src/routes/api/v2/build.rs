@@ -73,7 +73,7 @@ mod post {
         }
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     #[serde(untagged)]
     pub enum Payload {
         One(#[schema(inline)] Box<BuildSearch>),
@@ -97,7 +97,7 @@ mod post {
         configs: IndexMap<String, ConfigValue>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct ResponseOne {
         success: bool,
         build: Build,
@@ -108,7 +108,7 @@ mod post {
         configs: IndexMap<String, ConfigValue>,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct ResponseMany {
         success: bool,
 

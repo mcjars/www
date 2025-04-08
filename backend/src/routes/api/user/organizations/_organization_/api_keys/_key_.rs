@@ -7,10 +7,10 @@ mod get {
         routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::{extract::Path, http::StatusCode};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     #[serde(rename_all = "camelCase")]
     #[schema(rename_all = "camelCase")]
     struct Response {
@@ -73,10 +73,10 @@ mod delete {
         routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::{extract::Path, http::StatusCode};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }
