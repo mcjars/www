@@ -79,7 +79,6 @@ jobs:
       - name: Build binary
         run: |
           cargo build --release --target ${{ matrix.target }}
-          strip target/${{ matrix.target }}/release/api
           mkdir -p dist/${{ matrix.arch }}
           cp target/${{ matrix.target }}/release/api dist/${{ matrix.arch }}/api
 
