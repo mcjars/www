@@ -13,7 +13,7 @@ pub struct IndexFile {
     pub href: Option<String>,
 }
 
-pub fn render(state: &State, location: &str, files: &[IndexFile]) -> Response<String> {
+pub fn render(state: GetState, location: &str, files: &[IndexFile]) -> Response<String> {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
         .replace("{{LOCATION}}", location)
@@ -59,7 +59,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 let types = ServerType::all(&state.database, &state.cache).await;
 
                 let files = types
-                    .iter()
+                    .into_iter()
                     .map(|(k, t)| IndexFile {
                         name: format!("{}/", t.name),
                         size: format!("{} builds", t.builds),
@@ -67,7 +67,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     })
                     .collect::<Vec<_>>();
 
-                render(&state, "/", &files)
+                render(state, "/", &files)
             }),
         )
         .nest("/{type}", _type_::router(state))

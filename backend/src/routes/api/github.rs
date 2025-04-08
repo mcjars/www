@@ -50,60 +50,70 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     .send()
                     .await
                     .unwrap()
-                    .json::<serde_json::Value>()
-                    .await
-                    .unwrap();
+                    .json::<OAuthResponse>()
+                    .await;
 
-                if !user["access_token"].is_string() {
+                if user.is_err() {
                     return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid access token returned");
+                }
+                let user = user.unwrap();
+
+                #[derive(Deserialize)]
+                struct OAuthResponse {
+                    access_token: String,
                 }
 
                 let (data, email) = tokio::join!(
                     client
                         .get("https://api.github.com/user")
                         .header("Accept", "application/vnd.github+json")
-                        .header("Authorization", format!("Bearer {}", user["access_token"].as_str().unwrap()))
+                        .header("Authorization", format!("Bearer {}", user.access_token))
                         .send(),
                     client
                         .get("https://api.github.com/user/emails")
                         .header("Accept", "application/vnd.github+json")
-                        .header("Authorization", format!("Bearer {}", user["access_token"].as_str().unwrap()))
+                        .header("Authorization", format!("Bearer {}", user.access_token))
                         .send()
                 );
 
                 let (data, email) = tokio::join!(
-                    data.unwrap().json::<serde_json::Value>(),
-                    email.unwrap().json::<serde_json::Value>(),
+                    data.unwrap().json::<UserResponse>(),
+                    email.unwrap().json::<Vec<EmailResponse>>(),
                 );
 
+                #[derive(Deserialize)]
+                struct UserResponse {
+                    id: i32,
+                    name: Option<String>,
+                    login: String,
+                }
+
+                #[derive(Deserialize)]
+                struct EmailResponse {
+                    email: String,
+                    primary: bool,
+                }
+
+                if data.is_err() || email.is_err() {
+                    return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid user data returned");
+                }
                 let (data, email) = (data.unwrap(), email.unwrap());
 
                 let email = email
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .find(|email| email["primary"].as_bool().unwrap())
+                    .into_iter()
+                    .find(|email| email.primary)
                     .unwrap();
 
-                let user = User::new(
-                    &state.database,
-                    data["id"].as_i64().unwrap() as i32,
-                    data["name"].as_str().map(|s| s.to_string()),
-                    email["email"].as_str().unwrap().to_string(),
-                    data["login"].as_str().unwrap().to_string(),
-                ).await;
+                let user = User::new(&state.database, data.id, data.name, email.email, data.login).await;
 
                 let (_, key) = UserSession::new(
                     &state.database,
                     user.id,
+                    crate::extract_ip(&headers).unwrap().into(),
                     headers
-                        .get("x-real-ip")
-                        .or_else(|| headers.get("x-forwarded-for"))
-                        .map(|ip| ip.to_str().unwrap_or_default())
-                        .unwrap_or_default()
-                        .parse()
-                        .unwrap(),
-                    headers.get("User-Agent").map(|ua| ua.to_str().unwrap()).unwrap_or("")
+                        .get("User-Agent")
+                        .map(|ua| crate::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
+                        .unwrap_or("unknown"),
                 ).await;
 
                 cookies.add(

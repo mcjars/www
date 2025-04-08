@@ -14,7 +14,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     let versions = Version::all(&state.database, &state.cache, r#type).await;
 
                     let files = versions
-                        .iter()
+                        .into_iter()
                         .map(|(n, v)| IndexFile {
                             name: format!("{}/", n),
                             size: format!("{} builds", v.builds),
@@ -22,7 +22,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         })
                         .collect::<Vec<_>>();
 
-                    super::render(&state, &format!("/{}/", r#type.infos().name), &files)
+                    super::render(state, &format!("/{}/", r#type.infos().name), &files)
                 },
             ),
         )

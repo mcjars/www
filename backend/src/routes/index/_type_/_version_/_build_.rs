@@ -46,13 +46,13 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         }
 
                         crate::routes::index::render(
-                            &state,
+                            state,
                             &format!("/{}/{}/{}/", r#type.infos().name, version, build.name),
                             &files,
                         )
                     } else {
                         crate::routes::index::render(
-                            &state,
+                            state,
                             &format!("/{}/{}/{}/", r#type.infos().name, version, identifier),
                             &[],
                         )

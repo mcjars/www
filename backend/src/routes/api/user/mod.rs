@@ -49,20 +49,12 @@ async fn auth(
     }
 
     let (user, mut session) = user.unwrap();
-    session.ip = req
-        .headers()
-        .get("x-real-ip")
-        .or_else(|| req.headers().get("x-forwarded-for"))
-        .map(|ip| ip.to_str().unwrap_or_default())
-        .unwrap_or_default()
-        .to_string()
-        .parse()
-        .unwrap();
+    session.ip = crate::extract_ip(req.headers()).unwrap().into();
     session.user_agent = req
         .headers()
-        .get("user-agent")
-        .map(|ua| ua.to_str().unwrap_or_default())
-        .unwrap_or_default()
+        .get("User-Agent")
+        .map(|ua| crate::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
+        .unwrap_or("unknown")
         .to_string();
     session.save(&state.database).await;
 

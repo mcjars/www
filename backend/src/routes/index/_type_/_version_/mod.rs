@@ -24,7 +24,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             .await;
 
                         files = data
-                            .iter()
+                            .into_iter()
                             .rev()
                             .map(|b| IndexFile {
                                 name: format!("{}/", b.name),
@@ -35,7 +35,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     }
 
                     crate::routes::index::render(
-                        &state,
+                        state,
                         &format!("/{}/{}/", r#type.infos().name, version),
                         &files,
                     )

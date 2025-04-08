@@ -32,13 +32,6 @@ pub struct Request {
     created: NaiveDateTime,
 }
 
-pub struct RequestLogger {
-    pending: Mutex<Vec<Request>>,
-    processing: Mutex<Vec<Request>>,
-    database: Arc<crate::database::Database>,
-    cache: Arc<crate::cache::Cache>,
-}
-
 const ACCEPTED_METHODS: [Method; 5] = [
     Method::GET,
     Method::POST,
@@ -53,6 +46,15 @@ pub struct RateLimitData {
     pub hits: i64,
 }
 
+pub struct RequestLogger {
+    pending: Mutex<Vec<Request>>,
+    processing: Mutex<Vec<Request>>,
+    database: Arc<crate::database::Database>,
+    cache: Arc<crate::cache::Cache>,
+
+    client: reqwest::Client,
+}
+
 impl RequestLogger {
     pub fn new(database: Arc<crate::database::Database>, cache: Arc<crate::cache::Cache>) -> Self {
         Self {
@@ -60,6 +62,11 @@ impl RequestLogger {
             processing: Mutex::new(Vec::new()),
             database,
             cache,
+
+            client: reqwest::Client::builder()
+                .user_agent("MCJars API https://mcjars.app")
+                .build()
+                .unwrap(),
         }
     }
 
@@ -108,7 +115,7 @@ impl RequestLogger {
             return Ok((None, ratelimit));
         };
 
-        let mut data = Request {
+        let data = Request {
             id: rand::distr::Alphanumeric.sample_string(&mut rand::rng(), 12),
             organization_id: organization.map(|o| o.id),
             end: false,
@@ -116,19 +123,23 @@ impl RequestLogger {
             origin: request
                 .headers
                 .get("origin")
-                .map(|o| o.to_str().unwrap())
+                .map(|o| crate::slice_up_to(o.to_str().unwrap(), 255))
                 .unwrap_or("")
                 .to_string(),
             method: request.method.to_string(),
-            path: format!(
-                "{}{}",
-                request.uri.path(),
-                request
-                    .uri
-                    .query()
-                    .map(|q| format!("?{}", q))
-                    .unwrap_or_default()
-            ),
+            path: crate::slice_up_to(
+                &format!(
+                    "{}{}",
+                    request.uri.path(),
+                    request
+                        .uri
+                        .query()
+                        .map(|q| format!("?{}", q))
+                        .unwrap_or_default()
+                ),
+                255,
+            )
+            .to_string(),
             time: 0,
             status: 0,
             body: None,
@@ -141,15 +152,11 @@ impl RequestLogger {
             user_agent: request
                 .headers
                 .get("User-Agent")
-                .map(|ua| ua.to_str().unwrap_or("unknown"))
+                .map(|ua| crate::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
                 .unwrap_or("unknown")
                 .to_string(),
             created: chrono::Utc::now().naive_utc(),
         };
-
-        data.origin.truncate(255);
-        data.path.truncate(255);
-        data.user_agent.truncate(255);
 
         let id = data.id.clone();
         self.pending.lock().await.push(data);
@@ -185,10 +192,10 @@ impl RequestLogger {
     ) -> Result<HashMap<String, (String, String)>, reqwest::Error> {
         let mut result = HashMap::new();
 
-        let data = reqwest::Client::new()
+        let data = self
+            .client
             .post("http://ip-api.com/batch")
             .header("Content-Type", "application/json")
-            .header("User-Agent", "MCJars API https://mcjars.app")
             .json(
                 &ips.iter()
                     .map(|ip| {

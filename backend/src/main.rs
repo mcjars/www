@@ -47,7 +47,7 @@ fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, He
         .to_string();
     let mut metadata = String::new();
 
-    for (key, value) in meta.into_iter() {
+    for (key, value) in meta {
         metadata.push_str(&format!("<meta name=\"{}\" content=\"{}\">", key, value));
     }
 
@@ -179,6 +179,19 @@ pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
     };
 
     ip.parse().ok()
+}
+
+pub fn slice_up_to(s: &str, max_len: usize) -> &str {
+    if max_len >= s.len() {
+        return s;
+    }
+
+    let mut idx = max_len;
+    while !s.is_char_boundary(idx) {
+        idx -= 1;
+    }
+
+    &s[..idx]
 }
 
 #[tokio::main]
