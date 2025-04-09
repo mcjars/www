@@ -74,13 +74,13 @@ mod post {
     use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Deserialize)]
     pub struct Payload {
         #[schema(min_length = 3, max_length = 16)]
         name: String,
     }
 
-    #[derive(ToSchema, Serialize, Deserialize)]
+    #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
     }
