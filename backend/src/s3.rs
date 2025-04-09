@@ -51,6 +51,7 @@ impl S3 {
         instance
     }
 
+    #[inline]
     pub async fn url(&self, path: &str, content: &[u8], content_type: Option<&str>) -> String {
         self.bucket
             .put_object_with_content_type(

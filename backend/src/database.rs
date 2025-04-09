@@ -110,12 +110,12 @@ impl Database {
         instance
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn write(&self) -> &sqlx::PgPool {
         &self.write
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn read(&self) -> &sqlx::PgPool {
         self.read.as_ref().unwrap_or(&self.write)
     }

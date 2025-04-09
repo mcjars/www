@@ -21,6 +21,7 @@ pub struct User {
 }
 
 impl BaseModel for User {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("users");
 
@@ -60,6 +61,7 @@ impl BaseModel for User {
         ])
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
 
@@ -77,6 +79,7 @@ impl BaseModel for User {
 }
 
 impl User {
+    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         github_id: i32,
@@ -108,6 +111,7 @@ impl User {
         Self::map(None, &row)
     }
 
+    #[inline]
     pub async fn by_session(
         database: &crate::database::Database,
         session: &str,
@@ -135,6 +139,7 @@ impl User {
         })
     }
 
+    #[inline]
     pub async fn by_login(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -160,6 +165,7 @@ impl User {
             .await
     }
 
+    #[inline]
     pub fn api_user(&self, hide_email: bool) -> ApiUser {
         ApiUser {
             id: self.id,
@@ -205,6 +211,7 @@ pub struct UserSession {
 }
 
 impl BaseModel for UserSession {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("user_sessions");
 
@@ -232,6 +239,7 @@ impl BaseModel for UserSession {
         ])
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
 
@@ -246,6 +254,7 @@ impl BaseModel for UserSession {
 }
 
 impl UserSession {
+    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         user_id: i32,
@@ -276,6 +285,7 @@ impl UserSession {
         (Self::map(None, &row), hash)
     }
 
+    #[inline]
     pub async fn save(&self, database: &crate::database::Database) {
         sqlx::query(
             r#"
@@ -296,6 +306,7 @@ impl UserSession {
         .unwrap();
     }
 
+    #[inline]
     pub async fn delete_by_session(database: &crate::database::Database, session: &str) {
         sqlx::query(
             r#"

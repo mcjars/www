@@ -40,6 +40,7 @@ pub struct MinifiedVersionStats {
 }
 
 impl MinifiedVersionStats {
+    #[inline]
     pub async fn by_id(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -116,6 +117,7 @@ pub struct Version {
 }
 
 impl Version {
+    #[inline]
     pub async fn location(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -166,6 +168,7 @@ impl Version {
             .await
     }
 
+    #[inline]
     pub async fn all(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,

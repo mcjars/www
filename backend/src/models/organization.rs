@@ -25,6 +25,7 @@ pub struct Organization {
 }
 
 impl BaseModel for Organization {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("organizations");
 
@@ -68,6 +69,7 @@ impl BaseModel for Organization {
         columns
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
 
@@ -90,6 +92,7 @@ impl BaseModel for Organization {
 
 impl Organization {
     #[allow(clippy::new_ret_no_self)]
+    #[inline]
     pub async fn new(database: &crate::database::Database, owner_id: i32, name: &str) {
         sqlx::query("INSERT INTO organizations (owner_id, name) VALUES ($1, $2)")
             .bind(owner_id)
@@ -99,6 +102,7 @@ impl Organization {
             .unwrap();
     }
 
+    #[inline]
     pub async fn save(&self, database: &crate::database::Database) {
         sqlx::query(
             r#"
@@ -125,6 +129,7 @@ impl Organization {
         .unwrap();
     }
 
+    #[inline]
     pub async fn count_by_owner(database: &crate::database::Database, user_id: i32) -> i64 {
         sqlx::query(
             r#"
@@ -140,6 +145,7 @@ impl Organization {
         .get(0)
     }
 
+    #[inline]
     pub async fn all_by_owner(database: &crate::database::Database, user_id: i32) -> Vec<Self> {
         sqlx::query(&format!(
             r#"
@@ -160,6 +166,7 @@ impl Organization {
         .unwrap().into_iter().map(|row| Self::map(None, &row)).collect()
     }
 
+    #[inline]
     pub async fn by_id(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -189,6 +196,7 @@ impl Organization {
             .await
     }
 
+    #[inline]
     pub async fn by_key(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -215,6 +223,7 @@ impl Organization {
             .await
     }
 
+    #[inline]
     pub async fn by_id_and_user(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -252,6 +261,7 @@ impl Organization {
             .await
     }
 
+    #[inline]
     pub async fn delete_by_id(database: &crate::database::Database, id: i32) -> bool {
         sqlx::query(
             r#"
@@ -281,6 +291,7 @@ pub struct OrganizationKey {
 }
 
 impl BaseModel for OrganizationKey {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("organization_keys");
 
@@ -304,6 +315,7 @@ impl BaseModel for OrganizationKey {
         ])
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
 
@@ -320,6 +332,7 @@ impl BaseModel for OrganizationKey {
 
 impl OrganizationKey {
     #[allow(clippy::new_ret_no_self)]
+    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         organization_id: i32,
@@ -350,6 +363,7 @@ impl OrganizationKey {
         )
     }
 
+    #[inline]
     pub async fn count_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -368,6 +382,7 @@ impl OrganizationKey {
         .get(0)
     }
 
+    #[inline]
     pub async fn all_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -389,6 +404,7 @@ impl OrganizationKey {
         .collect()
     }
 
+    #[inline]
     pub async fn by_id(database: &crate::database::Database, id: i32) -> Option<Self> {
         if id < 1 {
             return None;
@@ -405,6 +421,7 @@ impl OrganizationKey {
         .map(|row| Self::map(None, &row))
     }
 
+    #[inline]
     pub async fn delete_by_id(database: &crate::database::Database, id: i32) -> bool {
         sqlx::query(
             r#"
@@ -434,6 +451,7 @@ pub struct OrganizationSubuser {
 }
 
 impl BaseModel for OrganizationSubuser {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("organization_subusers");
 
@@ -457,6 +475,7 @@ impl BaseModel for OrganizationSubuser {
         columns
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
         let pending = row.get(format!("{}pending", prefix).as_str());
@@ -472,6 +491,7 @@ impl BaseModel for OrganizationSubuser {
 
 impl OrganizationSubuser {
     #[allow(clippy::new_ret_no_self)]
+    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         organization_id: i32,
@@ -493,6 +513,7 @@ impl OrganizationSubuser {
             == 1
     }
 
+    #[inline]
     pub async fn save(&self, database: &crate::database::Database) {
         sqlx::query(
             r#"
@@ -512,6 +533,7 @@ impl OrganizationSubuser {
         .unwrap();
     }
 
+    #[inline]
     pub async fn count_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -530,6 +552,7 @@ impl OrganizationSubuser {
         .get(0)
     }
 
+    #[inline]
     pub async fn all_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -553,6 +576,7 @@ impl OrganizationSubuser {
         .collect()
     }
 
+    #[inline]
     pub async fn by_ids(
         database: &crate::database::Database,
         organization_id: i32,
@@ -577,6 +601,7 @@ impl OrganizationSubuser {
         .map(|row| Self::map(None, &row))
     }
 
+    #[inline]
     pub async fn delete_by_ids(
         database: &crate::database::Database,
         organization_id: i32,

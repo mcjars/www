@@ -73,6 +73,7 @@ impl RequestLogger {
         }
     }
 
+    #[inline]
     pub async fn log(
         &self,
         request: Parts,
@@ -189,6 +190,7 @@ impl RequestLogger {
         self.processing.lock().await.push(pending.remove(index));
     }
 
+    #[inline]
     async fn lookup_ips(
         &self,
         ips: &[String],

@@ -15,6 +15,7 @@ pub enum Format {
 }
 
 impl Display for Format {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -32,6 +33,7 @@ pub struct Config {
 }
 
 impl Config {
+    #[inline]
     pub fn by_alias(alias: &String) -> Option<&Config> {
         CONFIGS
             .iter()
@@ -39,6 +41,7 @@ impl Config {
             .map(|(_, config)| config)
     }
 
+    #[inline]
     pub fn format(
         file: &str,
         content: &str,

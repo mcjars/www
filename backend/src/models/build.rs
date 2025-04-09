@@ -70,6 +70,7 @@ pub struct Build {
 }
 
 impl BaseModel for Build {
+    #[inline]
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
         let table = table.unwrap_or("builds");
 
@@ -129,6 +130,7 @@ impl BaseModel for Build {
         ])
     }
 
+    #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
 
@@ -172,6 +174,7 @@ impl BaseModel for Build {
 }
 
 impl Build {
+    #[inline]
     pub fn installation_size(&self) -> u64 {
         self.installation
             .iter()
@@ -183,6 +186,7 @@ impl Build {
             .sum()
     }
 
+    #[inline]
     pub async fn by_v1_identifier(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -310,6 +314,7 @@ impl Build {
         .await
     }
 
+    #[inline]
     pub async fn by_build_number(
         database: &crate::database::Database,
         r#type: ServerType,
@@ -347,6 +352,7 @@ impl Build {
         }
     }
 
+    #[inline]
     pub async fn all_for_version(
         database: &crate::database::Database,
         r#type: ServerType,
@@ -375,6 +381,7 @@ impl Build {
         .collect()
     }
 
+    #[inline]
     pub async fn all_for_minecraft_version(
         database: &crate::database::Database,
         version_id: &str,

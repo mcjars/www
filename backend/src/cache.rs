@@ -61,7 +61,7 @@ impl Cache {
         instance
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn cached<T, F, Fut>(&self, key: &str, ttl: u64, fn_compute: F) -> T
     where
         T: Serialize + DeserializeOwned,

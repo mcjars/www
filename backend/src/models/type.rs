@@ -85,6 +85,7 @@ pub enum ServerType {
 impl FromStr for ServerType {
     type Err = String;
 
+    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().replace(" ", "_").as_str() {
             "VANILLA" => Ok(ServerType::Vanilla),
@@ -121,6 +122,7 @@ impl FromStr for ServerType {
 }
 
 impl<'de> Deserialize<'de> for ServerType {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -131,6 +133,7 @@ impl<'de> Deserialize<'de> for ServerType {
 }
 
 impl Display for ServerType {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -141,10 +144,12 @@ impl Display for ServerType {
 }
 
 impl ServerType {
+    #[inline]
     pub fn variants() -> Vec<ServerType> {
         TYPE_INFOS.keys().copied().collect()
     }
 
+    #[inline]
     pub async fn all(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -189,6 +194,7 @@ impl ServerType {
             .await
     }
 
+    #[inline]
     pub fn extract(
         data: &IndexMap<ServerType, ServerTypeInfo>,
         types: &[ServerType],
@@ -204,6 +210,7 @@ impl ServerType {
         result
     }
 
+    #[inline]
     pub fn infos(&self) -> &ServerTypeInfo {
         TYPE_INFOS.get(self).unwrap()
     }

@@ -5,6 +5,7 @@ pub enum LoggerLevel {
     Error,
 }
 
+#[inline]
 pub fn log(level: LoggerLevel, message: String) {
     let level = match level {
         LoggerLevel::Info => " INF ".on_blue(),

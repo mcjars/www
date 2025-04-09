@@ -37,7 +37,7 @@ const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
 const BLACKLISTED_HEADERS: [&str; 3] = ["content-encoding", "transfer-encoding", "connection"];
 const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
-#[inline(always)]
+#[inline]
 fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, HeaderMap, String) {
     let index = FRONTEND_ASSETS
         .get_file("index.html")
@@ -161,6 +161,7 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
     Ok(Response::from_parts(parts, Body::from(body_bytes)))
 }
 
+#[inline]
 pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
     let ip = headers
         .get("x-real-ip")
@@ -181,6 +182,7 @@ pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
     ip.parse().ok()
 }
 
+#[inline]
 pub fn slice_up_to(s: &str, max_len: usize) -> &str {
     if max_len >= s.len() {
         return s;
