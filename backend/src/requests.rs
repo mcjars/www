@@ -35,7 +35,7 @@ pub struct Request {
     created: NaiveDateTime,
 }
 
-const ACCEPTED_METHODS: [Method; 5] = [
+const ACCEPTED_METHODS: &[Method] = &[
     Method::GET,
     Method::POST,
     Method::PUT,

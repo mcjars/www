@@ -11,7 +11,7 @@ use axum::{
     ServiceExt,
     body::Body,
     extract::{Path, Request},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, Method, StatusCode},
     middleware::Next,
     response::Response,
     routing::get,
@@ -482,7 +482,7 @@ async fn main() {
                     .unwrap()
             })
             .layer(CatchPanicLayer::custom(handle_panic))
-            .layer(CorsLayer::very_permissive())
+            .layer(CorsLayer::permissive().allow_methods([Method::GET, Method::POST]))
             .layer(TraceLayer::new_for_http().on_request(handle_request))
             .layer(CookieManagerLayer::new())
             .route_layer(axum::middleware::from_fn(handle_postprocessing))
