@@ -14,14 +14,16 @@ impl Database {
         let instance = Self {
             write: match &env.database_url_primary {
                 Some(url) => PgPoolOptions::new()
-                    .max_connections(20)
+                    .min_connections(10)
+                    .max_connections(60)
                     .test_before_acquire(false)
                     .connect(url)
                     .await
                     .unwrap(),
 
                 None => PgPoolOptions::new()
-                    .max_connections(20)
+                    .min_connections(10)
+                    .max_connections(60)
                     .test_before_acquire(false)
                     .connect(&env.database_url)
                     .await
@@ -30,7 +32,8 @@ impl Database {
             read: if env.database_url_primary.is_some() {
                 Some(
                     PgPoolOptions::new()
-                        .max_connections(20)
+                        .min_connections(10)
+                        .max_connections(60)
                         .test_before_acquire(false)
                         .connect(&env.database_url)
                         .await
