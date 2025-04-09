@@ -2,5 +2,8 @@
 resolver = "2"
 members = ["backend"]
 
+[profile.dev]
+debug = false
+
 [profile.release]
 debug = "limited"
