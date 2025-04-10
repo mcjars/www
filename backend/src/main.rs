@@ -69,13 +69,14 @@ fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body>
         "a request panic has occurred".bright_red().to_string(),
     );
 
-    let body = routes::ApiError::new(&["internal server error"]);
-    let body = serde_json::to_string(&body).unwrap();
-
     Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .header("Content-Type", "application/json")
-        .body(Body::from(body))
+        .body(Body::from(
+            ApiError::new(&["internal server error"])
+                .to_value()
+                .to_string(),
+        ))
         .unwrap()
 }
 
@@ -103,7 +104,6 @@ fn handle_request(req: &Request<Body>, _span: &tracing::Span) {
 
 async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, StatusCode> {
     let if_none_match = req.headers().get("If-None-Match").cloned();
-
     let mut response = next.run(req).await;
 
     if let Some(content_type) = response.headers().get("Content-Type") {
@@ -295,7 +295,7 @@ async fn main() {
                             _ => return (
                                 StatusCode::NOT_FOUND,
                                 headers,
-                                Body::from(b"project not supported".to_vec()),
+                                Body::from("project not supported"),
                             ),
                         };
 
@@ -305,7 +305,7 @@ async fn main() {
                                 return (
                                     StatusCode::NOT_FOUND,
                                     headers,
-                                    Body::from(b"error fetching build".to_vec()),
+                                    Body::from("error fetching build"),
                                 );
                             }
                         };
@@ -314,7 +314,7 @@ async fn main() {
                             return (
                                 StatusCode::NOT_FOUND,
                                 headers,
-                                Body::from(b"build not found".to_vec()),
+                                Body::from("build not found"),
                             );
                         }
 

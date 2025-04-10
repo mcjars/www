@@ -1,3 +1,4 @@
+use crate::models::organization::Organization;
 use axum::http::{Method, request::Parts};
 use chrono::NaiveDateTime;
 use colored::Colorize;
@@ -10,8 +11,6 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::Mutex;
-
-use crate::models::organization::Organization;
 
 #[derive(Deserialize, Serialize)]
 pub struct Request {
@@ -85,7 +84,7 @@ impl RequestLogger {
         };
 
         let mut ratelimit: Option<RateLimitData> = None;
-        if organization.is_none() || !organization.as_ref().unwrap().verified {
+        if organization.is_none_or(|o| !o.verified) {
             let ratelimit_key = format!("mcjars_api::ratelimit::{}", ip);
 
             let count = self.cache.client.incr(&ratelimit_key).await.unwrap();
@@ -178,16 +177,17 @@ impl RequestLogger {
     ) {
         let mut pending = self.pending.lock().await;
 
-        if let Some(request) = pending.iter_mut().find(|r| r.id == id) {
+        if let Some(index) = pending.iter().position(|r| r.id == id) {
+            let mut request = pending.remove(index);
+
             request.end = true;
             request.status = status;
             request.time = time;
             request.data = data;
             request.body = body;
-        }
 
-        let index = pending.iter().position(|r| r.id == id).unwrap();
-        self.processing.lock().await.push(pending.remove(index));
+            self.processing.lock().await.push(request);
+        }
     }
 
     #[inline]
@@ -240,6 +240,7 @@ impl RequestLogger {
         let mut requests = processing
             .splice(0..std::cmp::min(30, length), Vec::new())
             .collect::<Vec<_>>();
+        drop(processing);
 
         if requests.is_empty() {
             return;
