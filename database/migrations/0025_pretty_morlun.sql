@@ -45,6 +45,4 @@ CREATE INDEX "buildHashes_sha224_idx" ON "build_hashes" USING btree ("sha224") W
 CREATE INDEX "buildHashes_sha256_idx" ON "build_hashes" USING btree ("sha256") WITH (fillfactor=100);--> statement-breakpoint
 CREATE INDEX "buildHashes_sha384_idx" ON "build_hashes" USING btree ("sha384") WITH (fillfactor=100);--> statement-breakpoint
 CREATE INDEX "buildHashes_sha512_idx" ON "build_hashes" USING btree ("sha512") WITH (fillfactor=100);--> statement-breakpoint
-CREATE INDEX "buildHashes_md5_idx" ON "build_hashes" USING btree ("md5") WITH (fillfactor=100);--> statement-breakpoint
-
-VACUUM ANALYZE build_hashes;
+CREATE INDEX "buildHashes_md5_idx" ON "build_hashes" USING btree ("md5") WITH (fillfactor=100);

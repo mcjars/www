@@ -20,6 +20,17 @@ mod get {
     }
 
     #[derive(ToSchema, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[schema(rename_all = "camelCase")]
+    struct StatsInternal {
+        idle_read_connections: usize,
+        idle_write_connections: usize,
+
+        cache_hits: usize,
+        cache_misses: usize,
+    }
+
+    #[derive(ToSchema, Serialize, Deserialize)]
     struct Stats {
         organizations: i64,
         users: i64,
@@ -28,6 +39,8 @@ mod get {
 
         #[schema(inline)]
         requests: StatsRequests,
+        #[schema(inline)]
+        internal: StatsInternal,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -93,6 +106,13 @@ mod get {
                         month: data[4].get(5),
                         year: data[4].get(6),
                     },
+                    internal: StatsInternal {
+                        idle_read_connections: 0,
+                        idle_write_connections: 0,
+
+                        cache_hits: 0,
+                        cache_misses: 0,
+                    },
                 }
             })
             .await;
@@ -100,7 +120,16 @@ mod get {
         axum::Json(
             serde_json::to_value(&Response {
                 success: true,
-                stats,
+                stats: Stats {
+                    internal: StatsInternal {
+                        idle_read_connections: state.database.read().num_idle(),
+                        idle_write_connections: state.database.write().num_idle(),
+
+                        cache_hits: state.cache.cache_hits(),
+                        cache_misses: state.cache.cache_misses(),
+                    },
+                    ..stats
+                },
             })
             .unwrap(),
         )

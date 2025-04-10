@@ -196,6 +196,8 @@ mod patch {
         organization.owner.id = owner_id;
         organization.save(&state.database).await;
 
+        state.cache.clear_organization(organization.id).await;
+
         (
             StatusCode::OK,
             axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),

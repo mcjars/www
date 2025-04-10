@@ -7,7 +7,6 @@ mod post {
     };
     use axum::{body::Bytes, http::StatusCode};
     use image::{ImageReader, codecs::webp::WebPEncoder, imageops::FilterType};
-    use rustis::commands::GenericCommands;
     use serde::Serialize;
     use utoipa::ToSchema;
 
@@ -84,15 +83,7 @@ mod post {
         organization.icon = url.clone();
         organization.save(&state.database).await;
 
-        let keys: Vec<String> = state
-            .cache
-            .client
-            .keys(format!("organization::{}*", organization.id))
-            .await
-            .unwrap();
-        if !keys.is_empty() {
-            state.cache.client.del(keys).await.unwrap();
-        }
+        state.cache.clear_organization(organization.id).await;
 
         (
             StatusCode::OK,

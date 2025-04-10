@@ -208,6 +208,7 @@ mod post {
         }
     }
 
+    #[inline]
     async fn lookup_build(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
@@ -411,7 +412,7 @@ mod post {
             Some(Result {
                 build: Build::map(None, &query[0]),
                 latest: Build::map(None, &query[1]),
-                version: crate::models::version::MinifiedVersion {
+                version: MinifiedVersion {
                     id: query[1]
                         .try_get("version_id")
                         .unwrap_or_else(|_| query[1].get("project_version_id")),

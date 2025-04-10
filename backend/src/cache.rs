@@ -1,14 +1,21 @@
 use crate::env::RedisMode;
 use colored::Colorize;
-use rustis::client::Client;
-use rustis::commands::{SetCondition, SetExpiration, StringCommands};
-use rustis::resp::cmd;
+use rustis::{
+    client::Client,
+    commands::{GenericCommands, SetCondition, SetExpiration, StringCommands},
+    resp::cmd,
+};
 use serde::{Serialize, de::DeserializeOwned};
-use std::future::Future;
-use std::sync::Arc;
+use std::{
+    future::Future,
+    sync::{Arc, atomic::AtomicUsize},
+};
 
 pub struct Cache {
     pub client: Client,
+
+    cache_hits: AtomicUsize,
+    cache_misses: AtomicUsize,
 }
 
 impl Cache {
@@ -30,6 +37,8 @@ impl Cache {
                 .await
                 .unwrap(),
             },
+            cache_hits: AtomicUsize::new(0),
+            cache_misses: AtomicUsize::new(0),
         };
 
         let version = String::from_utf8(
@@ -62,6 +71,16 @@ impl Cache {
     }
 
     #[inline]
+    pub fn cache_hits(&self) -> usize {
+        self.cache_hits.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    #[inline]
+    pub fn cache_misses(&self) -> usize {
+        self.cache_misses.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    #[inline]
     pub async fn cached<T, F, Fut>(&self, key: &str, ttl: u64, fn_compute: F) -> T
     where
         T: Serialize + DeserializeOwned,
@@ -73,11 +92,15 @@ impl Cache {
         match cached_value {
             Some(value) => {
                 let result: T = serde_json::from_str(&value).unwrap();
+                self.cache_hits
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
                 result
             }
             None => {
                 let result = fn_compute().await;
+                self.cache_misses
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
                 let serialized = serde_json::to_string(&result).unwrap();
                 self.client
@@ -93,6 +116,19 @@ impl Cache {
 
                 result
             }
+        }
+    }
+
+    #[inline]
+    pub async fn clear_organization(&self, organization: i32) {
+        let keys: Vec<String> = self
+            .client
+            .keys(format!("organization::{}*", organization))
+            .await
+            .unwrap();
+
+        if !keys.is_empty() {
+            self.client.del(keys).await.unwrap();
         }
     }
 }
