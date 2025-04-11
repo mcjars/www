@@ -1,16 +1,17 @@
 use super::{
+    BaseModel,
     build::Build,
     r#type::{SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER, ServerType},
 };
-use crate::models::BaseModel;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use sqlx::{Row, types::chrono::NaiveDateTime};
+use sqlx::{Row, prelude::Type, types::chrono::NaiveDateTime};
 use utoipa::ToSchema;
 
-#[derive(ToSchema, Serialize, Deserialize)]
+#[derive(ToSchema, Serialize, Deserialize, Type)]
 #[serde(rename_all = "UPPERCASE")]
 #[schema(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "version_type", rename_all = "UPPERCASE")]
 pub enum VersionType {
     Release,
     Snapshot,
@@ -51,7 +52,7 @@ impl MinifiedVersionStats {
                 let data = sqlx::query(
                     r#"
                     SELECT
-                        builds.type::text AS type,
+                        builds.type AS type,
                         COUNT(builds.id) AS builds,
                         minecraft_versions.type::text AS minecraft_version_type,
                         minecraft_versions.created AS minecraft_version_created,
@@ -83,17 +84,14 @@ impl MinifiedVersionStats {
                     builds.insert(
                         r#type,
                         data.iter()
-                            .find(|x| x.get::<String, _>("type") == r#type.to_string())
+                            .find(|x| x.get::<ServerType, _>("type") == r#type)
                             .map(|x| x.get("builds"))
                             .unwrap_or_default(),
                     );
                 }
 
                 Some(MinifiedVersionStats {
-                    r#type: serde_json::from_value(serde_json::Value::String(
-                        data[0].get("minecraft_version_type"),
-                    ))
-                    .unwrap(),
+                    r#type: data[0].get("minecraft_version_type"),
                     supported: data[0].get("minecraft_version_supported"),
                     java: data[0].get("minecraft_version_java"),
                     builds,
@@ -132,8 +130,7 @@ impl Version {
                     let (minecraft, project) = tokio::join!(
                         sqlx::query(
                             r#"
-                            SELECT
-                                1
+                            SELECT 1
                             FROM minecraft_versions
                             WHERE id = $1
                             LIMIT 1
@@ -143,16 +140,16 @@ impl Version {
                         .fetch_optional(database.read()),
                         sqlx::query(
                             r#"
-                            SELECT
-                                1
+                            SELECT 1
                             FROM project_versions
-                            WHERE id = $1
-                                AND type = $2::server_type
+                            WHERE
+                                id = $1
+                                AND type = $2
                             LIMIT 1
                             "#
                         )
                         .bind(id)
-                        .bind(r#type.to_string())
+                        .bind(r#type)
                         .fetch_optional(database.read()),
                     );
 
@@ -194,7 +191,7 @@ impl Version {
                                     project_versions.id AS project_version_id
                                 FROM project_versions
                                 INNER JOIN builds ON builds.project_version_id = project_versions.id
-                                WHERE builds.type = $1::server_type
+                                WHERE builds.type = $1
                                 GROUP BY project_versions.id
                             ) AS x
                             INNER JOIN builds ON builds.id = x.latest
@@ -202,7 +199,7 @@ impl Version {
                             "#,
                         Build::columns_sql(None, None)
                     ))
-                    .bind(r#type.to_string())
+                    .bind(r#type)
                     .fetch_all(database.read())
                     .await
                     .unwrap();
@@ -238,14 +235,14 @@ impl Version {
                                 SELECT
                                     COUNT(builds.id) AS builds,
                                     MAX(builds.id) AS latest,
-                                    minecraft_versions.type::text AS minecraft_version_type,
+                                    minecraft_versions.type AS minecraft_version_type,
                                     minecraft_versions.created AS minecraft_version_created,
                                     minecraft_versions.supported AS minecraft_version_supported,
                                     minecraft_versions.java AS minecraft_version_java,
                                     minecraft_versions.id AS minecraft_version_id
                                 FROM minecraft_versions
                                 INNER JOIN builds ON builds.version_id = minecraft_versions.id
-                                WHERE builds.type = $1::server_type
+                                WHERE builds.type = $1
                                 GROUP BY minecraft_versions.id
                             ) AS x
                             INNER JOIN builds ON builds.id = x.latest
@@ -253,17 +250,14 @@ impl Version {
                             "#,
                         Build::columns_sql(None, None),
                     ))
-                    .bind(r#type.to_string())
+                    .bind(r#type)
                     .fetch_all(database.read())
                     .await
                     .unwrap();
 
                     for row in data {
                         let version = Version {
-                            r#type: serde_json::from_value(serde_json::Value::String(
-                                row.get("minecraft_version_type"),
-                            ))
-                            .unwrap(),
+                            r#type: row.get("minecraft_version_type"),
                             supported: row.get("minecraft_version_supported"),
                             java: row.get("minecraft_version_java"),
                             builds: row.get("builds"),

@@ -7,7 +7,7 @@ MCJars is a website for retrieving Minecraft server versions. It allows you to e
 - Runs in Docker for high availability
 - Fast Reverse Hash Lookup (< 50ms)
 - Data is cached for fast repeated retrievals
-- Servers in Germany, Hillsboro (Oregon, US), and Ashburn (Virginia, US)
+- Servers in Germany, Singapore, and Ashburn (Virginia, US)
 - Blazingly 🔥 fast 🚀, written in 100% safe Rust. 🦀
 
 ## Developing (Frontend)

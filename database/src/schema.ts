@@ -44,7 +44,8 @@ export const types = [
 	'LOOHP_LIMBO',
 	'NANOLIMBO',
 	'DIVINEMC',
-	'MAGMA'
+	'MAGMA',
+	'LEAF'
 ] as const
 
 export const formats = [

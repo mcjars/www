@@ -1,5 +1,4 @@
-use super::r#type::ServerType;
-use crate::models::BaseModel;
+use super::{BaseModel, r#type::ServerType, version::VersionType};
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
 use std::collections::BTreeMap;
@@ -88,7 +87,7 @@ impl BaseModel for Build {
                 format!("{}project_version_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.type::text", table),
+                format!("{}.type", table),
                 format!("{}type", prefix.unwrap_or_default()),
             ),
             (
@@ -140,10 +139,7 @@ impl BaseModel for Build {
             project_version_id: row
                 .try_get(format!("{}project_version_id", prefix).as_str())
                 .ok(),
-            r#type: serde_json::from_value(serde_json::Value::String(
-                row.get(format!("{}type", prefix).as_str()),
-            ))
-            .unwrap(),
+            r#type: row.get(format!("{}type", prefix).as_str()),
             experimental: row.get(format!("{}experimental", prefix).as_str()),
             name: if row.get::<i32, _>(format!("{}build_number", prefix).as_str()) == 1
                 && row
@@ -226,7 +222,7 @@ impl Build {
                 FROM builds b
                 INNER JOIN spec_build sb ON
                     sb.id = b.id
-                    OR (COALESCE(sb.version_id, sb.project_version_id) = COALESCE(b.version_id, b.project_version_id) AND sb.type = b.type::text)
+                    OR (COALESCE(sb.version_id, sb.project_version_id) = COALESCE(b.version_id, b.project_version_id) AND sb.type = b.type)
                 WHERE b.type <> 'ARCLIGHT'
                     OR split_part(sb.project_version_id, '-', -1) = split_part(b.project_version_id, '-', -1)
                     OR split_part(sb.project_version_id, '-', -1) NOT IN ('forge', 'neoforge', 'fabric')
@@ -255,7 +251,7 @@ impl Build {
 
             SELECT
                 x.*,
-                mv.type::text AS version_type,
+                mv.type AS version_type,
                 mv.supported AS version_supported,
                 mv.java AS version_java,
                 mv.created AS version_created
@@ -297,12 +293,7 @@ impl Build {
                 id: query[1]
                     .try_get("version_id")
                     .unwrap_or_else(|_| query[1].get("project_version_id")),
-                r#type: serde_json::from_value(serde_json::Value::String(
-                    query[1]
-                        .try_get("version_type")
-                        .unwrap_or("RELEASE".to_string()),
-                ))
-                .unwrap(),
+                r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
                 supported: query[1].try_get("version_supported").unwrap_or(true),
                 java: query[1].try_get("version_java").unwrap_or(21),
                 builds: query[1].try_get("build_count").unwrap_or(0),
@@ -328,7 +319,7 @@ impl Build {
             FROM builds
             WHERE
                 {} = $1
-                AND type = $2::server_type
+                AND type = $2
                 {}
             ORDER BY id DESC
             "#,
@@ -341,7 +332,7 @@ impl Build {
             }
         ))
         .bind(version_id)
-        .bind(r#type.to_string())
+        .bind(r#type)
         .bind(build_number)
         .fetch_one(database.read())
         .await;
@@ -365,14 +356,14 @@ impl Build {
             FROM builds
             WHERE
                 {} = $1
-                AND type = $2::server_type
+                AND type = $2
             ORDER BY id DESC
             "#,
             Self::columns_sql(None, None),
             version_location
         ))
         .bind(version_id)
-        .bind(r#type.to_string())
+        .bind(r#type)
         .fetch_all(database.read())
         .await
         .unwrap()

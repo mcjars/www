@@ -1,12 +1,14 @@
 use super::r#type::ServerType;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::Type;
 use std::{fmt::Display, sync::LazyLock};
 use utoipa::ToSchema;
 
-#[derive(ToSchema, Serialize, Deserialize, Clone, Copy)]
+#[derive(ToSchema, Serialize, Deserialize, Type, Clone, Copy)]
 #[serde(rename_all = "UPPERCASE")]
 #[schema(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "format", rename_all = "UPPERCASE")]
 pub enum Format {
     Properties,
     Yaml,
@@ -25,20 +27,19 @@ impl Display for Format {
     }
 }
 
-#[derive(ToSchema, Serialize, Deserialize, Clone)]
+#[derive(ToSchema, Serialize, Clone)]
 pub struct Config {
     pub r#type: ServerType,
     pub format: Format,
-    pub aliases: Vec<String>,
+    pub aliases: &'static [&'static str],
 }
 
 impl Config {
     #[inline]
-    pub fn by_alias(alias: &String) -> Option<&Config> {
+    pub fn by_alias(alias: &str) -> Option<&Config> {
         CONFIGS
-            .iter()
-            .find(|(_, config)| config.aliases.contains(alias))
-            .map(|(_, config)| config)
+            .values()
+            .find(|config| config.aliases.contains(&alias))
     }
 
     #[inline]
@@ -46,8 +47,8 @@ impl Config {
         file: &str,
         content: &str,
     ) -> Result<(String, Option<String>), Box<dyn std::error::Error>> {
-        let mut value = "".to_string();
-        let mut contains: Option<String> = None;
+        let mut value = String::new();
+        let mut contains = None;
 
         for line in content.trim().lines() {
             if line.trim_start().starts_with('#') || line.trim().is_empty() {
@@ -92,16 +93,16 @@ impl Config {
 
             if file != "pufferfish.yml" && contains.is_none() {
                 if let Some(version) = parsed.get("config-version") {
-                    if version.is_string() {
-                        contains = Some(format!("config-version: {}", version.as_str().unwrap()));
-                    } else if version.is_i64() {
-                        contains = Some(format!("config-version: {}", version.as_i64().unwrap()));
+                    if let Some(version) = version.as_str() {
+                        contains = Some(format!("config-version: {}", version));
+                    } else if let Some(version) = version.as_i64() {
+                        contains = Some(format!("config-version: {}", version));
                     }
                 } else if let Some(version) = parsed.get("version") {
-                    if version.is_string() {
-                        contains = Some(format!("version: {}", version.as_str().unwrap()));
-                    } else if version.is_i64() {
-                        contains = Some(format!("version: {}", version.as_i64().unwrap()));
+                    if let Some(version) = version.as_str() {
+                        contains = Some(format!("version: {}", version));
+                    } else if let Some(version) = version.as_i64() {
+                        contains = Some(format!("version: {}", version));
                     }
                 }
             }
@@ -112,16 +113,10 @@ impl Config {
             let parsed: toml::Value = toml::from_str(&value)?;
 
             if let Some(version) = parsed.get("config-version") {
-                if version.is_str() {
-                    contains = Some(format!(
-                        "config-version = \"{}\"",
-                        version.as_str().unwrap()
-                    ));
-                } else if version.is_integer() {
-                    contains = Some(format!(
-                        "config-version = {}",
-                        version.as_integer().unwrap()
-                    ));
+                if let Some(version) = version.as_str() {
+                    contains = Some(format!("config-version = \"{}\"", version));
+                } else if let Some(version) = version.as_integer() {
+                    contains = Some(format!("config-version = {}", version));
                 }
             }
         }
@@ -173,15 +168,15 @@ impl Config {
                 }
             }
             serde_yaml::Value::String(s) => {
-                if let Some(key) = key {
-                    if key.as_str().unwrap().starts_with("seed-") {
+                if let Some(key) = key.map(|k| k.as_str()).flatten() {
+                    if key.starts_with("seed-") {
                         *s = "xxx".to_string();
                     }
                 }
             }
             serde_yaml::Value::Number(_) => {
-                if let Some(key) = key {
-                    if key.as_str().unwrap().starts_with("seed-") {
+                if let Some(key) = key.map(|k| k.as_str()).flatten() {
+                    if key.starts_with("seed-") {
                         *value = serde_yaml::Value::String("xxx".to_string());
                     }
                 }
@@ -191,214 +186,217 @@ impl Config {
     }
 }
 
-pub static CONFIGS: LazyLock<IndexMap<String, Config>> = LazyLock::new(|| {
+pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| {
     IndexMap::from([
         (
-            "server.properties".to_string(),
+            "server.properties",
             Config {
                 r#type: ServerType::Vanilla,
                 format: Format::Properties,
-                aliases: vec!["server.properties".to_string()],
+                aliases: &["server.properties"],
             },
         ),
         (
-            "spigot.yml".to_string(),
+            "spigot.yml",
             Config {
                 r#type: ServerType::Spigot,
                 format: Format::Yaml,
-                aliases: vec!["spigot.yml".to_string()],
+                aliases: &["spigot.yml"],
             },
         ),
         (
-            "bukkit.yml".to_string(),
+            "bukkit.yml",
             Config {
                 r#type: ServerType::Spigot,
                 format: Format::Yaml,
-                aliases: vec!["bukkit.yml".to_string()],
+                aliases: &["bukkit.yml"],
             },
         ),
         (
-            "paper.yml".to_string(),
+            "paper.yml",
             Config {
                 r#type: ServerType::Paper,
                 format: Format::Yaml,
-                aliases: vec!["paper.yml".to_string()],
+                aliases: &["paper.yml"],
             },
         ),
         (
-            "config/paper-global.yml".to_string(),
+            "config/paper-global.yml",
             Config {
                 r#type: ServerType::Paper,
                 format: Format::Yaml,
-                aliases: vec![
-                    "config/paper-global.yml".to_string(),
-                    "paper-global.yml".to_string(),
+                aliases: &["config/paper-global.yml", "paper-global.yml"],
+            },
+        ),
+        (
+            "config/paper-world-defaults.yml",
+            Config {
+                r#type: ServerType::Paper,
+                format: Format::Yaml,
+                aliases: &[
+                    "config/paper-world-defaults.yml",
+                    "paper-world-defaults.yml",
                 ],
             },
         ),
         (
-            "config/paper-world-defaults.yml".to_string(),
-            Config {
-                r#type: ServerType::Paper,
-                format: Format::Yaml,
-                aliases: vec![
-                    "config/paper-world-defaults.yml".to_string(),
-                    "paper-world-defaults.yml".to_string(),
-                ],
-            },
-        ),
-        (
-            "pufferfish.yml".to_string(),
+            "pufferfish.yml",
             Config {
                 r#type: ServerType::Pufferfish,
                 format: Format::Yaml,
-                aliases: vec!["pufferfish.yml".to_string()],
+                aliases: &["pufferfish.yml"],
             },
         ),
         (
-            "purpur.yml".to_string(),
+            "purpur.yml",
             Config {
                 r#type: ServerType::Purpur,
                 format: Format::Yaml,
-                aliases: vec!["purpur.yml".to_string()],
+                aliases: &["purpur.yml"],
             },
         ),
         (
-            "leaves.yml".to_string(),
+            "leaves.yml",
             Config {
                 r#type: ServerType::Leaves,
                 format: Format::Yaml,
-                aliases: vec!["leaves.yml".to_string()],
+                aliases: &["leaves.yml"],
             },
         ),
         (
-            "canvas.yml".to_string(),
+            "canvas.yml",
             Config {
                 r#type: ServerType::Canvas,
                 format: Format::Yaml,
-                aliases: vec!["canvas.yml".to_string()],
+                aliases: &["canvas.yml"],
             },
         ),
         (
-            "divinemc.yml".to_string(),
+            "divinemc.yml",
             Config {
                 r#type: ServerType::Divinemc,
                 format: Format::Yaml,
-                aliases: vec!["divinemc.yml".to_string()],
+                aliases: &["divinemc.yml"],
             },
         ),
         (
-            "config/sponge/global.conf".to_string(),
+            "config/sponge/global.conf",
             Config {
                 r#type: ServerType::Sponge,
                 format: Format::Conf,
-                aliases: vec![
-                    "config/sponge/global.conf".to_string(),
-                    "global.conf".to_string(),
-                ],
+                aliases: &["config/sponge/global.conf", "global.conf"],
             },
         ),
         (
-            "config/sponge/sponge.conf".to_string(),
+            "config/sponge/sponge.conf",
             Config {
                 r#type: ServerType::Sponge,
                 format: Format::Conf,
-                aliases: vec![
-                    "config/sponge/sponge.conf".to_string(),
-                    "sponge.conf".to_string(),
-                ],
+                aliases: &["config/sponge/sponge.conf", "sponge.conf"],
             },
         ),
         (
-            "config/sponge/tracker.conf".to_string(),
+            "config/sponge/tracker.conf",
             Config {
                 r#type: ServerType::Sponge,
                 format: Format::Conf,
-                aliases: vec![
-                    "config/sponge/tracker.conf".to_string(),
-                    "tracker.conf".to_string(),
-                ],
+                aliases: &["config/sponge/tracker.conf", "tracker.conf"],
             },
         ),
         (
-            "arclight.conf".to_string(),
+            "arclight.conf",
             Config {
                 r#type: ServerType::Arclight,
                 format: Format::Conf,
-                aliases: vec!["arclight.conf".to_string()],
+                aliases: &["arclight.conf"],
             },
         ),
         (
-            "config/neoforge-server.toml".to_string(),
+            "config/neoforge-server.toml",
             Config {
                 r#type: ServerType::Neoforge,
                 format: Format::Toml,
-                aliases: vec![
-                    "config/neoforge-server.toml".to_string(),
-                    "neoforge-server.toml".to_string(),
-                ],
+                aliases: &["config/neoforge-server.toml", "neoforge-server.toml"],
             },
         ),
         (
-            "config/neoforge-common.toml".to_string(),
+            "config/neoforge-common.toml",
             Config {
                 r#type: ServerType::Neoforge,
                 format: Format::Toml,
-                aliases: vec![
-                    "config/neoforge-common.toml".to_string(),
-                    "neoforge-common.toml".to_string(),
-                ],
+                aliases: &["config/neoforge-common.toml", "neoforge-common.toml"],
             },
         ),
         (
-            "mohist-config/mohist.yml".to_string(),
+            "mohist-config/mohist.yml",
             Config {
                 r#type: ServerType::Mohist,
                 format: Format::Yaml,
-                aliases: vec![
-                    "mohist-config/mohist.yml".to_string(),
-                    "mohist.yml".to_string(),
-                ],
+                aliases: &["mohist-config/mohist.yml", "mohist.yml"],
             },
         ),
         (
-            "velocity.toml".to_string(),
+            "velocity.toml",
             Config {
                 r#type: ServerType::Velocity,
                 format: Format::Toml,
-                aliases: vec!["velocity.toml".to_string()],
+                aliases: &["velocity.toml"],
             },
         ),
         (
-            "config.yml".to_string(),
+            "config.yml",
             Config {
                 r#type: ServerType::Bungeecord,
                 format: Format::Yaml,
-                aliases: vec!["config.yml".to_string()],
+                aliases: &["config.yml"],
             },
         ),
         (
-            "waterfall.yml".to_string(),
+            "waterfall.yml",
             Config {
                 r#type: ServerType::Waterfall,
                 format: Format::Yaml,
-                aliases: vec!["waterfall.yml".to_string()],
+                aliases: &["waterfall.yml"],
             },
         ),
         (
-            "settings.yml".to_string(),
+            "settings.yml",
             Config {
                 r#type: ServerType::Nanolimbo,
                 format: Format::Yaml,
-                aliases: vec!["settings.yml".to_string()],
+                aliases: &["settings.yml"],
             },
         ),
         (
-            "magma.yml".to_string(),
+            "magma.yml",
             Config {
                 r#type: ServerType::Magma,
                 format: Format::Yaml,
-                aliases: vec!["magma.yml".to_string()],
+                aliases: &["magma.yml"],
+            },
+        ),
+        (
+            "config/leaf-global.yml",
+            Config {
+                r#type: ServerType::Leaf,
+                format: Format::Yaml,
+                aliases: &["config/leaf-global.yml", "leaf-global.yml"],
+            },
+        ),
+        (
+            "config/gale-global.yml",
+            Config {
+                r#type: ServerType::Leaf,
+                format: Format::Yaml,
+                aliases: &["config/gale-global.yml", "gale-global.yml"],
+            },
+        ),
+        (
+            "config/gale-world-defaults.yml",
+            Config {
+                r#type: ServerType::Leaf,
+                format: Format::Yaml,
+                aliases: &["config/gale-world-defaults.yml", "gale-world-defaults.yml"],
             },
         ),
     ])

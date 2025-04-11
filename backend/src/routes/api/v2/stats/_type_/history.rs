@@ -117,7 +117,7 @@ mod get {
                             AVG(builds.zip_size)::FLOAT8 AS zip_average
                         FROM builds
                         WHERE
-                            builds.type = $1::server_type
+                            builds.type = $1
                             AND builds.created >= $2
                             AND builds.created <= $3
                         GROUP BY day
@@ -129,7 +129,7 @@ mod get {
                             "DISTINCT"
                         }
                     ))
-                    .bind(r#type.to_string())
+                    .bind(r#type)
                     .bind(start)
                     .bind(end)
                     .fetch_all(state.database.read())
@@ -137,7 +137,6 @@ mod get {
                     .unwrap();
 
                     let mut stats = Vec::with_capacity(end.day() as usize);
-
                     for i in 0..end.day() {
                         stats.push(Stats {
                             day: i as i16 + 1,

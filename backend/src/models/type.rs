@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize};
-use sqlx::Row;
+use sqlx::{Row, prelude::Type};
 use std::{fmt::Display, str::FromStr, sync::LazyLock};
 use utoipa::ToSchema;
 
@@ -52,9 +52,10 @@ pub struct ServerTypeInfo {
     pub versions: ServerTypeVersions,
 }
 
-#[derive(ToSchema, Serialize, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(ToSchema, Serialize, Type, PartialEq, Eq, Hash, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[schema(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(type_name = "server_type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ServerType {
     Vanilla,
     Paper,
@@ -80,6 +81,7 @@ pub enum ServerType {
     Nanolimbo,
     Divinemc,
     Magma,
+    Leaf,
 }
 
 impl FromStr for ServerType {
@@ -159,7 +161,7 @@ impl ServerType {
                 let data = sqlx::query(
                     r#"
                     SELECT
-                        type::text AS type,
+                        builds.type AS type,
                         COUNT(*) AS builds,
                         COUNT(DISTINCT version_id) AS versions_minecraft,
                         COUNT(DISTINCT project_version_id) AS versions_project
@@ -173,8 +175,7 @@ impl ServerType {
 
                 let mut types = IndexMap::new();
                 for row in data {
-                    let r#type: ServerType =
-                        serde_json::from_value(serde_json::Value::String(row.get("type"))).unwrap();
+                    let r#type: ServerType = row.get("type");
 
                     types.insert(
                         r#type,
@@ -669,6 +670,25 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
                 description: "Magma is the next generation of hybrid minecraft server softwares.".to_string(),
                 categories: vec!["plugins".to_string(), "modded".to_string()],
                 compatibility: vec!["spigot".to_string(), "forge".to_string()],
+                builds: 0,
+                versions: ServerTypeVersions {
+                    minecraft: 0,
+                    project: 0,
+                },
+            },
+        ),
+        (
+            ServerType::Leaf,
+            ServerTypeInfo {
+                name: "Leaf".to_string(),
+                icon: format!("{}/icons/leaf.png", env.s3_url),
+                color: "#65BE75".to_string(),
+                homepage: "https://www.leafmc.one".to_string(),
+                deprecated: true,
+                experimental: false,
+                description: "A Paper fork aim to find balance between performance, vanilla and stability.".to_string(),
+                categories: vec!["plugins".to_string()],
+                compatibility: vec!["spigot".to_string(), "paper".to_string()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,

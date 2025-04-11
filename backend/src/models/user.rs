@@ -1,4 +1,4 @@
-use crate::models::BaseModel;
+use super::BaseModel;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};

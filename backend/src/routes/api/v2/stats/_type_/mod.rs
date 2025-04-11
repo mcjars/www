@@ -73,7 +73,7 @@ mod get {
                         AVG(builds.jar_size)::FLOAT8 AS jar_average,
                         AVG(builds.zip_size)::FLOAT8 AS zip_average
                     FROM builds
-                    WHERE builds.type = $1::server_type
+                    WHERE builds.type = $1
                     "#,
                     if r#type == ServerType::Fabric {
                         ""
@@ -81,7 +81,7 @@ mod get {
                         "DISTINCT"
                     }
                 ))
-                .bind(r#type.to_string())
+                .bind(r#type)
                 .fetch_one(state.database.read())
                 .await
                 .unwrap();

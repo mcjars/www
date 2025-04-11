@@ -83,10 +83,10 @@ mod post {
                             INNER JOIN configs ON configs.id = config_values.config_id
                             INNER JOIN builds ON
                                 builds.id = build_configs.build_id
-                                AND builds.type = $1::server_type
+                                AND builds.type = $1
                             WHERE
-                                configs.type = $1::server_type
-                                AND configs.format = $2::format
+                                configs.type = $1
+                                AND configs.format = $2
                                 AND configs.location = $3
                                 AND config_values.value LIKE '%' || $4 || '%'
                             GROUP BY config_values.id, builds.id
@@ -94,9 +94,9 @@ mod post {
                             "#,
                             Build::columns_sql(None, None)
                         ))
-                        .bind(config.r#type.to_string())
-                        .bind(config.format.to_string())
-                        .bind(config.aliases[0].clone())
+                        .bind(config.r#type)
+                        .bind(config.format)
+                        .bind(config.aliases[0])
                         .bind(contains)
                         .fetch_all(state.database.read())
                         .await
@@ -113,19 +113,19 @@ mod post {
                             INNER JOIN configs ON configs.id = config_values.config_id
                             INNER JOIN builds ON
                                 builds.id = build_configs.build_id
-                                AND builds.type = $1::server_type
+                                AND builds.type = $1
                             WHERE
-                                configs.type = $1::server_type
-                                AND configs.format = $2::format
+                                configs.type = $1
+                                AND configs.format = $2
                                 AND configs.location = $3
                             ORDER BY similarity DESC
                             LIMIT 3
                             "#,
                             Build::columns_sql(None, None)
                         ))
-                        .bind(config.r#type.to_string())
-                        .bind(config.format.to_string())
-                        .bind(config.aliases[0].clone())
+                        .bind(config.r#type)
+                        .bind(config.format)
+                        .bind(config.aliases[0])
                         .bind(&formatted)
                         .fetch_all(state.database.read())
                         .await

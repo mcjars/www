@@ -129,7 +129,7 @@ mod get {
                                 AVG(builds.zip_size)::FLOAT8 AS zip_average
                             FROM builds
                             WHERE
-                                builds.type = $1::server_type
+                                builds.type = $1
                                 AND builds.{} = $2
                                 AND builds.created >= $3
                                 AND builds.created <= $4
@@ -143,7 +143,7 @@ mod get {
                             },
                             location
                         ))
-                        .bind(r#type.to_string())
+                        .bind(r#type)
                         .bind(version)
                         .bind(start)
                         .bind(end)
@@ -152,7 +152,6 @@ mod get {
                         .unwrap();
 
                         let mut stats = Vec::with_capacity(end.day() as usize);
-
                         for i in 0..end.day() {
                             stats.push(Stats {
                                 day: i as i16 + 1,

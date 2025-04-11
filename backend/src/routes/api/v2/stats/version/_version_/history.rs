@@ -129,7 +129,6 @@ mod get {
                     .unwrap();
 
                     let mut stats = Vec::with_capacity(end.day() as usize);
-
                     for i in 0..end.day() {
                         stats.push(Stats {
                             day: i as i16 + 1,

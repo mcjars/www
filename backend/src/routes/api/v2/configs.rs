@@ -10,7 +10,7 @@ mod get {
     #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
-        configs: IndexMap<String, Config>,
+        configs: IndexMap<&'static str, Config>,
     }
 
     #[utoipa::path(get, path = "/", responses(

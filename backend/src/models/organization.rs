@@ -1,11 +1,9 @@
-use crate::models::BaseModel;
+use super::{BaseModel, r#type::ServerType};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
 use std::collections::BTreeMap;
 use utoipa::ToSchema;
-
-use super::r#type::ServerType;
 
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct Organization {

@@ -88,7 +88,7 @@ mod get {
                                 AVG(builds.zip_size)::FLOAT8 AS zip_average
                             FROM builds
                             WHERE
-                                builds.type = $1::server_type
+                                builds.type = $1
                                 AND builds.{} = $2
                             "#,
                             if r#type == ServerType::Fabric {
@@ -98,7 +98,7 @@ mod get {
                             },
                             location
                         ))
-                        .bind(r#type.to_string())
+                        .bind(r#type)
                         .bind(version)
                         .fetch_one(state.database.read())
                         .await

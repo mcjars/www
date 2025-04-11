@@ -158,6 +158,21 @@ export const configs: Record<string, {
 		type: 'MAGMA',
 		format: 'YAML',
 		aliases: ['magma.yml']
+	},
+
+	// Leaf
+	'config/leaf-global.yml': {
+		type: 'LEAF',
+		format: 'YAML',
+		aliases: ['config/leaf-global.yml', 'leaf-global.yml']
+	}, 'config/gale-global.yml': {
+		type: 'LEAF',
+		format: 'YAML',
+		aliases: ['config/gale-global.yml', 'gale-global.yml']
+	}, 'config/gale-world-defaults.yml': {
+		type: 'LEAF',
+		format: 'YAML',
+		aliases: ['config/gale-world-defaults.yml', 'gale-world-defaults.yml']
 	}
 }
 
