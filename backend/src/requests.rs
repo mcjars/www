@@ -292,7 +292,7 @@ impl RequestLogger {
                 Err(e) => {
                     crate::logger::log(
                         crate::logger::LoggerLevel::Error,
-                        format!("failed to insert request: {}", e),
+                        format!("{} {}", "failed to insert request".red(), e),
                     );
 
                     self.processing
