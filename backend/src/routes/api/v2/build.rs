@@ -314,7 +314,7 @@ mod post {
                     FROM builds b
                     INNER JOIN spec_build sb ON
                         sb.id = b.id
-                        OR (COALESCE(sb.version_id, sb.project_version_id) = COALESCE(b.version_id, b.project_version_id) AND sb.type = b.type::text)
+                        OR (COALESCE(sb.version_id, sb.project_version_id) = COALESCE(b.version_id, b.project_version_id) AND sb.type = b.type)
                     WHERE b.type <> 'ARCLIGHT'
                         OR split_part(sb.project_version_id, '-', -1) = split_part(b.project_version_id, '-', -1)
                         OR split_part(sb.project_version_id, '-', -1) NOT IN ('forge', 'neoforge', 'fabric')
