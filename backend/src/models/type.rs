@@ -118,6 +118,7 @@ impl FromStr for ServerType {
             "DIVINEMC" => Ok(ServerType::Divinemc),
             "DIVINE_MC" => Ok(ServerType::Divinemc),
             "MAGMA" => Ok(ServerType::Magma),
+            "LEAF" => Ok(ServerType::Leaf),
             _ => Err(format!("Unknown server type: {}", s)),
         }
     }
