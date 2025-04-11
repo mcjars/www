@@ -11,6 +11,8 @@ pub mod version;
 
 pub trait BaseModel: Serialize + DeserializeOwned {
     fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String>;
+
+    #[inline]
     fn columns_sql(prefix: Option<&str>, table: Option<&str>) -> String {
         Self::columns(prefix, table)
             .iter()

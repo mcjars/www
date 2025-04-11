@@ -233,7 +233,7 @@ impl RequestLogger {
         Ok(result)
     }
 
-    pub async fn process(&self) {
+    pub async fn process(&self) -> Result<(), sqlx::Error> {
         let mut processing = self.processing.lock().await;
         let length = processing.len();
 
@@ -243,7 +243,7 @@ impl RequestLogger {
         drop(processing);
 
         if requests.is_empty() {
-            return;
+            return Ok(());
         }
 
         let ips = self
@@ -265,7 +265,7 @@ impl RequestLogger {
         }
 
         for r in requests.iter() {
-            sqlx::query!(
+            match sqlx::query!(
                 r#"
                 INSERT INTO requests (id, organization_id, origin, method, path, time, status, body, ip, continent, country, data, user_agent, created)
                 VALUES ($1, $2, $3, $4::text::Method, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -287,13 +287,29 @@ impl RequestLogger {
                 r.created
             )
             .execute(self.database.write())
-            .await
-            .unwrap();
+            .await {
+                Ok(_) => {}
+                Err(e) => {
+                    crate::logger::log(
+                        crate::logger::LoggerLevel::Error,
+                        format!("failed to insert request: {}", e),
+                    );
+
+                    self.processing
+                        .lock()
+                        .await
+                        .append(&mut requests);
+
+                    return Err(e);
+                }
+            }
         }
 
         crate::logger::log(
             crate::logger::LoggerLevel::Info,
             format!("processed {} requests", requests.len().to_string().cyan()),
         );
+
+        Ok(())
     }
 }

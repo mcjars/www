@@ -232,7 +232,7 @@ async fn main() {
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-                state.requests.process().await;
+                state.requests.process().await.unwrap_or_default();
             }
         });
     }
