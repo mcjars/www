@@ -10,7 +10,7 @@ mod get {
     #[derive(ToSchema, Serialize)]
     struct Response {
         success: bool,
-        configs: IndexMap<&'static str, Config>,
+        configs: &'static IndexMap<&'static str, Config>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -20,7 +20,7 @@ mod get {
         axum::Json(
             serde_json::to_value(&Response {
                 success: true,
-                configs: CONFIGS.clone(),
+                configs: &CONFIGS,
             })
             .unwrap(),
         )

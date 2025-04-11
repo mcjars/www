@@ -13,16 +13,16 @@ pub struct IndexFile {
     pub href: Option<String>,
 }
 
-pub fn render(state: GetState, location: &str, files: &[IndexFile]) -> Response<String> {
+pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Response<String> {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
         .replace("{{LOCATION}}", location)
         .replace(
             "<!-- ENTRIES -->",
             &files
-                .iter()
+                .into_iter()
                 .map(|f| {
-                    let href = f.href.clone().unwrap_or(f.name.clone());
+                    let href = f.href.unwrap_or_else(|| f.name.clone());
 
                     format!(
                         r#"
@@ -67,7 +67,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     })
                     .collect::<Vec<_>>();
 
-                render(state, "/", &files)
+                render(state, "/", files)
             }),
         )
         .nest("/{type}", _type_::router(state))

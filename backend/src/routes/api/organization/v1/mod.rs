@@ -43,9 +43,9 @@ mod get {
     ))]
     pub async fn route(
         state: GetState,
-        organization: GetOrganization,
+        mut organization: GetOrganization,
     ) -> axum::Json<serde_json::Value> {
-        let organization = organization.as_ref().unwrap().clone();
+        let organization = organization.take().unwrap();
 
         let stats = state
             .cache

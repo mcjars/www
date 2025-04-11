@@ -63,10 +63,7 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
     }
 
     let (parts, body) = req.into_parts();
-    let request_id = state
-        .requests
-        .log(parts.clone(), organization.as_ref())
-        .await;
+    let request_id = state.requests.log(&parts, organization.as_ref()).await;
 
     if let Err(Some(ratelimit)) = request_id {
         return Response::builder()

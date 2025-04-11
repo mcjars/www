@@ -50,26 +50,28 @@ async fn auth(
         }
     };
 
-    let organization = Organization::by_id_and_user(
+    let organization = match Organization::by_id_and_user(
         &state.database,
         &state.cache,
         user.id,
         user.admin,
         organization,
     )
-    .await;
+    .await
+    {
+        Some(organization) => organization,
+        None => {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .header("Content-Type", "application/json")
+                .body(Body::from(
+                    serde_json::to_string(&ApiError::new(&["organization not found"])).unwrap(),
+                ))
+                .unwrap());
+        }
+    };
 
-    if organization.is_none() {
-        return Ok(Response::builder()
-            .status(StatusCode::UNAUTHORIZED)
-            .header("Content-Type", "application/json")
-            .body(Body::from(
-                serde_json::to_string(&ApiError::new(&["unauthorized"])).unwrap(),
-            ))
-            .unwrap());
-    }
-
-    req.extensions_mut().insert(organization.unwrap());
+    req.extensions_mut().insert(organization);
 
     Ok(next.run(req).await)
 }
@@ -158,15 +160,15 @@ mod patch {
                 );
             }
 
-            let user = User::by_login(&state.database, &state.cache, &owner).await;
-            if user.is_none() {
-                return (
-                    StatusCode::NOT_FOUND,
-                    axum::Json(ApiError::new(&["new owner not found"]).to_value()),
-                );
-            }
-
-            owner_id = user.unwrap().id;
+            owner_id = match User::by_login(&state.database, &state.cache, &owner).await {
+                Some(user) => user.id,
+                None => {
+                    return (
+                        StatusCode::NOT_FOUND,
+                        axum::Json(ApiError::new(&["owner not found"]).to_value()),
+                    );
+                }
+            };
 
             let count = Organization::count_by_owner(&state.database, owner_id).await;
             if count >= 1 {

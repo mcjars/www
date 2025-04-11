@@ -186,7 +186,7 @@ impl ServerType {
                                 minecraft: row.get("versions_minecraft"),
                                 project: row.get("versions_project"),
                             },
-                            ..TYPE_INFOS.get(&r#type).unwrap().clone()
+                            ..r#type.infos().clone()
                         },
                     );
                 }
@@ -197,15 +197,15 @@ impl ServerType {
     }
 
     #[inline]
-    pub fn extract(
-        data: &IndexMap<ServerType, ServerTypeInfo>,
+    pub fn extract<'a>(
+        data: &'a IndexMap<ServerType, ServerTypeInfo>,
         types: &[ServerType],
-    ) -> IndexMap<ServerType, ServerTypeInfo> {
+    ) -> IndexMap<ServerType, &'a ServerTypeInfo> {
         let mut result = IndexMap::new();
 
         for r#type in types {
             if let Some(info) = data.get(r#type) {
-                result.insert(*r#type, info.clone());
+                result.insert(*r#type, info);
             }
         }
 

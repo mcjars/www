@@ -79,7 +79,6 @@ impl MinifiedVersionStats {
                 }
 
                 let mut builds = IndexMap::new();
-
                 for r#type in ServerType::variants() {
                     builds.insert(
                         r#type,
@@ -178,25 +177,25 @@ impl Version {
                 if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {
                     let data = sqlx::query(&format!(
                         r#"
+                        SELECT
+                            {},
+                            builds,
+                            latest,
+                            created_oldest
+                        FROM (
                             SELECT
-                                {},
-                                builds,
-                                latest,
-                                created_oldest
-                            FROM (
-                                SELECT
-                                    COUNT(builds.id) AS builds,
-                                    MAX(builds.id) AS latest,
-                                    MIN(builds.created) AS created_oldest,
-                                    project_versions.id AS project_version_id
-                                FROM project_versions
-                                INNER JOIN builds ON builds.project_version_id = project_versions.id
-                                WHERE builds.type = $1
-                                GROUP BY project_versions.id
-                            ) AS x
-                            INNER JOIN builds ON builds.id = x.latest
-                            ORDER BY x.created_oldest ASC
-                            "#,
+                                COUNT(builds.id) AS builds,
+                                MAX(builds.id) AS latest,
+                                MIN(builds.created) AS created_oldest,
+                                project_versions.id AS project_version_id
+                            FROM project_versions
+                            INNER JOIN builds ON builds.project_version_id = project_versions.id
+                            WHERE builds.type = $1
+                            GROUP BY project_versions.id
+                        ) AS x
+                        INNER JOIN builds ON builds.id = x.latest
+                        ORDER BY x.created_oldest ASC
+                        "#,
                         Build::columns_sql(None, None)
                     ))
                     .bind(r#type)
@@ -222,32 +221,32 @@ impl Version {
                 } else {
                     let data = sqlx::query(&format!(
                         r#"
+                        SELECT
+                            {},
+                            builds,
+                            latest,
+                            minecraft_version_type,
+                            minecraft_version_created,
+                            minecraft_version_supported,
+                            minecraft_version_java,
+                            minecraft_version_id
+                        FROM (
                             SELECT
-                                {},
-                                builds,
-                                latest,
-                                minecraft_version_type,
-                                minecraft_version_created,
-                                minecraft_version_supported,
-                                minecraft_version_java,
-                                minecraft_version_id
-                            FROM (
-                                SELECT
-                                    COUNT(builds.id) AS builds,
-                                    MAX(builds.id) AS latest,
-                                    minecraft_versions.type AS minecraft_version_type,
-                                    minecraft_versions.created AS minecraft_version_created,
-                                    minecraft_versions.supported AS minecraft_version_supported,
-                                    minecraft_versions.java AS minecraft_version_java,
-                                    minecraft_versions.id AS minecraft_version_id
-                                FROM minecraft_versions
-                                INNER JOIN builds ON builds.version_id = minecraft_versions.id
-                                WHERE builds.type = $1
-                                GROUP BY minecraft_versions.id
-                            ) AS x
-                            INNER JOIN builds ON builds.id = x.latest
-                            ORDER BY x.minecraft_version_created ASC
-                            "#,
+                                COUNT(builds.id) AS builds,
+                                MAX(builds.id) AS latest,
+                                minecraft_versions.type AS minecraft_version_type,
+                                minecraft_versions.created AS minecraft_version_created,
+                                minecraft_versions.supported AS minecraft_version_supported,
+                                minecraft_versions.java AS minecraft_version_java,
+                                minecraft_versions.id AS minecraft_version_id
+                            FROM minecraft_versions
+                            INNER JOIN builds ON builds.version_id = minecraft_versions.id
+                            WHERE builds.type = $1
+                            GROUP BY minecraft_versions.id
+                        ) AS x
+                        INNER JOIN builds ON builds.id = x.latest
+                        ORDER BY x.minecraft_version_created ASC
+                        "#,
                         Build::columns_sql(None, None),
                     ))
                     .bind(r#type)

@@ -31,23 +31,27 @@ mod post {
         mut organization: GetOrganization,
         image: Bytes,
     ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let image = ImageReader::new(std::io::Cursor::new(image)).with_guessed_format();
-        if image.is_err() {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["invalid image"]).to_value()),
-            );
-        }
+        let image = match ImageReader::new(std::io::Cursor::new(image)).with_guessed_format() {
+            Ok(reader) => reader,
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    axum::Json(ApiError::new(&["invalid image"]).to_value()),
+                );
+            }
+        };
 
-        let image = image.unwrap().decode();
-        if image.is_err() {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["invalid image"]).to_value()),
-            );
-        }
+        let image = match image.decode() {
+            Ok(image) => image,
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    axum::Json(ApiError::new(&["invalid image"]).to_value()),
+                );
+            }
+        };
 
-        let image = image.unwrap().resize_exact(512, 512, FilterType::Triangle);
+        let image = image.resize_exact(512, 512, FilterType::Triangle);
         let mut data: Vec<u8> = Vec::new();
         let encoder = WebPEncoder::new_lossless(&mut data);
         let color = image.color();

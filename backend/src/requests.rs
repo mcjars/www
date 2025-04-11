@@ -75,7 +75,7 @@ impl RequestLogger {
     #[inline]
     pub async fn log(
         &self,
-        request: Parts,
+        request: &Parts,
         organization: Option<&Organization>,
     ) -> Result<(Option<String>, Option<RateLimitData>), Option<RateLimitData>> {
         let ip = match crate::extract_ip(&request.headers) {

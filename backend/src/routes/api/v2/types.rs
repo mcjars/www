@@ -11,20 +11,20 @@ mod get {
     use utoipa::ToSchema;
 
     #[derive(ToSchema, Serialize)]
-    struct Types {
-        recommended: IndexMap<ServerType, ServerTypeInfo>,
-        established: IndexMap<ServerType, ServerTypeInfo>,
-        experimental: IndexMap<ServerType, ServerTypeInfo>,
-        miscellaneous: IndexMap<ServerType, ServerTypeInfo>,
-        limbos: IndexMap<ServerType, ServerTypeInfo>,
+    struct Types<'a> {
+        recommended: IndexMap<ServerType, &'a ServerTypeInfo>,
+        established: IndexMap<ServerType, &'a ServerTypeInfo>,
+        experimental: IndexMap<ServerType, &'a ServerTypeInfo>,
+        miscellaneous: IndexMap<ServerType, &'a ServerTypeInfo>,
+        limbos: IndexMap<ServerType, &'a ServerTypeInfo>,
     }
 
     #[derive(ToSchema, Serialize)]
-    struct Response {
+    struct Response<'a> {
         success: bool,
 
         #[schema(inline)]
-        types: Types,
+        types: Types<'a>,
     }
 
     #[utoipa::path(get, path = "/", responses(

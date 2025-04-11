@@ -34,7 +34,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
-const BLACKLISTED_HEADERS: [&str; 3] = ["content-encoding", "transfer-encoding", "connection"];
 const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
 #[inline]
@@ -318,14 +317,21 @@ async fn main() {
                             );
                         }
 
-                        for (key, value) in response.headers().iter() {
-                            if !BLACKLISTED_HEADERS.contains(&key.as_str()) {
-                                headers.insert(key, value.clone());
-                            }
-                        }
+                        headers.insert(
+                            "Content-Type",
+                            response.headers().get("Content-Type").unwrap().clone(),
+                        );
+                        headers.insert(
+                            "Content-Disposition",
+                            response
+                                .headers()
+                                .get("Content-Disposition")
+                                .unwrap()
+                                .clone(),
+                        );
 
                         (
-                            response.status(),
+                            StatusCode::OK,
                             headers,
                             Body::from(response.bytes().await.unwrap()),
                         )

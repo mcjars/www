@@ -39,17 +39,19 @@ async fn auth(
         })
         .await;
 
-    if user.is_none() {
-        return Ok(Response::builder()
-            .status(StatusCode::UNAUTHORIZED)
-            .header("Content-Type", "application/json")
-            .body(Body::from(
-                serde_json::to_string(&ApiError::new(&["unauthorized"])).unwrap(),
-            ))
-            .unwrap());
-    }
+    let (user, mut session) = match user {
+        Some(data) => data,
+        None => {
+            return Ok(Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .header("Content-Type", "application/json")
+                .body(Body::from(
+                    serde_json::to_string(&ApiError::new(&["invalid session"])).unwrap(),
+                ))
+                .unwrap());
+        }
+    };
 
-    let (user, mut session) = user.unwrap();
     session.ip = crate::extract_ip(req.headers()).unwrap().into();
     session.user_agent = req
         .headers()

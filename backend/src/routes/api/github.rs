@@ -53,10 +53,12 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     .json::<OAuthResponse>()
                     .await;
 
-                if user.is_err() {
-                    return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid access token returned");
-                }
-                let user = user.unwrap();
+                let user = match user {
+                    Ok(user) => user,
+                    Err(_) => {
+                        return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid access token returned");
+                    }
+                };
 
                 #[derive(Deserialize)]
                 struct OAuthResponse {
@@ -94,10 +96,12 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     primary: bool,
                 }
 
-                if data.is_err() || email.is_err() {
-                    return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid user data returned");
-                }
-                let (data, email) = (data.unwrap(), email.unwrap());
+                let (data, email) = match (data, email) {
+                    (Ok(data), Ok(email)) => (data, email),
+                    _ => {
+                        return (StatusCode::BAD_REQUEST, HeaderMap::new(), "invalid user data returned");
+                    }
+                };
 
                 let email = email
                     .into_iter()

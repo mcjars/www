@@ -11,9 +11,9 @@ mod get {
     use utoipa::ToSchema;
 
     #[derive(ToSchema, Serialize)]
-    struct Response {
+    struct Response<'a> {
         success: bool,
-        types: IndexMap<ServerType, ServerTypeInfo>,
+        types: IndexMap<ServerType, &'a ServerTypeInfo>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -30,7 +30,7 @@ mod get {
             serde_json::to_value(&Response {
                 success: true,
                 types: if organization.types.is_empty() {
-                    data
+                    data.iter().map(|(k, v)| (*k, v)).collect()
                 } else {
                     ServerType::extract(&data, &organization.types)
                 },

@@ -42,15 +42,16 @@ mod post {
         state: GetState,
         axum::Json(data): axum::Json<Payload>,
     ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let config = Config::by_alias(&data.file);
-        if config.is_none() {
-            return (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            );
-        }
+        let config = match Config::by_alias(&data.file) {
+            Some(config) => config,
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    axum::Json(ApiError::new(&["invalid config file"]).to_value()),
+                );
+            }
+        };
 
-        let config = config.unwrap();
         let (formatted, contains) = match Config::format(&data.file, &data.config) {
             Ok((formatted, contains)) => (formatted, contains),
             Err(_) => {
@@ -132,8 +133,7 @@ mod post {
                         .unwrap()
                     };
 
-                    let mut results = vec![];
-
+                    let mut results = Vec::with_capacity(data.len());
                     for row in data {
                         let build = Build::map(None, &row);
                         let value: String = row.get("value");

@@ -22,7 +22,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         })
                         .collect::<Vec<_>>();
 
-                    super::render(state, &format!("/{}/", r#type.infos().name), &files)
+                    super::render(state, &format!("/{}/", r#type.infos().name), files)
                 },
             ),
         )
