@@ -168,14 +168,14 @@ impl Config {
                 }
             }
             serde_yaml::Value::String(s) => {
-                if let Some(key) = key.map(|k| k.as_str()).flatten() {
+                if let Some(key) = key.and_then(|k| k.as_str()) {
                     if key.starts_with("seed-") {
                         *s = "xxx".to_string();
                     }
                 }
             }
             serde_yaml::Value::Number(_) => {
-                if let Some(key) = key.map(|k| k.as_str()).flatten() {
+                if let Some(key) = key.and_then(|k| k.as_str()) {
                     if key.starts_with("seed-") {
                         *value = serde_yaml::Value::String("xxx".to_string());
                     }
