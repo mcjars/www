@@ -21,13 +21,12 @@ use include_dir::{Dir, include_dir};
 use models::r#type::ServerType;
 use routes::{ApiError, GetState};
 use sentry_tower::SentryHttpLayer;
-use sha1::Digest;
+use sha2::Digest;
 use std::{collections::HashMap, net::IpAddr, sync::Arc, time::Instant};
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
     catch_panic::CatchPanicLayer, cors::CorsLayer, normalize_path::NormalizePathLayer,
-    trace::TraceLayer,
 };
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa_axum::router::OpenApiRouter;
@@ -79,7 +78,7 @@ fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body>
         .unwrap()
 }
 
-fn handle_request(req: &Request<Body>, _span: &tracing::Span) {
+async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let ip = extract_ip(req.headers())
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string());
@@ -99,6 +98,8 @@ fn handle_request(req: &Request<Body>, _span: &tracing::Span) {
             format!("({})", ip).bright_black(),
         ),
     );
+
+    Ok(next.run(req).await)
 }
 
 async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, StatusCode> {
@@ -138,7 +139,7 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
     let (mut parts, body) = response.into_parts();
     let body_bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
 
-    let mut hash = sha1::Sha1::new();
+    let mut hash = sha2::Sha256::new();
     hash.update(body_bytes.as_ref());
     let hash = format!("{:x}", hash.finalize());
 
@@ -491,7 +492,7 @@ async fn main() {
             })
             .layer(CatchPanicLayer::custom(handle_panic))
             .layer(CorsLayer::permissive().allow_methods([Method::GET, Method::POST]))
-            .layer(TraceLayer::new_for_http().on_request(handle_request))
+            .layer(axum::middleware::from_fn(handle_request))
             .layer(CookieManagerLayer::new())
             .route_layer(axum::middleware::from_fn(handle_postprocessing))
             .route_layer(SentryHttpLayer::with_transaction())

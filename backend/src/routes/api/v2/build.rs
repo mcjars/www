@@ -12,7 +12,6 @@ mod post {
     use indexmap::IndexMap;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
-    use sha1::Digest;
     use sqlx::Row;
     use utoipa::ToSchema;
 
@@ -218,11 +217,7 @@ mod post {
             return None;
         }
 
-        let mut sha1 = sha1::Sha1::new();
-        sha1.update(serde_json::to_string(&search).unwrap().as_bytes());
-        let identifier = format!("{:x}", sha1.finalize());
-
-        cache.cached(&format!("build::{}", identifier), 3600, || async {
+        cache.cached(&format!("build::{}", serde_json::to_string(&search).unwrap()), 3600, || async {
             let mut where_clause: Vec<String> = Vec::new();
             let mut data: Vec<serde_json::Value> = Vec::new();
 

@@ -61,7 +61,7 @@ checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
 
 [[package]]
 name = "api"
-version = "3.6.2"
+version = "3.6.3"
 dependencies = [
  "axum",
  "chrono",
@@ -80,7 +80,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sha1",
  "sha2",
  "sqlx",
  "tokio",
@@ -88,7 +87,6 @@ dependencies = [
  "tower",
  "tower-cookies",
  "tower-http",
- "tracing",
  "utoipa",
  "utoipa-axum",
 ]

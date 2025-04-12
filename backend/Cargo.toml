@@ -1,6 +1,6 @@
 [package]
 name = "api"
-version = "3.6.2"
+version = "3.6.3"
 edition = "2024"
 
 [dependencies]
@@ -16,13 +16,11 @@ utoipa = { version = "5.3.1", features = ["axum_extras", "preserve_order", "chro
 utoipa-axum = "0.2.0"
 chrono = { version = "0.4.40", features = ["serde"] }
 indexmap = { version = "2.7.1", features = ["serde"] }
-tower-http = { version = "0.6.2", features = ["catch-panic", "trace", "cors", "normalize-path"] }
+tower-http = { version = "0.6.2", features = ["catch-panic", "cors", "normalize-path"] }
 sentry = { version = "0.37.0", default-features = false, features = ["rustls", "reqwest", "backtrace", "contexts", "debug-images", "panic"] }
-tracing = "0.1.41"
 reqwest = { version = "0.12.12", default-features = false, features = ["json", "rustls-tls"] }
 sha2 = "0.10.8"
 sentry-tower = { version = "0.37.0", default-features = false, features = ["http", "axum-matched-path"] }
-sha1 = "0.10.6"
 rand = "0.9.0"
 serde_yaml = "0.9.34"
 toml = "0.8.20"

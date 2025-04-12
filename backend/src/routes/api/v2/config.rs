@@ -8,7 +8,6 @@ mod post {
     };
     use axum::http::StatusCode;
     use serde::{Deserialize, Serialize};
-    use sha1::Digest;
     use sqlx::Row;
     use utoipa::ToSchema;
 
@@ -62,15 +61,10 @@ mod post {
             }
         };
 
-        let mut hash = sha1::Sha1::new();
-        hash.update(&data.config);
-        hash.update(&data.file);
-        let hash = format!("{:x}", hash.finalize());
-
         let configs = state
             .cache
             .cached(
-                &format!("config::{}", hash),
+                &format!("config::{}", serde_json::to_string(&data).unwrap()),
                 10800,
                 || async {
                     let data = if let Some(contains) = contains {
