@@ -52,11 +52,11 @@ async fn auth(
         }
     };
 
-    session.ip = crate::extract_ip(req.headers()).unwrap().into();
+    session.ip = crate::utils::extract_ip(req.headers()).unwrap().into();
     session.user_agent = req
         .headers()
         .get("User-Agent")
-        .map(|ua| crate::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
+        .map(|ua| crate::utils::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
         .unwrap_or("unknown")
         .to_string();
     session.save(&state.database).await;

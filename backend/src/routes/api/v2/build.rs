@@ -8,12 +8,18 @@ mod post {
         },
         routes::{ApiError, GetData, GetState},
     };
-    use axum::http::StatusCode;
+    use axum::{extract::Query, http::StatusCode};
     use indexmap::IndexMap;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use sqlx::Row;
     use utoipa::ToSchema;
+
+    #[derive(ToSchema, Deserialize)]
+    pub struct Params {
+        #[serde(default)]
+        fields: String,
+    }
 
     #[derive(ToSchema, Serialize, Deserialize)]
     pub struct Hash {
@@ -124,8 +130,15 @@ mod post {
     pub async fn route(
         state: GetState,
         request_data: GetData,
+        params: Query<Params>,
         axum::Json(data): axum::Json<Payload>,
     ) -> (StatusCode, axum::Json<serde_json::Value>) {
+        let fields = params
+            .fields
+            .split(',')
+            .filter(|f| !f.is_empty())
+            .collect::<Vec<_>>();
+
         match data {
             Payload::One(search) => {
                 if let Some(result) = lookup_build(&state.database, &state.cache, *search).await {
@@ -143,16 +156,13 @@ mod post {
 
                     (
                         StatusCode::OK,
-                        axum::Json(
-                            serde_json::to_value(&ResponseOne {
-                                success: true,
-                                build: result.build,
-                                latest: result.latest,
-                                version: result.version,
-                                configs: result.configs,
-                            })
-                            .unwrap(),
-                        ),
+                        axum::Json(json!({
+                            "success": true,
+                            "build": crate::utils::extract_fields(result.build, &fields),
+                            "latest": crate::utils::extract_fields(result.latest, &fields),
+                            "version": result.version,
+                            "configs": result.configs,
+                        })),
                     )
                 } else {
                     (
@@ -195,13 +205,19 @@ mod post {
 
                 (
                     StatusCode::MULTI_STATUS,
-                    axum::Json(
-                        serde_json::to_value(&ResponseMany {
-                            success: true,
-                            builds: results,
-                        })
-                        .unwrap(),
-                    ),
+                    axum::Json(json!({
+                        "success": true,
+                        "builds": results.into_iter().map(|r| {
+                            r.map(|result| {
+                                json!({
+                                    "build": crate::utils::extract_fields(result.build, &fields),
+                                    "latest": crate::utils::extract_fields(result.latest, &fields),
+                                    "version": result.version,
+                                    "configs": result.configs,
+                                })
+                            })
+                        }).collect::<Vec<_>>()
+                    })),
                 )
             }
         }

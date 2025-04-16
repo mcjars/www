@@ -6,6 +6,7 @@ mod models;
 mod requests;
 mod routes;
 mod s3;
+mod utils;
 
 use axum::{
     ServiceExt,
@@ -22,7 +23,7 @@ use models::r#type::ServerType;
 use routes::{ApiError, GetState};
 use sentry_tower::SentryHttpLayer;
 use sha2::Digest;
-use std::{collections::HashMap, net::IpAddr, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
@@ -79,7 +80,7 @@ fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body>
 }
 
 async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
-    let ip = extract_ip(req.headers())
+    let ip = utils::extract_ip(req.headers())
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
@@ -159,41 +160,6 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
     }
 
     Ok(Response::from_parts(parts, Body::from(body_bytes)))
-}
-
-#[inline]
-pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
-    let ip = headers
-        .get("x-real-ip")
-        .or_else(|| headers.get("x-forwarded-for"))
-        .map(|ip| ip.to_str().unwrap_or_default())
-        .unwrap_or_default();
-
-    if ip.is_empty() {
-        return None;
-    }
-
-    let ip = if ip.contains(',') {
-        ip.split(',').next().unwrap_or_default().trim().to_string()
-    } else {
-        ip.to_string()
-    };
-
-    ip.parse().ok()
-}
-
-#[inline]
-pub fn slice_up_to(s: &str, max_len: usize) -> &str {
-    if max_len >= s.len() {
-        return s;
-    }
-
-    let mut idx = max_len;
-    while !s.is_char_boundary(idx) {
-        idx -= 1;
-    }
-
-    &s[..idx]
 }
 
 #[tokio::main]

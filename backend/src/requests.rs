@@ -78,7 +78,7 @@ impl RequestLogger {
         request: &Parts,
         organization: Option<&Organization>,
     ) -> Result<(Option<String>, Option<RateLimitData>), Option<RateLimitData>> {
-        let ip = match crate::extract_ip(&request.headers) {
+        let ip = match crate::utils::extract_ip(&request.headers) {
             Some(ip) => ip,
             None => return Err(None),
         };
@@ -126,11 +126,11 @@ impl RequestLogger {
             origin: request
                 .headers
                 .get("origin")
-                .map(|o| crate::slice_up_to(o.to_str().unwrap(), 255))
+                .map(|o| crate::utils::slice_up_to(o.to_str().unwrap(), 255))
                 .unwrap_or("")
                 .to_string(),
             method: request.method.to_string(),
-            path: crate::slice_up_to(
+            path: crate::utils::slice_up_to(
                 &format!(
                     "{}{}",
                     request.uri.path(),
@@ -155,7 +155,7 @@ impl RequestLogger {
             user_agent: request
                 .headers
                 .get("User-Agent")
-                .map(|ua| crate::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
+                .map(|ua| crate::utils::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
                 .unwrap_or("unknown")
                 .to_string(),
             created: chrono::Utc::now().naive_utc(),

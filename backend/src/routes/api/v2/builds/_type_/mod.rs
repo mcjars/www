@@ -8,11 +8,17 @@ mod get {
         models::{r#type::ServerType, version::Version},
         routes::{GetData, GetState},
     };
-    use axum::extract::Path;
+    use axum::extract::{Path, Query};
     use indexmap::IndexMap;
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
     use serde_json::json;
     use utoipa::ToSchema;
+
+    #[derive(ToSchema, Deserialize)]
+    pub struct Params {
+        #[serde(default)]
+        fields: String,
+    }
 
     #[derive(ToSchema, Serialize)]
     struct Response {
@@ -32,6 +38,7 @@ mod get {
     pub async fn route(
         state: GetState,
         request_data: GetData,
+        params: Query<Params>,
         Path(r#type): Path<ServerType>,
     ) -> axum::Json<serde_json::Value> {
         let data = Version::all(&state.database, &state.cache, r#type).await;
@@ -43,13 +50,26 @@ mod get {
             }
         });
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                builds: data,
-            })
-            .unwrap(),
-        )
+        let fields = params
+            .fields
+            .split(',')
+            .filter(|f| !f.is_empty())
+            .collect::<Vec<_>>();
+
+        axum::Json(json!({
+            "success": true,
+            "builds": data
+                .into_iter()
+                .map(|(name, version)| (name, json!({
+                    "type": version.r#type,
+                    "supported": version.supported,
+                    "java": version.java,
+                    "builds": version.builds,
+                    "created": version.created,
+                    "latest": crate::utils::extract_fields(version.latest, &fields),
+                })))
+                .collect::<IndexMap<String, serde_json::Value>>(),
+        }))
     }
 }
 

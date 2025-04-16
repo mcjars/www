@@ -6,10 +6,19 @@ mod get {
         models::{build::Build, r#type::ServerType, version::Version},
         routes::{ApiError, GetData, GetState},
     };
-    use axum::{extract::Path, http::StatusCode};
-    use serde::Serialize;
+    use axum::{
+        extract::{Path, Query},
+        http::StatusCode,
+    };
+    use serde::{Deserialize, Serialize};
     use serde_json::json;
     use utoipa::ToSchema;
+
+    #[derive(ToSchema, Deserialize)]
+    pub struct Params {
+        #[serde(default)]
+        fields: String,
+    }
 
     #[derive(ToSchema, Serialize)]
     struct Response {
@@ -35,6 +44,7 @@ mod get {
     pub async fn route(
         state: GetState,
         request_data: GetData,
+        params: Query<Params>,
         Path((r#type, version)): Path<(ServerType, String)>,
     ) -> (StatusCode, axum::Json<serde_json::Value>) {
         let location = Version::location(&state.database, &state.cache, r#type, &version).await;
@@ -59,15 +69,21 @@ mod get {
                 }
             });
 
+            let fields = params
+                .fields
+                .split(',')
+                .filter(|f| !f.is_empty())
+                .collect::<Vec<_>>();
+
             (
                 StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        builds: data,
-                    })
-                    .unwrap(),
-                ),
+                axum::Json(json!({
+                    "success": true,
+                    "builds": data
+                        .into_iter()
+                        .map(|build| crate::utils::extract_fields(build, &fields))
+                        .collect::<Vec<_>>(),
+                })),
             )
         } else {
             (
