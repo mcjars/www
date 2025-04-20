@@ -34,7 +34,7 @@ pub struct MinifiedVersion {
 pub struct MinifiedVersionStats {
     pub r#type: VersionType,
     pub supported: bool,
-    pub java: i32,
+    pub java: i16,
 
     pub created: NaiveDateTime,
     pub builds: IndexMap<ServerType, i64>,
@@ -54,7 +54,7 @@ impl MinifiedVersionStats {
                     SELECT
                         builds.type AS type,
                         COUNT(builds.id) AS builds,
-                        minecraft_versions.type::text AS minecraft_version_type,
+                        minecraft_versions.type AS minecraft_version_type,
                         minecraft_versions.created AS minecraft_version_created,
                         minecraft_versions.supported AS minecraft_version_supported,
                         minecraft_versions.java AS minecraft_version_java

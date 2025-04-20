@@ -113,6 +113,7 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
             .map(|c| c.starts_with("text/plain"))
             .unwrap_or(false)
             && response.status().is_client_error()
+            && response.status() != StatusCode::NOT_FOUND
         {
             let (mut parts, body) = response.into_parts();
 

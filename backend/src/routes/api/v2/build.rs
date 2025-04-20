@@ -4,7 +4,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod post {
     use crate::{
         models::{
-            BaseModel, build::Build, config::Format, r#type::ServerType, version::MinifiedVersion,
+            BaseModel,
+            build::Build,
+            config::Format,
+            r#type::ServerType,
+            version::{MinifiedVersion, VersionType},
         },
         routes::{ApiError, GetData, GetState},
     };
@@ -344,7 +348,7 @@ mod post {
                     *,
                     0 AS build_count,
                     now()::timestamp as version2_created,
-                    'RELEASE' AS version_type,
+                    'RELEASE'::version_type AS version_type,
                     false AS version_supported,
                     0 AS version_java,
                     now()::timestamp AS version_created
@@ -354,7 +358,7 @@ mod post {
     
                 SELECT
                     x.*,
-                    mv.type::text AS version_type,
+                    mv.type AS version_type,
                     mv.supported AS version_supported,
                     mv.java AS version_java,
                     mv.created AS version_created
@@ -394,8 +398,8 @@ mod post {
             for row in sqlx::query(
                 r#"
                 SELECT
-                    configs.type::text AS type,
-                    configs.format::text AS format,
+                    configs.type AS type,
+                    configs.format AS format,
                     configs.location AS location,
                     config_values.value AS value
                 FROM config_values
@@ -410,8 +414,8 @@ mod post {
             .await
             .unwrap()
             {
-                let r#type = serde_json::from_value(serde_json::Value::String(row.get("type"))).unwrap();
-                let format = serde_json::from_value(serde_json::Value::String(row.get("format"))).unwrap();
+                let r#type = row.get("type");
+                let format = row.get("format");
                 let value = row.get("value");
 
                 configs.insert(
@@ -427,12 +431,7 @@ mod post {
                     id: query[1]
                         .try_get("version_id")
                         .unwrap_or_else(|_| query[1].get("project_version_id")),
-                    r#type: serde_json::from_value(serde_json::Value::String(
-                        query[1]
-                            .try_get("version_type")
-                            .unwrap_or("RELEASE".to_string()),
-                    ))
-                    .unwrap(),
+                    r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
                     supported: query[1].try_get("version_supported").unwrap_or(true),
                     java: query[1].try_get("version_java").unwrap_or(21),
                     builds: query[1].try_get("build_count").unwrap_or(0),
