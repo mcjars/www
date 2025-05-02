@@ -72,7 +72,6 @@ impl RequestLogger {
         }
     }
 
-    #[inline]
     pub async fn log(
         &self,
         request: &Parts,
@@ -126,7 +125,7 @@ impl RequestLogger {
             origin: request
                 .headers
                 .get("origin")
-                .map(|o| crate::utils::slice_up_to(o.to_str().unwrap(), 255))
+                .map(|o| crate::utils::slice_up_to(o.to_str().unwrap_or("unknown"), 255))
                 .unwrap_or("")
                 .to_string(),
             method: request.method.to_string(),
@@ -213,27 +212,25 @@ impl RequestLogger {
             )
             .send()
             .await?
-            .json::<Vec<serde_json::Value>>()
+            .json::<Vec<IpApiResponse>>()
             .await?;
 
-        for entry in data {
-            if entry.get("continentCode").is_none() || entry.get("countryCode").is_none() {
-                continue;
-            }
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct IpApiResponse {
+            continent_code: String,
+            country_code: String,
+            query: String,
+        }
 
-            result.insert(
-                entry["query"].as_str().unwrap().to_string(),
-                [
-                    entry["continentCode"].as_str().unwrap().to_string(),
-                    entry["countryCode"].as_str().unwrap().to_string(),
-                ],
-            );
+        for entry in data {
+            result.insert(entry.query, [entry.continent_code, entry.country_code]);
         }
 
         Ok(result)
     }
 
-    pub async fn process(&self) -> Result<(), sqlx::Error> {
+    pub async fn process(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut processing = self.processing.lock().await;
         let length = processing.len();
 
@@ -300,7 +297,7 @@ impl RequestLogger {
                         .await
                         .append(&mut requests);
 
-                    return Err(e);
+                    return Err(Box::new(e));
                 }
             }
         }
