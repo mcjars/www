@@ -92,9 +92,8 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
     }
 
     let mut headers = HeaderMap::new();
-    let request_id = request_id.unwrap();
-    let (request_id, ratelimit) = request_id;
-    if let Some(ref request_id) = request_id {
+    let (request_id, ratelimit) = request_id.unwrap();
+    if let Some(request_id) = &request_id {
         headers.insert("X-Request-ID", request_id.parse().unwrap());
     }
 
@@ -122,14 +121,10 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
     let mut response = next.run(req).await;
 
     if let Some(request_id) = request_id {
-        let data = {
-            let data = data.lock().unwrap();
-
-            if let serde_json::Value::Object(data) = &*data {
-                Some(serde_json::Value::Object(data.clone()))
-            } else {
-                None
-            }
+        let data = if let serde_json::Value::Object(data) = data.lock().unwrap().take() {
+            Some(serde_json::Value::Object(data))
+        } else {
+            None
         };
 
         state

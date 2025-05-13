@@ -80,25 +80,18 @@ mod get {
                     let data = sqlx::query(
                         r#"
                         SELECT
-                            x.type AS type,
-                            COUNT(*) AS total,
-                            COUNT(DISTINCT ip) AS unique_ips
-                        FROM (
-                            SELECT
-                                requests.data->'build'->>'type' AS type,
-                                requests.ip AS ip
-                            FROM requests
-                            WHERE
-                                requests.status = 200
-                                AND requests.data IS NOT NULL
-                                AND requests.path NOT LIKE '%tracking=nostats%'
-                                AND requests.data->>'type' = 'lookup'
-                                AND requests.created >= $1
-                                AND requests.created <= $2
-                        ) AS x
-                        WHERE x.type IS NOT NULL
-                        GROUP BY x.type
-                        ORDER BY total DESC
+                            search_type AS type,
+                            day::smallint AS day,
+                            SUM(total_requests)::bigint AS total,
+                            SUM(unique_ips)::bigint AS unique_ips
+                        FROM mv_requests_stats_daily
+                        WHERE
+                            request_type = 'builds'
+                            AND search_type IS NOT NULL
+                            AND date_only >= $1::date
+                            AND date_only <= $2::date
+                        GROUP BY day, search_type
+                        ORDER BY day, SUM(total_requests) DESC
                         "#,
                     )
                     .bind(start)

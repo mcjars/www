@@ -192,7 +192,7 @@ impl RequestLogger {
     #[inline]
     async fn lookup_ips(
         &self,
-        ips: &[String],
+        ips: Vec<String>,
     ) -> Result<HashMap<String, [String; 2]>, reqwest::Error> {
         let mut result = HashMap::new();
 
@@ -201,7 +201,7 @@ impl RequestLogger {
             .post("http://ip-api.com/batch")
             .header("Content-Type", "application/json")
             .json(
-                &ips.iter()
+                &ips.into_iter()
                     .map(|ip| {
                         serde_json::json!({
                             "query": ip,
@@ -248,8 +248,7 @@ impl RequestLogger {
                 requests
                     .iter()
                     .map(|t| t.ip.to_string())
-                    .collect::<Vec<_>>()
-                    .as_slice(),
+                    .collect::<Vec<_>>(),
             )
             .await
             .unwrap_or_default();

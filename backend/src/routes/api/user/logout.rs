@@ -1,7 +1,7 @@
 use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-mod get {
+mod post {
     use crate::{models::user::UserSession, routes::GetState};
     use serde::Serialize;
     use tower_cookies::{Cookie, Cookies};
@@ -39,6 +39,6 @@ mod get {
 
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
-        .routes(routes!(get::route))
+        .routes(routes!(post::route))
         .with_state(state.clone())
 }
