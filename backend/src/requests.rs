@@ -232,11 +232,19 @@ impl RequestLogger {
 
     pub async fn process(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut processing = self.processing.lock().await;
+        let now = chrono::Utc::now().naive_utc();
         let length = processing.len();
+
+        self.pending
+            .lock()
+            .await
+            .retain(|r| r.created > now - chrono::Duration::seconds(60));
 
         let mut requests = processing
             .splice(0..std::cmp::min(30, length), Vec::new())
             .collect::<Vec<_>>();
+        processing.retain(|r| r.created > now - chrono::Duration::seconds(300));
+
         drop(processing);
 
         if requests.is_empty() {

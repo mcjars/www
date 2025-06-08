@@ -1,6 +1,6 @@
 [package]
 name = "api"
-version = "3.6.6"
+version = "3.6.7"
 edition = "2024"
 
 [dependencies]
