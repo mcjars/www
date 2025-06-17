@@ -3,7 +3,7 @@ use axum::http::{Method, request::Parts};
 use chrono::NaiveDateTime;
 use colored::Colorize;
 use rand::distr::SampleString;
-use rustis::commands::StringCommands;
+use rustis::commands::{SetCondition, SetExpiration, StringCommands};
 use serde::{Deserialize, Serialize};
 use sqlx::types::ipnetwork::IpNetwork;
 use std::{
@@ -86,23 +86,24 @@ impl RequestLogger {
         if organization.is_none_or(|o| !o.verified) {
             let ratelimit_key = format!("mcjars_api::ratelimit::{}", ip);
 
-            let count: i64 = self
+            let mut count: i64 = self
                 .cache
                 .client
                 .get(&ratelimit_key)
                 .await
                 .unwrap_or_default();
-            let count = if count == 0 {
-                self.cache
-                    .client
-                    .setex(&ratelimit_key, 60, 1)
-                    .await
-                    .unwrap();
-
-                1
-            } else {
-                self.cache.client.incr(&ratelimit_key).await.unwrap()
-            };
+            self.cache
+                .client
+                .set_with_options(
+                    ratelimit_key,
+                    count + 1,
+                    SetCondition::None,
+                    SetExpiration::Ex(60),
+                    true,
+                )
+                .await
+                .unwrap();
+            count += 1;
 
             ratelimit = Some(RateLimitData {
                 limit: if organization.is_some() { 240 } else { 120 },
