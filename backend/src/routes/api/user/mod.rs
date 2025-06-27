@@ -34,7 +34,7 @@ async fn auth(
 
     let user = state
         .cache
-        .cached(&format!("user::session::{}", session_id), 300, || {
+        .cached(&format!("user::session::{session_id}"), 300, || {
             User::by_session(&state.database, &session_id)
         })
         .await;

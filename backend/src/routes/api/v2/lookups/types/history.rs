@@ -74,7 +74,7 @@ mod get {
         let types = state
             .cache
             .cached(
-                &format!("lookups::types::all::history::{}::{}", start, end),
+                &format!("lookups::types::all::history::{start}::{end}"),
                 10800,
                 || async {
                     let data = sqlx::query(

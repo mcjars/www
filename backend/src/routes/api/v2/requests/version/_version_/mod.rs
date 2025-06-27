@@ -42,7 +42,7 @@ mod get {
         let requests = state
             .cache
             .cached(
-                &format!("requests::versions::{}", version),
+                &format!("requests::versions::{version}"),
                 10800,
                 || async {
                     let data = sqlx::query(

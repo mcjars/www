@@ -84,7 +84,7 @@ impl RequestLogger {
 
         let mut ratelimit: Option<RateLimitData> = None;
         if organization.is_none_or(|o| !o.verified) {
-            let ratelimit_key = format!("mcjars_api::ratelimit::{}", ip);
+            let ratelimit_key = format!("mcjars_api::ratelimit::{ip}");
 
             let now = chrono::Utc::now().timestamp();
             let expiry = self
@@ -159,7 +159,7 @@ impl RequestLogger {
                     request
                         .uri
                         .query()
-                        .map(|q| format!("?{}", q))
+                        .map(|q| format!("?{q}"))
                         .unwrap_or_default()
                 ),
                 255,

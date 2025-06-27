@@ -62,7 +62,7 @@ mod get {
     ) -> axum::Json<serde_json::Value> {
         let stats = state
             .cache
-            .cached(&format!("stats::versions::{}", version), 10800, || async {
+            .cached(&format!("stats::versions::{version}"), 10800, || async {
                 let data = sqlx::query(
                     r#"
                     SELECT

@@ -80,8 +80,7 @@ mod get {
             .cache
             .cached(
                 &format!(
-                    "requests::versions::{}::history::{}::{}",
-                    version, start, end
+                    "requests::versions::{version}::history::{start}::{end}"
                 ),
                 10800,
                 || async {

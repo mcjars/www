@@ -94,15 +94,15 @@ impl Config {
             if file != "pufferfish.yml" && contains.is_none() {
                 if let Some(version) = parsed.get("config-version") {
                     if let Some(version) = version.as_str() {
-                        contains = Some(format!("config-version: {}", version));
+                        contains = Some(format!("config-version: {version}"));
                     } else if let Some(version) = version.as_i64() {
-                        contains = Some(format!("config-version: {}", version));
+                        contains = Some(format!("config-version: {version}"));
                     }
                 } else if let Some(version) = parsed.get("version") {
                     if let Some(version) = version.as_str() {
-                        contains = Some(format!("version: {}", version));
+                        contains = Some(format!("version: {version}"));
                     } else if let Some(version) = version.as_i64() {
-                        contains = Some(format!("version: {}", version));
+                        contains = Some(format!("version: {version}"));
                     }
                 }
             }
@@ -114,9 +114,9 @@ impl Config {
 
             if let Some(version) = parsed.get("config-version") {
                 if let Some(version) = version.as_str() {
-                    contains = Some(format!("config-version = \"{}\"", version));
+                    contains = Some(format!("config-version = \"{version}\""));
                 } else if let Some(version) = version.as_integer() {
-                    contains = Some(format!("config-version = {}", version));
+                    contains = Some(format!("config-version = {version}"));
                 }
             }
         }

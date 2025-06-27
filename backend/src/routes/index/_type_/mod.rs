@@ -16,7 +16,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     let files = versions
                         .into_iter()
                         .map(|(n, v)| IndexFile {
-                            name: format!("{}/", n),
+                            name: format!("{n}/"),
                             size: format!("{} builds", v.builds),
                             href: None,
                         })

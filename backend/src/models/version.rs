@@ -48,7 +48,7 @@ impl MinifiedVersionStats {
         id: &str,
     ) -> Option<Self> {
         cache
-            .cached(&format!("version::{}::stats", id), 3600, || async {
+            .cached(&format!("version::{id}::stats"), 3600, || async {
                 let data = sqlx::query(
                     r#"
                     SELECT
@@ -123,7 +123,7 @@ impl Version {
     ) -> Option<String> {
         cache
             .cached(
-                &format!("version_location::{}::{}", r#type, id),
+                &format!("version_location::{type}::{id}"),
                 86400,
                 || async {
                     let (minecraft, project) = tokio::join!(
@@ -171,7 +171,7 @@ impl Version {
         r#type: ServerType,
     ) -> IndexMap<String, Self> {
         cache
-            .cached(&format!("versions::{}", r#type), 1800, || async {
+            .cached(&format!("versions::{type}"), 1800, || async {
                 let mut versions = IndexMap::new();
 
                 if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {

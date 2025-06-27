@@ -27,35 +27,35 @@ impl BaseModel for User {
 
         BTreeMap::from([
             (
-                format!("{}.id", table),
+                format!("{table}.id"),
                 format!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.github_id", table),
+                format!("{table}.github_id"),
                 format!("{}github_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.admin", table),
+                format!("{table}.admin"),
                 format!("{}admin", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.name", table),
+                format!("{table}.name"),
                 format!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.email", table),
+                format!("{table}.email"),
                 format!("{}email", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.login", table),
+                format!("{table}.login"),
                 format!("{}login", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.last_login", table),
+                format!("{table}.last_login"),
                 format!("{}last_login", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ])
@@ -66,14 +66,14 @@ impl BaseModel for User {
         let prefix = prefix.unwrap_or_default();
 
         Self {
-            id: row.get(format!("{}id", prefix).as_str()),
-            github_id: row.get(format!("{}github_id", prefix).as_str()),
-            admin: row.get(format!("{}admin", prefix).as_str()),
-            name: row.get(format!("{}name", prefix).as_str()),
-            email: row.get(format!("{}email", prefix).as_str()),
-            login: row.get(format!("{}login", prefix).as_str()),
-            last_login: row.get(format!("{}last_login", prefix).as_str()),
-            created: row.get(format!("{}created", prefix).as_str()),
+            id: row.get(format!("{prefix}id").as_str()),
+            github_id: row.get(format!("{prefix}github_id").as_str()),
+            admin: row.get(format!("{prefix}admin").as_str()),
+            name: row.get(format!("{prefix}name").as_str()),
+            email: row.get(format!("{prefix}email").as_str()),
+            login: row.get(format!("{prefix}login").as_str()),
+            last_login: row.get(format!("{prefix}last_login").as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
         }
     }
 }
@@ -146,7 +146,7 @@ impl User {
         login: &str,
     ) -> Option<Self> {
         cache
-            .cached(&format!("user::{}", login), 3600, || async {
+            .cached(&format!("user::{login}"), 3600, || async {
                 let row = sqlx::query(&format!(
                     r#"
                     SELECT {}
@@ -217,23 +217,23 @@ impl BaseModel for UserSession {
 
         BTreeMap::from([
             (
-                format!("{}.id", table),
+                format!("{table}.id"),
                 format!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.ip", table),
+                format!("{table}.ip"),
                 format!("{}ip", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.user_agent", table),
+                format!("{table}.user_agent"),
                 format!("{}user_agent", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.last_used", table),
+                format!("{table}.last_used"),
                 format!("{}last_used", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ])
@@ -244,11 +244,11 @@ impl BaseModel for UserSession {
         let prefix = prefix.unwrap_or_default();
 
         Self {
-            id: row.get(format!("{}id", prefix).as_str()),
-            ip: row.get(format!("{}ip", prefix).as_str()),
-            user_agent: row.get(format!("{}user_agent", prefix).as_str()),
-            last_used: row.get(format!("{}last_used", prefix).as_str()),
-            created: row.get(format!("{}created", prefix).as_str()),
+            id: row.get(format!("{prefix}id").as_str()),
+            ip: row.get(format!("{prefix}ip").as_str()),
+            user_agent: row.get(format!("{prefix}user_agent").as_str()),
+            last_used: row.get(format!("{prefix}last_used").as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
         }
     }
 }

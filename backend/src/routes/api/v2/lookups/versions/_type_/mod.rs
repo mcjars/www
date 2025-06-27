@@ -44,7 +44,7 @@ mod get {
     ) -> axum::Json<serde_json::Value> {
         let versions = state
             .cache
-            .cached(&format!("lookups::versions::{}", r#type), 10800, || async {
+            .cached(&format!("lookups::versions::{type}"), 10800, || async {
                 let column = if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {
                     "project_version"
                 } else {
@@ -54,18 +54,17 @@ mod get {
                 let data = sqlx::query(&format!(
                     r#"
                     SELECT
-                        build_{}_id AS version,
+                        build_{column}_id AS version,
                         SUM(total_requests)::bigint AS total,
                         SUM(unique_ips)::bigint AS unique_ips
                     FROM mv_requests_stats
                     WHERE
                         request_type = 'lookup'
                         AND build_type = $1
-                        AND build_{}_id IS NOT NULL
-                    GROUP BY build_{}_id
+                        AND build_{column}_id IS NOT NULL
+                    GROUP BY build_{column}_id
                     ORDER BY total DESC
-                    "#,
-                    column, column, column
+                    "#
                 ))
                 .bind(r#type.to_string())
                 .fetch_all(state.database.read())

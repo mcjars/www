@@ -75,55 +75,55 @@ impl BaseModel for Build {
 
         BTreeMap::from([
             (
-                format!("{}.id", table),
+                format!("{table}.id"),
                 format!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.version_id", table),
+                format!("{table}.version_id"),
                 format!("{}version_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.project_version_id", table),
+                format!("{table}.project_version_id"),
                 format!("{}project_version_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.type", table),
+                format!("{table}.type"),
                 format!("{}type", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.experimental", table),
+                format!("{table}.experimental"),
                 format!("{}experimental", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.build_number", table),
+                format!("{table}.build_number"),
                 format!("{}build_number", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.jar_url", table),
+                format!("{table}.jar_url"),
                 format!("{}jar_url", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.jar_size", table),
+                format!("{table}.jar_size"),
                 format!("{}jar_size", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.zip_url", table),
+                format!("{table}.zip_url"),
                 format!("{}zip_url", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.zip_size", table),
+                format!("{table}.zip_size"),
                 format!("{}zip_size", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.installation", table),
+                format!("{table}.installation"),
                 format!("{}installation", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.changes", table),
+                format!("{table}.changes"),
                 format!("{}changes", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ])
@@ -134,37 +134,37 @@ impl BaseModel for Build {
         let prefix = prefix.unwrap_or_default();
 
         Self {
-            id: row.get(format!("{}id", prefix).as_str()),
-            version_id: row.try_get(format!("{}version_id", prefix).as_str()).ok(),
+            id: row.get(format!("{prefix}id").as_str()),
+            version_id: row.try_get(format!("{prefix}version_id").as_str()).ok(),
             project_version_id: row
-                .try_get(format!("{}project_version_id", prefix).as_str())
+                .try_get(format!("{prefix}project_version_id").as_str())
                 .ok(),
-            r#type: row.get(format!("{}type", prefix).as_str()),
-            experimental: row.get(format!("{}experimental", prefix).as_str()),
-            name: if row.get::<i32, _>(format!("{}build_number", prefix).as_str()) == 1
+            r#type: row.get(format!("{prefix}type").as_str()),
+            experimental: row.get(format!("{prefix}experimental").as_str()),
+            name: if row.get::<i32, _>(format!("{prefix}build_number").as_str()) == 1
                 && row
-                    .try_get::<String, _>(format!("{}project_version_id", prefix).as_str())
+                    .try_get::<String, _>(format!("{prefix}project_version_id").as_str())
                     .is_ok()
             {
-                row.get(format!("{}project_version_id", prefix).as_str())
+                row.get(format!("{prefix}project_version_id").as_str())
             } else {
                 format!(
                     "#{}",
-                    row.get::<i32, _>(format!("{}build_number", prefix).as_str())
+                    row.get::<i32, _>(format!("{prefix}build_number").as_str())
                 )
             },
-            build_number: row.get(format!("{}build_number", prefix).as_str()),
-            jar_url: row.get(format!("{}jar_url", prefix).as_str()),
-            jar_size: row.get(format!("{}jar_size", prefix).as_str()),
-            zip_url: row.get(format!("{}zip_url", prefix).as_str()),
-            zip_size: row.get(format!("{}zip_size", prefix).as_str()),
+            build_number: row.get(format!("{prefix}build_number").as_str()),
+            jar_url: row.get(format!("{prefix}jar_url").as_str()),
+            jar_size: row.get(format!("{prefix}jar_size").as_str()),
+            zip_url: row.get(format!("{prefix}zip_url").as_str()),
+            zip_size: row.get(format!("{prefix}zip_size").as_str()),
             installation: serde_json::from_value(
-                row.get(format!("{}installation", prefix).as_str()),
+                row.get(format!("{prefix}installation").as_str()),
             )
             .unwrap(),
-            changes: serde_json::from_value(row.get(format!("{}changes", prefix).as_str()))
+            changes: serde_json::from_value(row.get(format!("{prefix}changes").as_str()))
                 .unwrap(),
-            created: row.get(format!("{}created", prefix).as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
         }
     }
 }
@@ -188,7 +188,7 @@ impl Build {
         cache: &crate::cache::Cache,
         identifier: &str,
     ) -> Option<(Self, Self, super::version::MinifiedVersion)> {
-        cache.cached(&format!("build::{}", identifier), 3600, || async {
+        cache.cached(&format!("build::{identifier}"), 3600, || async {
         let hash: Option<&str> = match identifier.len() {
             32 => Some("md5"),
             40 => Some("sha1"),
@@ -270,7 +270,7 @@ impl Build {
             "#,
             Self::columns_sql(None, None),
             if let Some(hash) = hash {
-                format!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {} = decode($1, 'hex')", hash)
+                format!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {hash} = decode($1, 'hex')")
             } else {
                 "builds WHERE builds.id = $1::int".to_string()
             },

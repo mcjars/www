@@ -29,35 +29,35 @@ impl BaseModel for Organization {
 
         let mut columns = BTreeMap::from([
             (
-                format!("{}.id", table),
+                format!("{table}.id"),
                 format!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.owner_id", table),
+                format!("{table}.owner_id"),
                 format!("{}owner_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.verified", table),
+                format!("{table}.verified"),
                 format!("{}verified", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.public", table),
+                format!("{table}.public"),
                 format!("{}public", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.name", table),
+                format!("{table}.name"),
                 format!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.icon", table),
+                format!("{table}.icon"),
                 format!("{}icon", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.types", table),
+                format!("{table}.types"),
                 format!("{}types", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ]);
@@ -72,18 +72,18 @@ impl BaseModel for Organization {
         let prefix = prefix.unwrap_or_default();
 
         Self {
-            id: row.get(format!("{}id", prefix).as_str()),
+            id: row.get(format!("{prefix}id").as_str()),
             owner: super::user::User::map(Some("owner_"), row).api_user(false),
 
-            verified: row.get(format!("{}verified", prefix).as_str()),
-            public: row.get(format!("{}public", prefix).as_str()),
+            verified: row.get(format!("{prefix}verified").as_str()),
+            public: row.get(format!("{prefix}public").as_str()),
 
-            name: row.get(format!("{}name", prefix).as_str()),
-            icon: row.get(format!("{}icon", prefix).as_str()),
-            types: serde_json::from_value(row.get(format!("{}types", prefix).as_str())).unwrap(),
+            name: row.get(format!("{prefix}name").as_str()),
+            icon: row.get(format!("{prefix}icon").as_str()),
+            types: serde_json::from_value(row.get(format!("{prefix}types").as_str())).unwrap(),
 
             subuser_pending: row.try_get("pending").unwrap_or(false),
-            created: row.get(format!("{}created", prefix).as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
         }
     }
 }
@@ -175,7 +175,7 @@ impl Organization {
         }
 
         cache
-            .cached(&format!("organization::{}", id), 300, || async {
+            .cached(&format!("organization::{id}"), 300, || async {
                 sqlx::query(&format!(
                     r#"
                     SELECT {}
@@ -201,7 +201,7 @@ impl Organization {
         key: &str,
     ) -> Option<Self> {
         cache
-            .cached(&format!("organization::key::{}", key), 300, || async {
+            .cached(&format!("organization::key::{key}"), 300, || async {
                 sqlx::query(&format!(
                     r#"
                     SELECT {}
@@ -230,7 +230,7 @@ impl Organization {
         organization_id: i32,
     ) -> Option<Self> {
         cache
-            .cached(&format!("organization::{}::user::{}", organization_id, user_id), 60, || async {
+            .cached(&format!("organization::{organization_id}::user::{user_id}"), 60, || async {
                 sqlx::query(&format!(
                     r#"
                     SELECT {}
@@ -295,19 +295,19 @@ impl BaseModel for OrganizationKey {
 
         BTreeMap::from([
             (
-                format!("{}.id", table),
+                format!("{table}.id"),
                 format!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.name", table),
+                format!("{table}.name"),
                 format!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.organization_id", table),
+                format!("{table}.organization_id"),
                 format!("{}organization_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ])
@@ -318,12 +318,12 @@ impl BaseModel for OrganizationKey {
         let prefix = prefix.unwrap_or_default();
 
         Self {
-            id: row.get(format!("{}id", prefix).as_str()),
-            organization_id: row.get(format!("{}organization_id", prefix).as_str()),
+            id: row.get(format!("{prefix}id").as_str()),
+            organization_id: row.get(format!("{prefix}organization_id").as_str()),
 
-            name: row.get(format!("{}name", prefix).as_str()),
+            name: row.get(format!("{prefix}name").as_str()),
 
-            created: row.get(format!("{}created", prefix).as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
         }
     }
 }
@@ -455,15 +455,15 @@ impl BaseModel for OrganizationSubuser {
 
         let mut columns = BTreeMap::from([
             (
-                format!("{}.organization_id", table),
+                format!("{table}.organization_id"),
                 format!("{}organization_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.pending", table),
+                format!("{table}.pending"),
                 format!("{}pending", prefix.unwrap_or_default()),
             ),
             (
-                format!("{}.created", table),
+                format!("{table}.created"),
                 format!("{}created", prefix.unwrap_or_default()),
             ),
         ]);
@@ -476,12 +476,12 @@ impl BaseModel for OrganizationSubuser {
     #[inline]
     fn map(prefix: Option<&str>, row: &PgRow) -> Self {
         let prefix = prefix.unwrap_or_default();
-        let pending = row.get(format!("{}pending", prefix).as_str());
+        let pending = row.get(format!("{prefix}pending").as_str());
 
         Self {
-            organization_id: row.get(format!("{}organization_id", prefix).as_str()),
+            organization_id: row.get(format!("{prefix}organization_id").as_str()),
             user: super::user::User::map(Some("user_"), row).api_user(pending),
-            created: row.get(format!("{}created", prefix).as_str()),
+            created: row.get(format!("{prefix}created").as_str()),
             pending,
         }
     }

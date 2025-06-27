@@ -113,8 +113,7 @@ mod get {
                 .cache
                 .cached(
                     &format!(
-                        "stats::types::{}::{}::history::{}::{}",
-                        r#type, version, start, end
+                        "stats::types::{type}::{version}::history::{start}::{end}"
                     ),
                     10800,
                     || async {

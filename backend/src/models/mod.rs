@@ -16,7 +16,7 @@ pub trait BaseModel: Serialize + DeserializeOwned {
     fn columns_sql(prefix: Option<&str>, table: Option<&str>) -> String {
         Self::columns(prefix, table)
             .iter()
-            .map(|(key, value)| format!("{} as {}", key, value))
+            .map(|(key, value)| format!("{key} as {value}"))
             .collect::<Vec<String>>()
             .join(", ")
     }

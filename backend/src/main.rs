@@ -47,7 +47,7 @@ fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, He
     let mut metadata = String::new();
 
     for (key, value) in meta {
-        metadata.push_str(&format!("<meta name=\"{}\" content=\"{}\">", key, value));
+        metadata.push_str(&format!("<meta name=\"{key}\" content=\"{value}\">"));
     }
 
     let mut headers = HeaderMap::new();
@@ -91,12 +91,12 @@ async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, Stat
             format!("HTTP {}", req.method()).green().bold(),
             req.uri().path().cyan(),
             if let Some(query) = req.uri().query() {
-                format!("?{}", query)
+                format!("?{query}")
             } else {
                 "".to_string()
             }
             .bright_cyan(),
-            format!("({})", ip).bright_black(),
+            format!("({ip})").bright_black(),
         ),
     );
 
@@ -171,7 +171,7 @@ async fn main() {
         env.sentry_url.clone(),
         sentry::ClientOptions {
             server_name: env.server_name.clone().map(|s| s.into()),
-            release: Some(format!("{}:{}", VERSION, GIT_COMMIT).into()),
+            release: Some(format!("{VERSION}:{GIT_COMMIT}").into()),
             traces_sample_rate: 1.0,
             ..Default::default()
         },
@@ -184,7 +184,7 @@ async fn main() {
 
     let state = Arc::new(routes::AppState {
         start_time: Instant::now(),
-        version: format!("{}:{}", VERSION, GIT_COMMIT),
+        version: format!("{VERSION}:{GIT_COMMIT}"),
 
         database: database.clone(),
         cache: cache.clone(),
@@ -369,7 +369,7 @@ async fn main() {
                     ("og:description", format!("Download the latest {} server builds with ease. Browse {} builds for {} different versions on our website. Not affiliated with Mojang AB.", data.1.name, builds, versions).to_string()),
                     ("og:title", format!("MCJars | {} Versions", data.1.name).to_string()),
                     ("og:image", format!("{}/icons/{}.png", state.env.s3_url, r#type.to_string().to_lowercase())),
-                    ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
+                    ("og:url", format!("https://mcjars.app/{type}/versions")),
                 ]);
 
                 render_index(meta, state)
@@ -382,7 +382,7 @@ async fn main() {
                     ("og:description", format!("View the latest statistics for {}. Not affiliated with Mojang AB.", data.name).to_string()),
                     ("og:title", format!("MCJars | {} Statistics", data.name).to_string()),
                     ("og:image", format!("{}/icons/{}.png", state.env.s3_url, r#type.to_string().to_lowercase())),
-                    ("og:url", format!("https://mcjars.app/{}/versions", r#type)),
+                    ("og:url", format!("https://mcjars.app/{type}/versions")),
                 ]);
 
                 render_index(meta, state)
@@ -399,12 +399,10 @@ async fn main() {
 
                 for r#type in ServerType::variants() {
                     sitemap.push_str(&format!(
-                        "<url><loc>https://mcjars.app/{}/versions</loc><lastmod>{}</lastmod></url>",
-                        r#type, now
+                        "<url><loc>https://mcjars.app/{type}/versions</loc><lastmod>{now}</lastmod></url>"
                     ));
                     sitemap.push_str(&format!(
-                        "<url><loc>https://mcjars.app/{}/statistics</loc><lastmod>{}</lastmod></url>",
-                        r#type, now
+                        "<url><loc>https://mcjars.app/{type}/statistics</loc><lastmod>{now}</lastmod></url>"
                     ));
                 }
 

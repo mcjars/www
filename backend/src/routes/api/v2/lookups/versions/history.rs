@@ -74,7 +74,7 @@ mod get {
         let versions = state
             .cache
             .cached(
-                &format!("lookups::versions::all::history::{}::{}", start, end),
+                &format!("lookups::versions::all::history::{start}::{end}"),
                 10800,
                 || async {
                     let data = sqlx::query(

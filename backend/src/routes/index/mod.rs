@@ -34,7 +34,7 @@ pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Respons
                         if href.starts_with("https") {
                             href
                         } else {
-                            format!("./{}", href)
+                            format!("./{href}")
                         },
                         f.name,
                         f.size

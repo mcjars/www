@@ -75,7 +75,7 @@ mod get {
             let stats = state
                 .cache
                 .cached(
-                    &format!("stats::types::{}::{}", r#type, version),
+                    &format!("stats::types::{type}::{version}"),
                     10800,
                     || async {
                         let data = sqlx::query(&format!(

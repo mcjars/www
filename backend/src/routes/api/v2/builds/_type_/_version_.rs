@@ -53,7 +53,7 @@ mod get {
             let data = state
                 .cache
                 .cached(
-                    &format!("builds::{}::{}", r#type, version),
+                    &format!("builds::{type}::{version}"),
                     1800,
                     || async {
                         Build::all_for_version(&state.database, r#type, &location, &version).await

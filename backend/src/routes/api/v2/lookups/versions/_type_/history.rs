@@ -82,7 +82,7 @@ mod get {
         let versions = state
             .cache
             .cached(
-                &format!("lookups::versions::{}::history::{}::{}", r#type, start, end),
+                &format!("lookups::versions::{type}::history::{start}::{end}"),
                 10800,
                 || async {
                     let column = if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {
@@ -94,7 +94,7 @@ mod get {
                     let data = sqlx::query(&format!(
                         r#"
                         SELECT
-                            build_{}_id AS version,
+                            build_{column}_id AS version,
                             day::smallint AS day,
                             SUM(total_requests)::bigint AS total,
                             SUM(unique_ips)::bigint AS unique_ips
@@ -102,13 +102,12 @@ mod get {
                         WHERE
                             request_type = 'lookup'
                             AND build_type = $1
-                            AND build_{}_id IS NOT NULL
+                            AND build_{column}_id IS NOT NULL
                             AND date_only >= $2::date
                             AND date_only <= $3::date
-                        GROUP BY day, build_{}_id
+                        GROUP BY day, build_{column}_id
                         ORDER BY day, SUM(total_requests) DESC
-                        "#,
-                        column, column, column
+                        "#
                     ))
                     .bind(r#type.to_string())
                     .bind(start)

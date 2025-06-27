@@ -18,7 +18,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     if let Some(location) = location {
                         let data = state
                             .cache
-                            .cached(&format!("builds::{}::{}", r#type, version), 1800, || {
+                            .cached(&format!("builds::{type}::{version}"), 1800, || {
                                 Build::all_for_version(&state.database, r#type, &location, &version)
                             })
                             .await;

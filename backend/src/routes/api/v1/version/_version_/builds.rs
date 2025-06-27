@@ -34,7 +34,7 @@ mod get {
     ) -> (StatusCode, axum::Json<serde_json::Value>) {
         let data = state
             .cache
-            .cached(&format!("version::{}::builds", version), 1800, || async {
+            .cached(&format!("version::{version}::builds"), 1800, || async {
                 let data = Build::all_for_minecraft_version(&state.database, &version).await;
 
                 let mut builds = IndexMap::new();

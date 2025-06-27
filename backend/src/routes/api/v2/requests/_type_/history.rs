@@ -97,7 +97,7 @@ mod get {
         let requests = state
             .cache
             .cached(
-                &format!("requests::types::{}::history::{}::{}", r#type, start, end),
+                &format!("requests::types::{type}::history::{start}::{end}"),
                 10800,
                 || async {
                     let data = sqlx::query(
