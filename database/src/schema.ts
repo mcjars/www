@@ -45,7 +45,8 @@ export const types = [
 	'NANOLIMBO',
 	'DIVINEMC',
 	'MAGMA',
-	'LEAF'
+	'LEAF',
+	'VELOCITY_CTD'
 ] as const
 
 export const formats = [

@@ -3,7 +3,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
     use crate::{
-        models::r#type::{ESTABLISHED_TYPES, ServerType, ServerTypeInfo},
+        models::r#type::{ServerType, ServerTypeInfo, V1_TYPES},
         routes::GetState,
     };
     use indexmap::IndexMap;
@@ -25,7 +25,7 @@ mod get {
         axum::Json(
             serde_json::to_value(&Response {
                 success: true,
-                types: ServerType::extract(&data, &ESTABLISHED_TYPES),
+                types: ServerType::extract(&data, &V1_TYPES),
             })
             .unwrap(),
         )

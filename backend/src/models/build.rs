@@ -158,12 +158,9 @@ impl BaseModel for Build {
             jar_size: row.get(format!("{prefix}jar_size").as_str()),
             zip_url: row.get(format!("{prefix}zip_url").as_str()),
             zip_size: row.get(format!("{prefix}zip_size").as_str()),
-            installation: serde_json::from_value(
-                row.get(format!("{prefix}installation").as_str()),
-            )
-            .unwrap(),
-            changes: serde_json::from_value(row.get(format!("{prefix}changes").as_str()))
+            installation: serde_json::from_value(row.get(format!("{prefix}installation").as_str()))
                 .unwrap(),
+            changes: serde_json::from_value(row.get(format!("{prefix}changes").as_str())).unwrap(),
             created: row.get(format!("{prefix}created").as_str()),
         }
     }

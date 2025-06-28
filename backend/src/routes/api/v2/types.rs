@@ -72,6 +72,7 @@ mod get {
                     miscellaneous: ServerType::extract(
                         &data,
                         &[
+                            ServerType::VelocityCtd,
                             ServerType::Arclight,
                             ServerType::Mohist,
                             ServerType::Magma,

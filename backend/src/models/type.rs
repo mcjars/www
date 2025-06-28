@@ -4,10 +4,13 @@ use sqlx::{Row, prelude::Type};
 use std::{fmt::Display, str::FromStr, sync::LazyLock};
 use utoipa::ToSchema;
 
-pub const SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER: [ServerType; 2] =
-    [ServerType::Velocity, ServerType::Nanolimbo];
+pub const SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER: [ServerType; 3] = [
+    ServerType::Velocity,
+    ServerType::Nanolimbo,
+    ServerType::VelocityCtd,
+];
 
-pub const ESTABLISHED_TYPES: [ServerType; 18] = [
+pub const V1_TYPES: [ServerType; 18] = [
     ServerType::Vanilla,
     ServerType::Paper,
     ServerType::Pufferfish,
@@ -82,6 +85,7 @@ pub enum ServerType {
     Divinemc,
     Magma,
     Leaf,
+    VelocityCtd,
 }
 
 impl FromStr for ServerType {
@@ -119,6 +123,8 @@ impl FromStr for ServerType {
             "DIVINE_MC" => Ok(ServerType::Divinemc),
             "MAGMA" => Ok(ServerType::Magma),
             "LEAF" => Ok(ServerType::Leaf),
+            "VELOCITYCTD" => Ok(ServerType::VelocityCtd),
+            "VELOCITY_CTD" => Ok(ServerType::VelocityCtd),
             _ => Err(format!("Unknown server type: {s}")),
         }
     }
@@ -690,6 +696,25 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
                 description: "A Paper fork aimed to find balance between performance, vanilla and stability.".to_string(),
                 categories: vec!["plugins".to_string()],
                 compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                builds: 0,
+                versions: ServerTypeVersions {
+                    minecraft: 0,
+                    project: 0,
+                },
+            },
+        ),
+        (
+            ServerType::VelocityCtd,
+            ServerTypeInfo {
+                name: "VelocityCTD".to_string(),
+                icon: format!("{}/icons/velocity_ctd.png", env.s3_url),
+                color: "#054EC4".to_string(),
+                homepage: "https://github.com/GemstoneGG/Velocity-CTD".to_string(),
+                deprecated: false,
+                experimental: false,
+                description: "A fork of Velocity with various optimizations, commands, and more!".to_string(),
+                categories: vec!["plugins".to_string(), "proxy".to_string()],
+                compatibility: vec!["velocity".to_string()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,

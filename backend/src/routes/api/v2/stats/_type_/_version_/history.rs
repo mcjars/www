@@ -112,9 +112,7 @@ mod get {
             let stats = state
                 .cache
                 .cached(
-                    &format!(
-                        "stats::types::{type}::{version}::history::{start}::{end}"
-                    ),
+                    &format!("stats::types::{type}::{version}::history::{start}::{end}"),
                     10800,
                     || async {
                         let data = sqlx::query(&format!(

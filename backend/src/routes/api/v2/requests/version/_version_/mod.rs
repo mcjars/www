@@ -41,12 +41,9 @@ mod get {
     ) -> axum::Json<serde_json::Value> {
         let requests = state
             .cache
-            .cached(
-                &format!("requests::versions::{version}"),
-                10800,
-                || async {
-                    let data = sqlx::query(
-                        r#"
+            .cached(&format!("requests::versions::{version}"), 10800, || async {
+                let data = sqlx::query(
+                    r#"
                         SELECT
                             search_type AS type,
                             SUM(total_requests)::bigint AS total,
@@ -58,27 +55,26 @@ mod get {
                         GROUP BY search_type
                         ORDER BY total DESC
                         "#,
-                    )
-                    .bind(version)
-                    .fetch_all(state.database.read())
-                    .await
-                    .unwrap();
+                )
+                .bind(version)
+                .fetch_all(state.database.read())
+                .await
+                .unwrap();
 
-                    let mut requests = IndexMap::new();
+                let mut requests = IndexMap::new();
 
-                    for row in data {
-                        requests.insert(
-                            row.get("type"),
-                            VersionStats {
-                                total: row.get("total"),
-                                unique_ips: row.get("unique_ips"),
-                            },
-                        );
-                    }
+                for row in data {
+                    requests.insert(
+                        row.get("type"),
+                        VersionStats {
+                            total: row.get("total"),
+                            unique_ips: row.get("unique_ips"),
+                        },
+                    );
+                }
 
-                    requests
-                },
-            )
+                requests
+            })
             .await;
 
         axum::Json(
