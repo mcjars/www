@@ -114,8 +114,10 @@ impl FromStr for ServerType {
             "CANVAS" => Ok(ServerType::Canvas),
             "ASPAPER" => Ok(ServerType::Aspaper),
             "LEGACYFABRIC" => Ok(ServerType::LegacyFabric),
+            "LEGACY-FABRIC" => Ok(ServerType::LegacyFabric),
             "LEGACY_FABRIC" => Ok(ServerType::LegacyFabric),
             "LOOHPLIMBO" => Ok(ServerType::LoohpLimbo),
+            "LOOHP-LIMBO" => Ok(ServerType::LoohpLimbo),
             "LOOHP_LIMBO" => Ok(ServerType::LoohpLimbo),
             "NANOLIMBO" => Ok(ServerType::Nanolimbo),
             "NANO_LIMBO" => Ok(ServerType::Nanolimbo),
@@ -124,6 +126,7 @@ impl FromStr for ServerType {
             "MAGMA" => Ok(ServerType::Magma),
             "LEAF" => Ok(ServerType::Leaf),
             "VELOCITYCTD" => Ok(ServerType::VelocityCtd),
+            "VELOCITY-CTD" => Ok(ServerType::VelocityCtd),
             "VELOCITY_CTD" => Ok(ServerType::VelocityCtd),
             _ => Err(format!("Unknown server type: {s}")),
         }
@@ -706,7 +709,7 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::VelocityCtd,
             ServerTypeInfo {
-                name: "VelocityCTD".to_string(),
+                name: "Velocity-CTD".to_string(),
                 icon: format!("{}/icons/velocity_ctd.png", env.s3_url),
                 color: "#054EC4".to_string(),
                 homepage: "https://github.com/GemstoneGG/Velocity-CTD".to_string(),
