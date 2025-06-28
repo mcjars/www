@@ -165,7 +165,7 @@ export function AppSidebar() {
 												<>
 													{types.map((type) => (
 														<SidebarMenuItem key={type.identifier}>
-															<Collapsible defaultOpen={location.pathname.includes('/'.concat(type.identifier)) || type.identifier === 'VANILLA'} className={'group/collapsible-type'}>
+															<Collapsible defaultOpen={location.pathname.includes('/'.concat(type.identifier, '/')) || type.identifier === 'VANILLA'} className={'group/collapsible-type'}>
 																<SidebarMenuButton asChild isActive={location.pathname.startsWith(`/${type.identifier}`)}>
 																	<CollapsibleTrigger className={'flex flex-row items-center'}>
 																		<img src={type.icon} alt={type.name} className={'h-6 w-6 rounded-md'} />
