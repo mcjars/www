@@ -95,6 +95,10 @@ impl BaseModel for Build {
                 format!("{}experimental", prefix.unwrap_or_default()),
             ),
             (
+                format!("{table}.name"),
+                format!("{}name", prefix.unwrap_or_default()),
+            ),
+            (
                 format!("{table}.build_number"),
                 format!("{}build_number", prefix.unwrap_or_default()),
             ),
@@ -141,18 +145,7 @@ impl BaseModel for Build {
                 .ok(),
             r#type: row.get(format!("{prefix}type").as_str()),
             experimental: row.get(format!("{prefix}experimental").as_str()),
-            name: if row.get::<i32, _>(format!("{prefix}build_number").as_str()) == 1
-                && row
-                    .try_get::<String, _>(format!("{prefix}project_version_id").as_str())
-                    .is_ok()
-            {
-                row.get(format!("{prefix}project_version_id").as_str())
-            } else {
-                format!(
-                    "#{}",
-                    row.get::<i32, _>(format!("{prefix}build_number").as_str())
-                )
-            },
+            name: row.get(format!("{prefix}name").as_str()),
             build_number: row.get(format!("{prefix}build_number").as_str()),
             jar_url: row.get(format!("{prefix}jar_url").as_str()),
             jar_size: row.get(format!("{prefix}jar_size").as_str()),

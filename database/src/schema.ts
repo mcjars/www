@@ -236,6 +236,7 @@ export const builds = pgTable('builds', {
 	rehash: boolean('rehash').default(false).notNull(),
 	experimental: boolean('experimental').default(false).notNull(),
 
+	name: varchar('name', { length: 255 }).default('').notNull(),
 	buildNumber: integer('build_number').notNull(),
 	jarUrl: varchar('jar_url', { length: 255 }),
 	jarSize: integer('jar_size'),
@@ -250,6 +251,7 @@ export const builds = pgTable('builds', {
 }, (builds) => [
 	index('builds_type_idx').on(builds.type),
 	index('builds_experimental_idx').on(builds.experimental),
+	index('builds_name_idx').on(builds.name),
 	index('builds_build_number_idx').on(builds.buildNumber),
 	index('builds_jar_url_idx').on(builds.jarUrl).where(isNotNull(builds.jarUrl)),
 	index('builds_jar_size_idx').on(builds.jarSize).where(isNotNull(builds.jarSize)),

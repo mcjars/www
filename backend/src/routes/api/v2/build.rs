@@ -37,7 +37,8 @@ mod post {
     }
 
     impl Hash {
-        pub fn any(&self) -> bool {
+        #[inline]
+        pub fn has_any(&self) -> bool {
             self.sha1.is_some()
                 || self.sha224.is_some()
                 || self.sha256.is_some()
@@ -55,6 +56,7 @@ mod post {
         r#type: Option<ServerType>,
         version_id: Option<String>,
         project_version_id: Option<String>,
+        name: Option<String>,
         build_number: Option<u32>,
         experimental: Option<bool>,
         jar_url: Option<String>,
@@ -67,7 +69,8 @@ mod post {
     }
 
     impl BuildSearch {
-        pub fn any(&self) -> bool {
+        #[inline]
+        pub fn has_any(&self) -> bool {
             self.id.is_some()
                 || self.r#type.is_some()
                 || self.version_id.is_some()
@@ -78,7 +81,7 @@ mod post {
                 || self.jar_size.is_some()
                 || self.zip_url.is_some()
                 || self.zip_size.is_some()
-                || self.hash.as_ref().map(|h| h.any()).unwrap_or(false)
+                || self.hash.as_ref().map(|h| h.has_any()).unwrap_or(false)
         }
     }
 
@@ -233,7 +236,7 @@ mod post {
         cache: &crate::cache::Cache,
         search: BuildSearch,
     ) -> Option<Result> {
-        if !search.any() {
+        if !search.has_any() {
             return None;
         }
 
@@ -256,6 +259,10 @@ mod post {
             if let Some(project_version_id) = &search.project_version_id {
                 where_clause.push(format!("builds.project_version_id = $1->>{}", data.len()));
                 data.push(serde_json::to_value(project_version_id).unwrap());
+            }
+            if let Some(name) = &search.name {
+                where_clause.push(format!("builds.name = $1->>{}", data.len()));
+                data.push(serde_json::to_value(name).unwrap());
             }
             if let Some(build_number) = search.build_number {
                 where_clause.push(format!("builds.build_number = ($1->>{})::int", data.len()));
@@ -281,36 +288,34 @@ mod post {
                 where_clause.push(format!("builds.zip_size = ($1->>{})::int", data.len()));
                 data.push(serde_json::to_value(zip_size).unwrap());
             }
-            if let Some(hash) = &search.hash {
-                if hash.any() {
-                    if let Some(primary) = hash.primary {
-                        where_clause.push(format!("build_hashes.primary = ($1->>{})::bool", data.len()));
-                        data.push(serde_json::to_value(primary).unwrap());
-                    }
-                    if let Some(sha1) = &hash.sha1 {
-                        where_clause.push(format!("build_hashes.sha1 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(sha1).unwrap());
-                    }
-                    if let Some(sha224) = &hash.sha224 {
-                        where_clause.push(format!("build_hashes.sha224 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(sha224).unwrap());
-                    }
-                    if let Some(sha256) = &hash.sha256 {
-                        where_clause.push(format!("build_hashes.sha256 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(sha256).unwrap());
-                    }
-                    if let Some(sha384) = &hash.sha384 {
-                        where_clause.push(format!("build_hashes.sha384 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(sha384).unwrap());
-                    }
-                    if let Some(sha512) = &hash.sha512 {
-                        where_clause.push(format!("build_hashes.sha512 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(sha512).unwrap());
-                    }
-                    if let Some(md5) = &hash.md5 {
-                        where_clause.push(format!("build_hashes.md5 = decode($1->>{}, 'hex')", data.len()));
-                        data.push(serde_json::to_value(md5).unwrap());
-                    }
+            if let Some(hash) = &search.hash && hash.has_any() {
+                if let Some(primary) = hash.primary {
+                    where_clause.push(format!("build_hashes.primary = ($1->>{})::bool", data.len()));
+                    data.push(serde_json::to_value(primary).unwrap());
+                }
+                if let Some(sha1) = &hash.sha1 {
+                    where_clause.push(format!("build_hashes.sha1 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(sha1).unwrap());
+                }
+                if let Some(sha224) = &hash.sha224 {
+                    where_clause.push(format!("build_hashes.sha224 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(sha224).unwrap());
+                }
+                if let Some(sha256) = &hash.sha256 {
+                    where_clause.push(format!("build_hashes.sha256 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(sha256).unwrap());
+                }
+                if let Some(sha384) = &hash.sha384 {
+                    where_clause.push(format!("build_hashes.sha384 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(sha384).unwrap());
+                }
+                if let Some(sha512) = &hash.sha512 {
+                    where_clause.push(format!("build_hashes.sha512 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(sha512).unwrap());
+                }
+                if let Some(md5) = &hash.md5 {
+                    where_clause.push(format!("build_hashes.md5 = decode($1->>{}, 'hex')", data.len()));
+                    data.push(serde_json::to_value(md5).unwrap());
                 }
             }
 
@@ -376,7 +381,7 @@ mod post {
                 LEFT JOIN minecraft_versions mv ON mv.id = x.version_id
                 "#,
                 Build::columns_sql(None, None),
-                if search.hash.as_ref().map(|h| h.any()).unwrap_or(false) {
+                if search.hash.as_ref().map(|h| h.has_any()).unwrap_or(false) {
                     "build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id"
                 } else {
                     "builds"

@@ -204,6 +204,13 @@
       "when": 1751128956932,
       "tag": "0028_brave_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1751129950610,
+      "tag": "0029_shocking_bug",
+      "breakpoints": true
     }
   ]
 }
