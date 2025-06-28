@@ -190,7 +190,7 @@ impl Version {
                                 project_versions.id AS project_version_id
                             FROM project_versions
                             INNER JOIN builds ON builds.project_version_id = project_versions.id
-                            WHERE builds.type = $1
+                            WHERE builds.type = $1 AND project_versions.type = $1
                             GROUP BY project_versions.id
                         ) AS x
                         INNER JOIN builds ON builds.id = x.latest
