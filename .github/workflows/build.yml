@@ -14,9 +14,11 @@ jobs:
           - arch: amd64
             runner: ubuntu-24.04
             target: x86_64-unknown-linux-musl
+            cross: false
           - arch: arm64
             runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
+            cross: true
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -80,9 +82,15 @@ jobs:
         with:
           prefix-key: ${{ runner.os }}-${{ matrix.target }}
 
-      - name: Build binary
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Process release binary
         run: |
-          cargo build --release --target ${{ matrix.target }}
           sentry-cli --url ${{ secrets.SENTRY_URL }} debug-files upload --include-sources --org ${{ secrets.SENTRY_ORG }} --project ${{ secrets.SENTRY_PROJECT }} --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} target/${{ matrix.target }}/release/api
 
           strip target/${{ matrix.target }}/release/api
