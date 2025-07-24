@@ -93,9 +93,13 @@ jobs:
         run: |
           sentry-cli --url ${{ secrets.SENTRY_URL }} debug-files upload --include-sources --org ${{ secrets.SENTRY_ORG }} --project ${{ secrets.SENTRY_PROJECT }} --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} target/${{ matrix.target }}/release/api
 
-          strip target/${{ matrix.target }}/release/api
           mkdir -p dist/${{ matrix.arch }}
           cp target/${{ matrix.target }}/release/api dist/${{ matrix.arch }}/api
+
+      - name: Strip release binary (x86_64 only)
+        if: matrix.arch == 'amd64'
+        run: |
+          strip dist/${{ matrix.arch }}/api
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
