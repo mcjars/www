@@ -54,6 +54,7 @@ mod get {
                         &[
                             ServerType::Purpur,
                             ServerType::Pufferfish,
+                            ServerType::Folia,
                             ServerType::Sponge,
                             ServerType::Spigot,
                             ServerType::Bungeecord,
@@ -62,12 +63,7 @@ mod get {
                     ),
                     experimental: ServerType::extract(
                         &data,
-                        &[
-                            ServerType::Folia,
-                            ServerType::Quilt,
-                            ServerType::Canvas,
-                            ServerType::Divinemc,
-                        ],
+                        &[ServerType::Quilt, ServerType::Canvas],
                     ),
                     miscellaneous: ServerType::extract(
                         &data,
@@ -76,6 +72,7 @@ mod get {
                             ServerType::Arclight,
                             ServerType::Mohist,
                             ServerType::Magma,
+                            ServerType::Divinemc,
                             ServerType::Leaf,
                             ServerType::Leaves,
                             ServerType::Aspaper,

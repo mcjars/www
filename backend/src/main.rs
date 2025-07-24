@@ -24,6 +24,7 @@ use routes::{ApiError, GetState};
 use sentry_tower::SentryHttpLayer;
 use sha2::Digest;
 use std::{collections::HashMap, sync::Arc, time::Instant};
+use tikv_jemallocator::Jemalloc;
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
@@ -31,6 +32,9 @@ use tower_http::{
 };
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa_axum::router::OpenApiRouter;
+
+#[global_allocator]
+static ALLOC: Jemalloc = Jemalloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");

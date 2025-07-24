@@ -14,8 +14,8 @@ impl Database {
         let instance = Self {
             write: match &env.database_url_primary {
                 Some(url) => PgPoolOptions::new()
-                    .min_connections(10)
-                    .max_connections(60)
+                    .min_connections(5)
+                    .max_connections(10)
                     .test_before_acquire(false)
                     .connect(url)
                     .await
@@ -23,7 +23,7 @@ impl Database {
 
                 None => PgPoolOptions::new()
                     .min_connections(10)
-                    .max_connections(60)
+                    .max_connections(30)
                     .test_before_acquire(false)
                     .connect(&env.database_url)
                     .await
@@ -33,7 +33,7 @@ impl Database {
                 Some(
                     PgPoolOptions::new()
                         .min_connections(10)
-                        .max_connections(60)
+                        .max_connections(30)
                         .test_before_acquire(false)
                         .connect(&env.database_url)
                         .await
