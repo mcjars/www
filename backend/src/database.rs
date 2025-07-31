@@ -13,6 +13,17 @@ async fn update_count(pool: &sqlx::PgPool, key: &str, value: i64) -> Result<(), 
     Ok(())
 }
 
+#[inline]
+async fn reset_count(pool: &sqlx::PgPool, key: &str, value: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO counts (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2")
+        .bind(key)
+        .bind(value)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
 pub struct Database {
     write: sqlx::PgPool,
     read: Option<sqlx::PgPool>,
@@ -140,8 +151,8 @@ impl Database {
                     let build_hashes_count: i64 = build_hashes.get(0);
 
                     match tokio::try_join!(
-                        update_count(&writer, "builds", builds_count),
-                        update_count(&writer, "build_hashes", build_hashes_count)
+                        reset_count(&writer, "builds", builds_count),
+                        reset_count(&writer, "build_hashes", build_hashes_count)
                     ) {
                         Ok(_) => {}
                         Err(e) => {
