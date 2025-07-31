@@ -211,6 +211,13 @@
       "when": 1751129950610,
       "tag": "0029_shocking_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1753929796348,
+      "tag": "0030_classy_timeslip",
+      "breakpoints": true
     }
   ]
 }

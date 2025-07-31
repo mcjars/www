@@ -51,6 +51,7 @@ pub struct RateLimitData {
 pub struct RequestLogger {
     pending: Mutex<Vec<Request>>,
     processing: Mutex<Vec<Request>>,
+    uncounted_requests: Mutex<i64>,
     database: Arc<crate::database::Database>,
     cache: Arc<crate::cache::Cache>,
 
@@ -62,6 +63,7 @@ impl RequestLogger {
         Self {
             pending: Mutex::new(Vec::new()),
             processing: Mutex::new(Vec::new()),
+            uncounted_requests: Mutex::new(0),
             database,
             cache,
 
@@ -79,7 +81,7 @@ impl RequestLogger {
     ) -> Result<(Option<String>, Option<RateLimitData>), Option<RateLimitData>> {
         let ip = match crate::utils::extract_ip(&request.headers) {
             Some(ip) => ip,
-            None => return Err(None),
+            None => std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
         };
 
         let mut ratelimit: Option<RateLimitData> = None;
@@ -128,12 +130,9 @@ impl RequestLogger {
             }
         }
 
-        if request
-            .uri
-            .query()
-            .map(|q| q.contains("tracking=none"))
-            .unwrap_or(false)
-            || ACCEPTED_METHODS.iter().all(|m| *m != request.method)
+        *self.uncounted_requests.lock().await += 1;
+
+        if ACCEPTED_METHODS.iter().all(|m| *m != request.method)
             || !request.uri.path().starts_with("/api")
             || request.uri.path().starts_with("/api/github")
         {
@@ -159,7 +158,7 @@ impl RequestLogger {
                     request
                         .uri
                         .query()
-                        .map(|q| format!("?{q}"))
+                        .map(|q| format!("?{}", q.replacen("tracking=none", "tracking=nostats", 1)))
                         .unwrap_or_default()
                 ),
                 255,
@@ -329,6 +328,20 @@ impl RequestLogger {
 
                     return Err(Box::new(e));
                 }
+            }
+        }
+
+        let mut uncounted_requests = self.uncounted_requests.lock().await;
+        if *uncounted_requests > 0 {
+            let count = *uncounted_requests;
+            *uncounted_requests = 0;
+            drop(uncounted_requests);
+
+            if let Err(e) = self.database.update_count("requests", count).await {
+                crate::logger::log(
+                    crate::logger::LoggerLevel::Error,
+                    format!("{} {}", "failed to update request count".red(), e),
+                );
             }
         }
 

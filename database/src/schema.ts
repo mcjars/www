@@ -1,5 +1,5 @@
 import { isNotNull, relations, sql } from "drizzle-orm"
-import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType } from "drizzle-orm/pg-core"
+import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType, bigint } from "drizzle-orm/pg-core"
 
 export const bytea = customType<{ data: string; notNull: false; default: false }>({
   dataType() {
@@ -136,6 +136,13 @@ export const webhooks = pgTable('webhooks', {
 }, (webhooks) => [
 	index('webhooks_organization_idx').on(webhooks.organizationId).where(isNotNull(webhooks.organizationId)),
 	index('webhooks_enabled_idx').on(webhooks.enabled)
+])
+
+export const counts = pgTable('counts', {
+	key: varchar('key', { length: 255 }).primaryKey().notNull(),
+	value: bigint('value', { mode: 'number' }).notNull().default(0)
+}, (counts) => [
+	uniqueIndex('counts_key_idx').on(counts.key)
 ])
 
 export const users = pgTable('users', {

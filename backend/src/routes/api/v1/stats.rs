@@ -53,12 +53,14 @@ mod get {
                     FROM builds
                     UNION ALL
                     SELECT
-                        COUNT(*), 0, 0
-                    FROM build_hashes
+                        value, pg_database_size(current_database()), 0
+                    FROM counts
+                    WHERE key = 'build_hashes'
                     UNION ALL
                     SELECT 
-                        COUNT(*), pg_database_size(current_database()), 0
-                    FROM requests
+                        value, 0, 0
+                    FROM counts
+                    WHERE key = 'requests'
                     "#,
                 )
                 .fetch_all(state.database.read())
@@ -70,7 +72,7 @@ mod get {
                     hashes: data[1].get(0),
                     requests: data[2].get(0),
                     size: StatsSize {
-                        database: data[2].get(1),
+                        database: data[1].get(1),
                     },
                     total: StatsTotal {
                         jar_size: data[0].get(1),
