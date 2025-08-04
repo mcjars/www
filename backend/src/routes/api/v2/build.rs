@@ -281,7 +281,7 @@ mod post {
                 data.push(serde_json::to_value(jar_size).unwrap());
             }
             if let Some(zip_url) = &search.zip_url {
-                where_clause.push(format!("builds.zip_url = ($1->>{})::int", data.len()));
+                where_clause.push(format!("builds.zip_url = $1->>{}", data.len()));
                 data.push(serde_json::to_value(zip_url).unwrap());
             }
             if let Some(zip_size) = search.zip_size {
