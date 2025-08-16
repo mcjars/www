@@ -315,6 +315,14 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "config/canvas-server.json5",
+            Config {
+                r#type: ServerType::Canvas,
+                format: Format::Json5,
+                aliases: &["config/canvas-server.json5", "canvas-server.json5"],
+            },
+        ),
+        (
             "divinemc.yml",
             Config {
                 r#type: ServerType::Divinemc,
