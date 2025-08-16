@@ -57,7 +57,9 @@ export default function PageLookup() {
 			file.name.endsWith('.yml') ||
 			file.name.endsWith('.properties') ||
 			file.name.endsWith('.toml') ||
-			file.name.endsWith('.conf')
+			file.name.endsWith('.conf') ||
+			file.name.endsWith('.json') ||
+			file.name.endsWith('.json5')
 		) {
 			setIsDropLoading(true)
 
