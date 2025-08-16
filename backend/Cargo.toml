@@ -1,6 +1,6 @@
 [package]
 name = "api"
-version = "3.7.0"
+version = "3.7.1"
 edition = "2024"
 
 [dependencies]
@@ -31,3 +31,4 @@ futures-util = "0.3.31"
 tower = "0.5.2"
 include_dir = "0.7.4"
 tikv-jemallocator = "0.6.0"
+json5 = "0.4.1"

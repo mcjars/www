@@ -53,7 +53,8 @@ export const formats = [
 	'YAML',
 	'CONF',
 	'TOML',
-	'PROPERTIES'
+	'PROPERTIES',
+	'JSON5'
 ] as const
 
 export const typesEnum = pgEnum('server_type', types),

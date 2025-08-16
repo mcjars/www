@@ -1,0 +1,1 @@
+ALTER TYPE "public"."format" ADD VALUE 'JSON5';

@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import * as schema from "@/schema"
 import env from "@/globals/env"
 import yaml from "js-yaml"
+import json5 from "json5"
 import logger from "@/globals/logger"
 import { Pool } from "pg"
 
@@ -69,6 +70,10 @@ export const configs: Record<string, {
 		type: 'CANVAS',
 		format: 'YAML',
 		aliases: ['canvas.yml']
+	}, 'config/canvas-server.json5': {
+		type: 'CANVAS',
+		format: 'JSON5',
+		aliases: ['config/canvas-server.json5', 'canvas-server.json5']
 	},
 
 	// DivineMC
@@ -243,6 +248,39 @@ export default Object.assign(db, {
 			unquotedReplacements.forEach((decimalValue, placeholder) => {
 				value = value.replace(new RegExp(`${placeholder}`, 'g'), decimalValue)
 			})
+		} else if (file.endsWith('.json') || file.endsWith('.json5')) {
+			const loadedData: object = json5.parse(value)
+
+			function processJsonKeysRecursively(value: any, key: string | null) {
+				switch (typeof value) {
+					case 'object':
+						if (Array.isArray(value)) {
+							for (const item of value) {
+								processJsonKeysRecursively(item, null);
+							}
+						} else {
+							for (const [k, v] of Object.entries(value).sort(([k1], [k2]) => k1.localeCompare(k2))) {
+								processJsonKeysRecursively(v, k);
+							}
+						}
+						break;
+					case 'string':
+						if (key && key.startsWith('seed')) {
+							value = 'xxx';
+						}
+						break;
+					case 'number':
+						if (key && key.startsWith('seed')) {
+							value = 'xxx';
+						}
+						break;
+					default:
+						break;
+				}
+			}
+
+			processJsonKeysRecursively(loadedData, null);
+			value = JSON.stringify(loadedData, null, 2);
 		}
 
 		if (file === 'velocity.toml') {

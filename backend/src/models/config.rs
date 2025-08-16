@@ -14,6 +14,7 @@ pub enum Format {
     Yaml,
     Conf,
     Toml,
+    Json5,
 }
 
 impl Display for Format {
@@ -109,6 +110,11 @@ impl Config {
 
             Self::process_yaml_keys_recursively(&mut parsed, None);
             value = serde_yaml::to_string(&parsed).unwrap();
+        } else if file.ends_with(".json") || file.ends_with(".json5") {
+            let mut parsed: serde_json::Value = json5::from_str(&value)?;
+
+            Self::process_json_keys_recursively(&mut parsed, None);
+            value = serde_json::to_string_pretty(&parsed).unwrap();
         } else if file.ends_with(".toml") && contains.is_none() {
             let parsed: toml::Value = toml::from_str(&value)?;
 
@@ -178,6 +184,43 @@ impl Config {
                 if let Some(key) = key.and_then(|k| k.as_str()) {
                     if key.starts_with("seed-") {
                         *value = serde_yaml::Value::String("xxx".to_string());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn process_json_keys_recursively(value: &mut serde_json::Value, key: Option<&String>) {
+        match value {
+            serde_json::Value::Object(map) => {
+                let mut entries: Vec<(String, serde_json::Value)> =
+                    std::mem::take(map).into_iter().collect();
+
+                entries.sort_by(|(k1, _), (k2, _)| k1.cmp(&k2));
+
+                for (k, v) in entries.iter_mut() {
+                    Self::process_json_keys_recursively(v, Some(k));
+                }
+
+                *map = serde_json::Map::from_iter(entries);
+            }
+            serde_json::Value::Array(seq) => {
+                for item in seq.iter_mut() {
+                    Self::process_json_keys_recursively(item, None);
+                }
+            }
+            serde_json::Value::String(s) => {
+                if let Some(key) = key {
+                    if key.starts_with("seed") {
+                        *s = "xxx".to_string();
+                    }
+                }
+            }
+            serde_json::Value::Number(_) => {
+                if let Some(key) = key {
+                    if key.starts_with("seed") {
+                        *value = serde_json::Value::String("xxx".to_string());
                     }
                 }
             }
