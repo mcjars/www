@@ -251,36 +251,29 @@ export default Object.assign(db, {
 		} else if (file.endsWith('.json') || file.endsWith('.json5')) {
 			const loadedData: object = json5.parse(value)
 
-			function processJsonKeysRecursively(value: any, key: string | null) {
-				switch (typeof value) {
-					case 'object':
-						if (Array.isArray(value)) {
-							for (const item of value) {
-								processJsonKeysRecursively(item, null);
-							}
-						} else {
-							for (const [k, v] of Object.entries(value).sort(([k1], [k2]) => k1.localeCompare(k2))) {
-								processJsonKeysRecursively(v, k);
-							}
+			function sortAndMask(obj: any): any {
+				if (Array.isArray(obj)) {
+					return obj.map(sortAndMask)
+				} else if (obj && typeof obj === 'object') {
+					const sorted: any = {}
+					for (const key of Object.keys(obj).sort()) {
+						let val = obj[key]
+						if (typeof val === 'object' && val !== null) {
+							val = sortAndMask(val)
+						} else if (key.startsWith('seed')) {
+							val = 'xxx'
 						}
-						break;
-					case 'string':
-						if (key && key.startsWith('seed')) {
-							value = 'xxx';
-						}
-						break;
-					case 'number':
-						if (key && key.startsWith('seed')) {
-							value = 'xxx';
-						}
-						break;
-					default:
-						break;
+						sorted[key] = val
+					}
+
+					return sorted
 				}
+
+				return obj
 			}
 
-			processJsonKeysRecursively(loadedData, null);
-			value = JSON.stringify(loadedData, null, 2);
+			const sortedMasked = sortAndMask(loadedData)
+			value = JSON.stringify(sortedMasked, null, 2)
 		}
 
 		if (file === 'velocity.toml') {
