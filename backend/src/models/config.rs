@@ -70,23 +70,23 @@ impl Config {
 
             match file {
                 "config.yml" => {
-                    if let Some(stats_uuid) = parsed.get_mut("stats_uuid") {
-                        if stats_uuid.is_string() {
-                            *stats_uuid = serde_yaml::Value::String("xxx".to_string());
-                        }
+                    if let Some(stats_uuid) = parsed.get_mut("stats_uuid")
+                        && stats_uuid.is_string()
+                    {
+                        *stats_uuid = serde_yaml::Value::String("xxx".to_string());
                     }
 
-                    if let Some(stats) = parsed.get_mut("stats") {
-                        if stats.is_string() {
-                            *stats = serde_yaml::Value::String("xxx".to_string());
-                        }
+                    if let Some(stats) = parsed.get_mut("stats")
+                        && stats.is_string()
+                    {
+                        *stats = serde_yaml::Value::String("xxx".to_string());
                     }
                 }
                 "leaves.yml" => {
-                    if let Some(server_id) = parsed.get_mut("server-id") {
-                        if server_id.is_string() {
-                            *server_id = serde_yaml::Value::String("xxx".to_string());
-                        }
+                    if let Some(server_id) = parsed.get_mut("server-id")
+                        && server_id.is_string()
+                    {
+                        *server_id = serde_yaml::Value::String("xxx".to_string());
                     }
                 }
                 _ => {}
@@ -174,17 +174,17 @@ impl Config {
                 }
             }
             serde_yaml::Value::String(s) => {
-                if let Some(key) = key.and_then(|k| k.as_str()) {
-                    if key.starts_with("seed-") {
-                        *s = "xxx".to_string();
-                    }
+                if let Some(key) = key.and_then(|k| k.as_str())
+                    && key.starts_with("seed-")
+                {
+                    *s = "xxx".to_string();
                 }
             }
             serde_yaml::Value::Number(_) => {
-                if let Some(key) = key.and_then(|k| k.as_str()) {
-                    if key.starts_with("seed-") {
-                        *value = serde_yaml::Value::String("xxx".to_string());
-                    }
+                if let Some(key) = key.and_then(|k| k.as_str())
+                    && key.starts_with("seed-")
+                {
+                    *value = serde_yaml::Value::String("xxx".to_string());
                 }
             }
             _ => {}
@@ -197,7 +197,7 @@ impl Config {
                 let mut entries: Vec<(String, serde_json::Value)> =
                     std::mem::take(map).into_iter().collect();
 
-                entries.sort_by(|(k1, _), (k2, _)| k1.cmp(&k2));
+                entries.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
                 for (k, v) in entries.iter_mut() {
                     Self::process_json_keys_recursively(v, Some(k));
@@ -211,17 +211,17 @@ impl Config {
                 }
             }
             serde_json::Value::String(s) => {
-                if let Some(key) = key {
-                    if key.starts_with("seed") {
-                        *s = "xxx".to_string();
-                    }
+                if let Some(key) = key
+                    && key.starts_with("seed")
+                {
+                    *s = "xxx".to_string();
                 }
             }
             serde_json::Value::Number(_) => {
-                if let Some(key) = key {
-                    if key.starts_with("seed") {
-                        *value = serde_json::Value::String("xxx".to_string());
-                    }
+                if let Some(key) = key
+                    && key.starts_with("seed")
+                {
+                    *value = serde_json::Value::String("xxx".to_string());
                 }
             }
             _ => {}

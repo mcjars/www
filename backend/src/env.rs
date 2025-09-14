@@ -29,6 +29,9 @@ pub struct Env {
     pub s3_access_key: String,
     pub s3_secret_key: String,
 
+    pub files_cache: String,
+    pub files_location: String,
+
     pub bind: String,
     pub port: u16,
 
@@ -142,6 +145,15 @@ impl Env {
                 .unwrap_or("6969".to_string())
                 .parse()
                 .unwrap(),
+
+            files_cache: std::env::var("FILES_CACHE")
+                .unwrap_or("/mnt/mcjars-cache".to_string())
+                .trim_matches('"')
+                .to_string(),
+            files_location: std::env::var("FILES_LOCATION")
+                .unwrap_or("/mnt/mcjars".to_string())
+                .trim_matches('"')
+                .to_string(),
 
             app_url: std::env::var("APP_URL")
                 .expect("APP_URL is required")

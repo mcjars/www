@@ -225,6 +225,20 @@
       "when": 1755381348279,
       "tag": "0031_tiny_hellion",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1757798570336,
+      "tag": "0032_nasty_bromley",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1757798739044,
+      "tag": "0033_abnormal_redwing",
+      "breakpoints": true
     }
   ]
 }

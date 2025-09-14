@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 pub mod build;
 pub mod config;
+pub mod file;
 pub mod organization;
 pub mod r#type;
 pub mod user;

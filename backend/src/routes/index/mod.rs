@@ -1,6 +1,6 @@
 use super::{GetState, State};
 use crate::models::r#type::ServerType;
-use axum::{http::Response, routing::get};
+use axum::{body::Body, http::Response, routing::get};
 use utoipa_axum::router::OpenApiRouter;
 
 mod _type_;
@@ -13,7 +13,7 @@ pub struct IndexFile {
     pub href: Option<String>,
 }
 
-pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Response<String> {
+pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Response<Body> {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
         .replace("{{LOCATION}}", location)
@@ -47,7 +47,7 @@ pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Respons
     Response::builder()
         .header("Content-Type", "text/html")
         .header("Cache-Control", "no-cache")
-        .body(html)
+        .body(Body::from(html))
         .unwrap()
 }
 

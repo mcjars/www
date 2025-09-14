@@ -1,6 +1,6 @@
 [package]
 name = "api"
-version = "3.7.1"
+version = "3.8.0"
 edition = "2024"
 
 [dependencies]
@@ -32,3 +32,6 @@ tower = "0.5.2"
 include_dir = "0.7.4"
 tikv-jemallocator = "0.6.0"
 json5 = "0.4.1"
+serde_arrays = "0.2.0"
+human_bytes = "0.4.3"
+tokio-util = { version = "0.7.16", features = ["full"] }

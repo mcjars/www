@@ -14,6 +14,7 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 
 mod api;
+mod files;
 mod index;
 
 #[derive(ToSchema, Serialize)]
@@ -43,6 +44,7 @@ pub struct AppState {
     pub database: Arc<crate::database::Database>,
     pub cache: Arc<crate::cache::Cache>,
     pub requests: crate::requests::RequestLogger,
+    pub files: crate::files::FileCache,
     pub env: Arc<crate::env::Env>,
     pub s3: Arc<crate::s3::S3>,
 }
@@ -53,13 +55,11 @@ pub type GetData = axum::extract::Extension<Arc<Mutex<serde_json::Value>>>;
 
 async fn handle_api_request(state: GetState, req: Request, next: Next) -> Response<Body> {
     let mut organization: Option<Organization> = None;
-    if let Some(authorization) = req.headers().get("Authorization") {
-        if let Ok(authorization) = authorization.to_str() {
-            if authorization.len() == 64 {
-                organization =
-                    Organization::by_key(&state.database, &state.cache, authorization).await;
-            }
-        }
+    if let Some(authorization) = req.headers().get("Authorization")
+        && let Ok(authorization) = authorization.to_str()
+        && authorization.len() == 64
+    {
+        organization = Organization::by_key(&state.database, &state.cache, authorization).await;
     }
 
     let (parts, body) = req.into_parts();
@@ -153,6 +153,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .nest("/api", api::router(state))
         .nest("/index", index::router(state))
+        .nest("/files", files::router(state))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             handle_api_request,

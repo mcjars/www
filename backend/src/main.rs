@@ -1,6 +1,7 @@
 mod cache;
 mod database;
 mod env;
+mod files;
 mod logger;
 mod models;
 mod requests;
@@ -111,35 +112,34 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
     let if_none_match = req.headers().get("If-None-Match").cloned();
     let mut response = next.run(req).await;
 
-    if let Some(content_type) = response.headers().get("Content-Type") {
-        if content_type
+    if let Some(content_type) = response.headers().get("Content-Type")
+        && content_type
             .to_str()
             .map(|c| c.starts_with("text/plain"))
             .unwrap_or(false)
-            && response.status().is_client_error()
-            && response.status() != StatusCode::NOT_FOUND
-        {
-            let (mut parts, body) = response.into_parts();
+        && response.status().is_client_error()
+        && response.status() != StatusCode::NOT_FOUND
+    {
+        let (mut parts, body) = response.into_parts();
 
-            let text_body = String::from_utf8(
-                axum::body::to_bytes(body, usize::MAX)
-                    .await
-                    .unwrap()
-                    .into_iter()
-                    .by_ref()
-                    .collect::<Vec<u8>>(),
-            )
-            .unwrap();
+        let text_body = String::from_utf8(
+            axum::body::to_bytes(body, usize::MAX)
+                .await
+                .unwrap()
+                .into_iter()
+                .by_ref()
+                .collect::<Vec<u8>>(),
+        )
+        .unwrap();
 
-            parts
-                .headers
-                .insert("Content-Type", "application/json".parse().unwrap());
+        parts
+            .headers
+            .insert("Content-Type", "application/json".parse().unwrap());
 
-            response = Response::from_parts(
-                parts,
-                Body::from(ApiError::new(&[&text_body]).to_value().to_string()),
-            );
-        }
+        response = Response::from_parts(
+            parts,
+            Body::from(ApiError::new(&[&text_body]).to_value().to_string()),
+        );
     }
 
     let (mut parts, body) = response.into_parts();
@@ -193,6 +193,7 @@ async fn main() {
         database: database.clone(),
         cache: cache.clone(),
         requests: requests::RequestLogger::new(database.clone(), cache.clone()),
+        files: files::FileCache::new(database.clone(), env.clone()).await,
         env,
         s3,
     });
@@ -205,6 +206,18 @@ async fn main() {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
                 state.requests.process().await.unwrap_or_default();
+            }
+        });
+    }
+
+    {
+        let state = state.clone();
+
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+
+                state.files.process().await.unwrap_or_default();
             }
         });
     }

@@ -235,6 +235,29 @@ export const projectVersionsRelations = relations(projectVersions, ({ many }) =>
 	builds: many(builds, { relationName: 'project_versions' })
 }))
 
+export const files = pgTable('files', {
+	path: varchar({ length: 255 }).array(),
+	size: integer('size').notNull(),
+
+	sha1: bytea('sha1').notNull(),
+	sha224: bytea('sha224').notNull(),
+	sha256: bytea('sha256').notNull(),
+	sha384: bytea('sha384').notNull(),
+	sha512: bytea('sha512').notNull(),
+	md5: bytea('md5').notNull(),
+
+	lastAccess: timestamp('last_access')
+}, (files) => [
+	primaryKey({ name: 'files_pk', columns: [files.path] }),
+
+	index('files_sha1_idx').on(files.sha1).with({ fillfactor: 100 }),
+	index('files_sha224_idx').on(files.sha224).with({ fillfactor: 100 }),
+	index('files_sha256_idx').on(files.sha256).with({ fillfactor: 100 }),
+	index('files_sha384_idx').on(files.sha384).with({ fillfactor: 100 }),
+	index('files_sha512_idx').on(files.sha512).with({ fillfactor: 100 }),
+	index('files_md5_idx').on(files.md5).with({ fillfactor: 100 })
+])
+
 export const builds = pgTable('builds', {
 	id: serial('id').primaryKey().notNull(),
 	versionId: varchar('version_id', { length: 63 }).references(() => minecraftVersions.id, { onDelete: 'cascade' }),
