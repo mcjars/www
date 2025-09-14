@@ -1,4 +1,4 @@
-import logger from "@@/globals/logger"
+import logger from "@/globals/logger"
 import * as fs from "fs"
 import { system } from "@rjweb/utils"
 

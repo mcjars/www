@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres"
-import * as schema from "@@/schema"
-import env from "@@/globals/env"
+import * as schema from "@/schema"
+import env from "@/globals/env"
 import yaml from "js-yaml"
 import json5 from "json5"
-import logger from "@@/globals/logger"
+import logger from "@/globals/logger"
 import { Pool } from "pg"
 
 export const configs: Record<string, {
