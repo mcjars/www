@@ -154,7 +154,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
         .nest("/api", api::router(state))
         .nest("/index", index::router(state))
         .nest("/files", files::router(state))
-        .route_layer(axum::middleware::from_fn_with_state(
+        .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             handle_api_request,
         ))

@@ -91,7 +91,7 @@ impl RequestLogger {
                 if request.uri.path().contains("files") {
                     "files"
                 } else {
-                    "regular "
+                    "regular"
                 }
             );
 
