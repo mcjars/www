@@ -101,7 +101,37 @@ impl FileCache {
         let source = Path::new(&self.env.files_location).join(path);
         let destination = Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string());
 
-        let (return_reader, mut return_writer) = tokio::io::duplex(file.size as usize);
+        let (return_reader, mut return_writer) = tokio::io::duplex(32 * 1024);
+        let (file_allow_sender, mut file_allow_reader) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn({
+            let destination = destination.clone();
+
+            async move {
+                let mut skip_allow_check = false;
+                file_allow_reader.recv().await;
+
+                let mut run = async || -> std::io::Result<()> {
+                    let mut buffer = vec![0; 32 * 1024];
+                    let mut file = tokio::fs::File::open(&destination).await?;
+
+                    loop {
+                        match file.read(&mut buffer).await? {
+                            0 => break,
+                            n => return_writer.write_all(&buffer[..n]).await?,
+                        }
+
+                        if !skip_allow_check && file_allow_reader.recv().await == Some(true) {
+                            skip_allow_check = true;
+                        }
+                    }
+
+                    Ok(())
+                };
+
+                run().await.unwrap();
+            }
+        });
 
         tokio::spawn({
             drop(cached_file_lock);
@@ -125,10 +155,12 @@ impl FileCache {
                             }
                             n => {
                                 file.write_all(&buffer[..n]).await?;
-                                return_writer.write_all(&buffer[..n]).await?;
+                                file_allow_sender.send(false).ok();
                             }
                         }
                     }
+
+                    file_allow_sender.send(true).ok();
 
                     Ok(())
                 };
