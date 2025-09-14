@@ -101,29 +101,7 @@ impl FileCache {
         let source = Path::new(&self.env.files_location).join(path);
         let destination = Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string());
 
-        let (mut reader, mut writer) = tokio::io::duplex(32 * 1024);
         let (return_reader, mut return_writer) = tokio::io::duplex(32 * 1024);
-
-        tokio::spawn(async move {
-            let mut buffer = vec![0; 32 * 1024];
-            let mut file = tokio::fs::File::create(destination).await.unwrap();
-
-            loop {
-                match reader.read(&mut buffer).await.unwrap() {
-                    0 => {
-                        file.sync_all().await.unwrap();
-                        break;
-                    }
-                    n => {
-                        file.write_all(&buffer[..n]).await.unwrap();
-                        return_writer
-                            .write_all(&buffer[..n])
-                            .await
-                            .unwrap_or_default();
-                    }
-                }
-            }
-        });
 
         tokio::spawn({
             drop(cached_file_lock);
@@ -134,19 +112,35 @@ impl FileCache {
             async move {
                 let cached_file_lock = cached_file.lock().await;
 
-                match tokio::io::copy(
-                    &mut tokio::fs::File::open(source).await.unwrap(),
-                    &mut writer,
-                )
-                .await
-                {
-                    Ok(_) => {}
-                    Err(err) => {
-                        cached_files.write().await.remove(&key);
+                let run = async || -> std::io::Result<()> {
+                    let mut buffer = vec![0; 32 * 1024];
+                    let mut reader = tokio::fs::File::open(source).await?;
+                    let mut file = tokio::fs::File::create(&destination).await?;
 
-                        panic!("{:?}", err);
+                    loop {
+                        match reader.read(&mut buffer).await? {
+                            0 => {
+                                file.sync_all().await?;
+                                break;
+                            }
+                            n => {
+                                file.write_all(&buffer[..n]).await?;
+                                return_writer.write_all(&buffer[..n]).await?;
+                            }
+                        }
                     }
+
+                    Ok(())
                 };
+
+                if let Err(err) = run().await {
+                    cached_files.write().await.remove(&key);
+                    tokio::fs::remove_file(destination)
+                        .await
+                        .unwrap_or_default();
+
+                    panic!("{:?}", err);
+                }
 
                 total_size.fetch_add(
                     cached_file_lock.size as i64,
