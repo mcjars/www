@@ -31,6 +31,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 if let Some(last) = last.strip_suffix(".CHECKSUMS.txt") {
                     let file = match File::by_path(
                         &state.database,
+                        &state.cache,
                         &path
                             .components()
                             .take(path.components().count() - 1)
@@ -105,7 +106,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     }
                 }
 
-                let file = match File::by_path(&state.database, path).await {
+                let file = match File::by_path(&state.database, &state.cache, path).await {
                     Some(file) => file,
                     None => return render(state, &format!("/{}", path.to_string_lossy()), vec![]),
                 };
@@ -159,7 +160,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 }
             }
 
-            let files = File::all_for_root(&state.database, path).await;
+            let files = File::all_for_root(&state.database, &state.cache, path).await;
 
             let mut index_files = Vec::with_capacity(files.len());
 

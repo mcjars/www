@@ -91,90 +91,106 @@ impl BaseModel for File {
 
 impl File {
     #[inline]
-    pub async fn by_path(database: &crate::database::Database, path: &Path) -> Option<Self> {
-        sqlx::query(&format!(
-            r#"
-            SELECT {}
-            FROM files
-            WHERE files.path = $1::varchar[]
-            "#,
-            Self::columns_sql(None, None)
-        ))
-        .bind(
-            path.components()
-                .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
-                .map(|c| c.as_os_str().to_string_lossy())
-                .collect::<Vec<_>>(),
-        )
-        .fetch_optional(database.read())
-        .await
-        .unwrap()
-        .map(|row| Self::map(None, &row))
+    pub async fn by_path(
+        database: &crate::database::Database,
+        cache: &crate::cache::Cache,
+        path: &Path,
+    ) -> Option<Self> {
+        cache
+            .cached(&format!("file::{}", path.display()), 3600, || async {
+                sqlx::query(&format!(
+                    r#"
+                    SELECT {}
+                    FROM files
+                    WHERE files.path = $1::varchar[]
+                    "#,
+                    Self::columns_sql(None, None)
+                ))
+                .bind(
+                    path.components()
+                        .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
+                        .map(|c| c.as_os_str().to_string_lossy())
+                        .collect::<Vec<_>>(),
+                )
+                .fetch_optional(database.read())
+                .await
+                .unwrap()
+                .map(|row| Self::map(None, &row))
+            })
+            .await
     }
 
     #[inline]
-    pub async fn all_for_root(database: &crate::database::Database, root: &Path) -> Vec<Self> {
-        sqlx::query(
-            r#"
-            WITH prefix AS (
-                SELECT $1::varchar[] AS arr
-            ),
-            prefix_length AS (
-                SELECT
-                    COALESCE(array_length(arr, 1), 0) AS len,
-                    arr
-                FROM prefix
-            ),
-            path_info AS (
-                SELECT
-                    path[prefix_length.len + 1] AS current_entry,
-                    array_length(path, 1) AS path_len,
-                    files.*
-                FROM files, prefix_length
-                WHERE
-                    array_length(path, 1) >= prefix_length.len + 1
-                    AND (
-                        prefix_length.len = 0
-                        OR
-                        path[1:prefix_length.len] = prefix_length.arr
+    pub async fn all_for_root(
+        database: &crate::database::Database,
+        cache: &crate::cache::Cache,
+        root: &Path,
+    ) -> Vec<Self> {
+        cache
+            .cached(&format!("files::{}", root.display()), 3600, || async {
+                sqlx::query(
+                    r#"
+                    WITH prefix AS (
+                        SELECT $1::varchar[] AS arr
+                    ),
+                    prefix_length AS (
+                        SELECT
+                            COALESCE(array_length(arr, 1), 0) AS len,
+                            arr
+                        FROM prefix
+                    ),
+                    path_info AS (
+                        SELECT
+                            path[prefix_length.len + 1] AS current_entry,
+                            array_length(path, 1) AS path_len,
+                            files.*
+                        FROM files, prefix_length
+                        WHERE
+                            array_length(path, 1) >= prefix_length.len + 1
+                            AND (
+                                prefix_length.len = 0
+                                OR
+                                path[1:prefix_length.len] = prefix_length.arr
+                            )
+                    ),
+                    directory_check AS (
+                        SELECT
+                            current_entry,
+                            MAX(CASE WHEN path_len > (SELECT len FROM prefix_length) + 1 THEN 1 ELSE 0 END)::boolean AS is_directory,
+                            SUM(size) AS total_size
+                        FROM path_info
+                        WHERE current_entry IS NOT NULL
+                        GROUP BY current_entry
                     )
-            ),
-            directory_check AS (
-                SELECT
-                    current_entry,
-                    MAX(CASE WHEN path_len > (SELECT len FROM prefix_length) + 1 THEN 1 ELSE 0 END)::boolean AS is_directory,
-                    SUM(size) AS total_size
-                FROM path_info
-                WHERE current_entry IS NOT NULL
-                GROUP BY current_entry
-            )
-            SELECT DISTINCT ON (pi.current_entry)
-                pi.current_entry,
-                pi.path,
-                CASE
-                    WHEN dc.is_directory THEN dc.total_size
-                    ELSE pi.size
-                END AS total_size,
-                pi.*,
-                dc.is_directory
-            FROM path_info pi
-            JOIN directory_check dc ON pi.current_entry = dc.current_entry
-            WHERE pi.current_entry IS NOT NULL
-            ORDER BY pi.current_entry, pi.path_len
-            "#
-        )
-        .bind(
-            root
-                .components()
-                .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
-                .map(|c| c.as_os_str().to_string_lossy().to_string())
-                .collect::<Vec<String>>()
-        )
-        .fetch_all(database.read())
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|row| Self::map(None, &row))
-        .collect()
+                    SELECT DISTINCT ON (pi.current_entry)
+                        pi.current_entry,
+                        pi.path,
+                        CASE
+                            WHEN dc.is_directory THEN dc.total_size
+                            ELSE pi.size
+                        END AS total_size,
+                        pi.*,
+                        dc.is_directory
+                    FROM path_info pi
+                    JOIN directory_check dc ON pi.current_entry = dc.current_entry
+                    WHERE pi.current_entry IS NOT NULL
+                    ORDER BY pi.current_entry, pi.path_len
+                    "#
+                )
+                .bind(
+                    root
+                        .components()
+                        .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
+                        .map(|c| c.as_os_str().to_string_lossy().to_string())
+                        .collect::<Vec<String>>()
+                )
+                .fetch_all(database.read())
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|row| Self::map(None, &row))
+                .collect()
+            })
+            .await
     }
 }
