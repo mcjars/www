@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE files\n                SET last_access = $1\n                WHERE files.path = $2::varchar[] AND (files.last_access IS NULL OR files.last_access < $1)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "49a38b27e4579a04cb675bbd7ca0ae43141af7f2849e0a10e9d902cd69f3db9a"
+}
