@@ -101,7 +101,7 @@ impl FileCache {
         let source = Path::new(&self.env.files_location).join(path);
         let destination = Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string());
 
-        let (return_reader, mut return_writer) = tokio::io::duplex(32 * 1024);
+        let (return_reader, mut return_writer) = tokio::io::duplex(file.size as usize);
 
         tokio::spawn({
             drop(cached_file_lock);

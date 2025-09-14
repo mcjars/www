@@ -123,7 +123,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         .header("Content-Length", file.size.to_string())
                         .header(
                             "ETag",
-                            file.sha512
+                            file.sha256
                                 .iter()
                                 .map(|b| format!("{:02x}", b))
                                 .collect::<String>(),
@@ -146,7 +146,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         .header("Content-Length", file.size.to_string())
                         .header(
                             "ETag",
-                            file.sha512
+                            file.sha256
                                 .iter()
                                 .map(|b| format!("{:02x}", b))
                                 .collect::<String>(),
