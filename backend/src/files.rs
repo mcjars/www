@@ -129,7 +129,9 @@ impl FileCache {
                     Ok(())
                 };
 
-                run().await.unwrap();
+                if run().await.is_err() {
+                    file_allow_reader.close();
+                }
             }
         });
 
