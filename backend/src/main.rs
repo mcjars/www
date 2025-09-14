@@ -142,29 +142,33 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
         );
     }
 
-    let (mut parts, body) = response.into_parts();
-    let body_bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
+    if !response.headers().contains_key("ETag") {
+        let (mut parts, body) = response.into_parts();
+        let body_bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
 
-    let mut hash = sha2::Sha256::new();
-    hash.update(body_bytes.as_ref());
-    let hash = format!("{:x}", hash.finalize());
+        let mut hash = sha2::Sha256::new();
+        hash.update(body_bytes.as_ref());
+        let hash = format!("{:x}", hash.finalize());
 
-    parts.headers.insert("ETag", hash.parse().unwrap());
+        parts.headers.insert("ETag", hash.parse().unwrap());
 
-    if if_none_match == Some(hash.parse().unwrap()) {
-        let mut cached_response = Response::builder()
-            .status(StatusCode::NOT_MODIFIED)
-            .body(Body::empty())
-            .unwrap();
+        if if_none_match == Some(hash.parse().unwrap()) {
+            let mut cached_response = Response::builder()
+                .status(StatusCode::NOT_MODIFIED)
+                .body(Body::empty())
+                .unwrap();
 
-        for (key, value) in parts.headers.iter() {
-            cached_response.headers_mut().insert(key, value.clone());
+            for (key, value) in parts.headers.iter() {
+                cached_response.headers_mut().insert(key, value.clone());
+            }
+
+            return Ok(cached_response);
         }
 
-        return Ok(cached_response);
+        Ok(Response::from_parts(parts, Body::from(body_bytes)))
+    } else {
+        Ok(response)
     }
-
-    Ok(Response::from_parts(parts, Body::from(body_bytes)))
 }
 
 #[tokio::main]

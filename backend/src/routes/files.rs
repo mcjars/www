@@ -121,6 +121,14 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             },
                         )
                         .header("Content-Length", file.size.to_string())
+                        .header(
+                            "ETag",
+                            file.sha512
+                                .iter()
+                                .map(|b| format!("{:02x}", b))
+                                .collect::<String>(),
+                        )
+                        .header("Cache-Control", "public, max-age=604800")
                         .body(Body::empty())
                         .unwrap();
                 } else {
@@ -136,6 +144,14 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             },
                         )
                         .header("Content-Length", file.size.to_string())
+                        .header(
+                            "ETag",
+                            file.sha512
+                                .iter()
+                                .map(|b| format!("{:02x}", b))
+                                .collect::<String>(),
+                        )
+                        .header("Cache-Control", "public, max-age=604800")
                         .body(Body::from_stream(tokio_util::io::ReaderStream::new(
                             file_reader,
                         )))
