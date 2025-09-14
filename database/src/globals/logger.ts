@@ -1,5 +1,5 @@
 import colors, { StyleFunction } from "ansi-colors"
-import env from "@/globals/env"
+import env from "@@/globals/env"
 import * as fs from "fs"
 import path from "path"
 
