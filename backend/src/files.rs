@@ -9,7 +9,10 @@ use std::{
         atomic::{AtomicI32, AtomicI64},
     },
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    sync::{Mutex, RwLock},
+};
 
 struct CachedFile {
     id: i32,
@@ -19,11 +22,12 @@ struct CachedFile {
     last_access_written: bool,
 }
 
+type CachedFiles = HashMap<Arc<PathBuf>, Arc<Mutex<CachedFile>>>;
 pub struct FileCache {
     id: Arc<AtomicI32>,
     total_size: Arc<AtomicI64>,
     max_cache_size: i64,
-    cached_files: RwLock<HashMap<Arc<PathBuf>, Arc<Mutex<CachedFile>>>>,
+    cached_files: Arc<RwLock<CachedFiles>>,
 
     database: Arc<crate::database::Database>,
     env: Arc<crate::env::Env>,
@@ -40,13 +44,17 @@ impl FileCache {
             id: Arc::new(AtomicI32::new(0)),
             total_size: Arc::new(AtomicI64::new(0)),
             max_cache_size: 5 * 1024 * 1024 * 1024,
-            cached_files: RwLock::new(HashMap::new()),
+            cached_files: Arc::new(RwLock::new(HashMap::new())),
             database,
             env,
         }
     }
 
-    pub async fn get(&self, path: &Path, file: &File) -> std::io::Result<tokio::fs::File> {
+    pub async fn get(
+        &self,
+        path: &Path,
+        file: &File,
+    ) -> std::io::Result<Box<dyn tokio::io::AsyncRead + Send + Unpin>> {
         if file.is_directory {
             return Err(std::io::Error::other("Cannot get file for directory"));
         }
@@ -59,10 +67,12 @@ impl FileCache {
             cached_file.last_access = chrono::Utc::now().naive_utc();
             cached_file.last_access_written = false;
 
-            return tokio::fs::File::open(
-                Path::new(&self.env.files_cache).join(cached_file.id.to_string()),
-            )
-            .await;
+            return Ok(Box::new(
+                tokio::fs::File::open(
+                    Path::new(&self.env.files_cache).join(cached_file.id.to_string()),
+                )
+                .await?,
+            ));
         }
 
         drop(cached_files);
@@ -88,29 +98,64 @@ impl FileCache {
             .await
             .insert(key.clone(), cached_file.clone());
 
-        match tokio::fs::copy(
-            Path::new(&self.env.files_location).join(path),
-            Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string()),
-        )
-        .await
-        {
-            Ok(_) => {}
-            Err(err) => {
-                self.cached_files.write().await.remove(&key);
+        let source = Path::new(&self.env.files_location).join(path);
+        let destination = Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string());
 
-                return Err(err);
+        let (mut reader, mut writer) = tokio::io::duplex(32 * 1024);
+        let (return_reader, mut return_writer) = tokio::io::duplex(32 * 1024);
+
+        tokio::spawn(async move {
+            let mut buffer = vec![0; 32 * 1024];
+            let mut file = tokio::fs::File::create(destination).await.unwrap();
+
+            loop {
+                match reader.read(&mut buffer).await.unwrap() {
+                    0 => {
+                        file.sync_all().await.unwrap();
+                        break;
+                    }
+                    n => {
+                        file.write_all(&buffer[..n]).await.unwrap();
+                        return_writer
+                            .write_all(&buffer[..n])
+                            .await
+                            .unwrap_or_default();
+                    }
+                }
             }
-        };
+        });
 
-        self.total_size.fetch_add(
-            cached_file_lock.size as i64,
-            std::sync::atomic::Ordering::SeqCst,
-        );
+        tokio::spawn({
+            drop(cached_file_lock);
 
-        tokio::fs::File::open(
-            Path::new(&self.env.files_cache).join(cached_file_lock.id.to_string()),
-        )
-        .await
+            let cached_files = self.cached_files.clone();
+            let total_size = self.total_size.clone();
+
+            async move {
+                let cached_file_lock = cached_file.lock().await;
+
+                match tokio::io::copy(
+                    &mut tokio::fs::File::open(source).await.unwrap(),
+                    &mut writer,
+                )
+                .await
+                {
+                    Ok(_) => {}
+                    Err(err) => {
+                        cached_files.write().await.remove(&key);
+
+                        panic!("{:?}", err);
+                    }
+                };
+
+                total_size.fetch_add(
+                    cached_file_lock.size as i64,
+                    std::sync::atomic::Ordering::SeqCst,
+                );
+            }
+        });
+
+        Ok(Box::new(return_reader))
     }
 
     async fn make_space_for_file(&self, required_size: i64) -> std::io::Result<()> {
