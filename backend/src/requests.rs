@@ -86,7 +86,14 @@ impl RequestLogger {
 
         let mut ratelimit: Option<RateLimitData> = None;
         if organization.is_none_or(|o| !o.verified) {
-            let ratelimit_key = format!("mcjars_api::ratelimit::{ip}");
+            let ratelimit_key = format!(
+                "mcjars_api::ratelimit::{ip}::{}",
+                if request.uri.path().contains("files") {
+                    "files"
+                } else {
+                    "regular "
+                }
+            );
 
             let now = chrono::Utc::now().timestamp();
             let expiry = self
@@ -121,7 +128,11 @@ impl RequestLogger {
             count += 1;
 
             ratelimit = Some(RateLimitData {
-                limit: if organization.is_some() { 240 } else { 120 },
+                limit: if request.uri.path().contains("files") {
+                    30
+                } else {
+                    if organization.is_some() { 240 } else { 120 }
+                },
                 hits: count,
             });
 
