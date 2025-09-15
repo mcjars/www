@@ -23,7 +23,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                                     InstallationStep::Download(step) => {
                                         files.push(IndexFile {
                                             name: step.file,
-                                            size: format!("{} bytes", step.size),
+                                            size: human_bytes::human_bytes(step.size as f64),
                                             href: Some(step.url),
                                         });
                                     }

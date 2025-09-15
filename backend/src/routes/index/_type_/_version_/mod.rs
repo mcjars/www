@@ -28,7 +28,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             .rev()
                             .map(|b| IndexFile {
                                 name: format!("{}/", b.name),
-                                size: format!("{} bytes", b.installation_size()),
+                                size: human_bytes::human_bytes(b.installation_size() as f64),
                                 href: Some(format!("{}/", b.id)),
                             })
                             .collect::<Vec<_>>();

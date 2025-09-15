@@ -1,77 +1,111 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-	<title>Index of {{LOCATION}}</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-	<style type="text/css">
-		body {
-			font-family: monospace;
-			background-color: #FFFFFF;
-			color: #000000;
-			margin: 8px;
-		}
-		h1 {
-			font-size: 18px;
-			font-weight: bold;
-		}
-		pre {
-			margin: 0;
-			font-family: monospace;
-		}
-		table {
-			border: 0;
-			width: 100%;
-		}
-		td {
-			padding: 1px 0;
-			font-size: 14px;
-			white-space: nowrap;
-		}
-		a {
-			color: #0000FF;
-			text-decoration: none;
-		}
-		a:visited {
-			color: #800080;
-		}
-		a:hover {
-			text-decoration: underline;
-		}
-		.size {
-			text-align: right;
-		}
-		hr {
-			height: 1px;
-			color: #CCCCCC;
-			background-color: #CCCCCC;
-			border: none;
-		}
-		address {
-			font-style: italic;
-			font-size: 12px;
-			margin-top: 10px;
-		}
-	</style>
-</head>
-<body>
-	<h1>Index of {{LOCATION}}</h1>
-	<hr>
-	<table>
-		<tr>
-			<th style="text-align: left;">Name</th>
-			<th style="text-align: right;">Size</th>
-		</tr>
-	</table>
-	<hr>
-	<table cellspacing="0">
-		<tr>
-			<td><a href="../">[Parent Directory]</a></td>
-			<td class="size">-</td>
-		</tr>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+  <head>
+    <title>Index of {{LOCATION}}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type="text/css">
+      body {
+        font-family: monospace;
+        background-color: #ffffff;
+        color: #000000;
+        margin: 8px;
+      }
+      h1 {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      pre {
+        margin: 0;
+        font-family: monospace;
+      }
+      table {
+        border: 0;
+        width: auto;
+        min-width: 50%;
+        max-width: 800px;
+        table-layout: fixed;
+      }
+      th,
+      td {
+        padding: 4px 8px;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      th {
+        text-align: left;
+      }
+      tr:hover {
+        background-color: #f0f0f0;
+      }
+      a {
+        color: #0000ff;
+        text-decoration: none;
+      }
+      a:visited {
+        color: #800080;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .size {
+        text-align: right;
+        width: 100px;
+        padding-left: 20px;
+      }
+      hr {
+        height: 1px;
+        color: #cccccc;
+        background-color: #cccccc;
+        border: none;
+        max-width: 800px;
+        margin-left: 0;
+      }
+      address {
+        font-style: italic;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      .parent-dir {
+        font-weight: bold;
+      }
 
-		<!-- ENTRIES -->
-	</table>
-	<hr>
-	<address>MCJars/{{VERSION}} Server</address>
-</body>
+			.icon {
+				display: inline-block;
+				width: 16px;
+				height: 16px;
+				margin-right: 5px;
+				vertical-align: middle;
+			}
+      .folder-icon {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABgUlEQVR4AayQPUpDURCFZwLZg5Y2YpHCtwL7iC5DlNe4A12CoEGwcQtWwVJLK1MIkpdCO91ABIPJ+J25MSkV4uOee+b3zNzXshW//xN4ue6uNVfd7aZXMDzf2/rLcrlBc9k9+/rwN5v4o1mB++x52Ns/tV++FLCZ74QKXZeZyC3g6UnT243RxW6IhRF+g//EpsZXBCIwOQvCcDcXEUZJNwhkS7Adfk3AigDFZEyFbgYxH9HAgUjRZPoIkDUishRJAaXdo6SCNDCJqgKoGEkTcGEiHNkpIDsIhyJyxABNbgQzt0xEWStzKZCN6WJxcjisVnr5F+nk4rkFBXqeWlJAhuCqxshyjXccTinOKB6HDRxglZ+oOkEBTS22Zv1YYoGs1NhgPqsIEL5f6qtx7kFaJN/MAzRAveKZ2YM4n7BZ948nNl7/tHZl3q4mZpXN7fCoJi5fiCraUY1b042tun+4EJDRqe/eO/XNYBN06n6ybMQHxVcMHPQH1dHtq3qElq5V8A0AAP//4hBxdwAAAAZJREFUAwApsKAhTGjZfQAAAABJRU5ErkJggg==");
+      }
+      .file-icon {
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABeUlEQVR4AaRSMVLDQAxc2Q2UPCAMT/HkPExKu+M34SmUdAlVCqLMPYEfkBk+QAeNLVZnbHIOVNycLN2edk/SuMA/15lACNUqhNBUoWoY0wf3q7/eyQRI/DCUO8A2JcoNaCVj+l1d1/e/iRQZaLgQswkaIkG36C5769f17blILiDkCj9G85DmIvEhfvaL68u+s/W8klyAhLSd70wehL7iTMq344rwnbESwtPOBJgLt/RxpqeR9T2HDfFHgAB+VibgV25DBx6BHNoAYOCmJzCuTICpaTt1nGUq5BQYVEY+ZgIpE072WY5Z4nUU8gTQBPSY1kyAuAi4nZKEIMTYgu61Ud037olMOxeY2rPEc6EpkwF/NFuGpbmvQ9gSmrWQGuYY+KJfpjI88Crc08SlzY571YbHXMCAd9IxvmwU9HkgXy0ENyEsXx3OWjjo4aqDtLxo0XVtj74VQYqJQVWFtlU9SFf0npdX4ElRlQm0GLdR4xT73anF5/ji5y8AAAD//9+HONgAAAAGSURBVAMAtAiaIe2mkdUAAAAASUVORK5CYII=");
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Index of {{LOCATION}}</h1>
+    <hr />
+    <table cellspacing="0">
+      <tr>
+        <th>Name</th>
+        <th class="size">Size</th>
+      </tr>
+      <tr>
+        <td>
+          <span class="icon folder-icon"></span>
+          <a href="../" class="parent-dir">[Parent Directory]</a>
+        </td>
+        <td class="size">-</td>
+      </tr>
+
+      <!-- ENTRIES -->
+    </table>
+    <hr />
+    <address>MCJars/{{VERSION}} Server</address>
+  </body>
 </html>

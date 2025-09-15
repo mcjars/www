@@ -23,14 +23,23 @@ pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Respons
                 .into_iter()
                 .map(|f| {
                     let href = f.href.unwrap_or_else(|| f.name.clone());
+                    let element = if href == "#" { "span" } else { "a" };
 
                     format!(
                         r#"
                         <tr>
-                            <td><a href="{}">{}</a></td>
+                            <td>
+                                <span class="icon {}-icon"></span>
+                                <{element} href="{}">{}</{element}>
+                            </td>
                             <td class="size">{}</td>
                         </tr>
                         "#,
+                        if href.ends_with("/") {
+                            "folder"
+                        } else {
+                            "file"
+                        },
                         if href.starts_with("https") {
                             href
                         } else {

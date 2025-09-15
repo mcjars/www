@@ -130,8 +130,10 @@ impl RequestLogger {
             ratelimit = Some(RateLimitData {
                 limit: if request.uri.path().contains("files") {
                     30
+                } else if organization.is_some() {
+                    240
                 } else {
-                    if organization.is_some() { 240 } else { 120 }
+                    120
                 },
                 hits: count,
             });
