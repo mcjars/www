@@ -42,6 +42,7 @@ pub struct AppState {
     pub version: String,
 
     pub database: Arc<crate::database::Database>,
+    pub clickhouse: Arc<crate::clickhouse::Clickhouse>,
     pub cache: Arc<crate::cache::Cache>,
     pub requests: crate::requests::RequestLogger,
     pub files: crate::files::FileCache,

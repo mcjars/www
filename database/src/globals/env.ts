@@ -19,6 +19,11 @@ try {
 const infos = z.object({
 	DATABASE_URL: z.string(),
 
+	CLICKHOUSE_URL: z.string(),
+	CLICKHOUSE_DATABASE: z.string(),
+	CLICKHOUSE_USERNAME: z.string(),
+	CLICKHOUSE_PASSWORD: z.string(),
+
 	LOG_DIRECTORY: z.string().optional(),
 })
 

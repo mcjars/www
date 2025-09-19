@@ -35,3 +35,4 @@ json5 = "0.4.1"
 serde_arrays = "0.2.0"
 human_bytes = "0.4.3"
 tokio-util = { version = "0.7.16", features = ["full"] }
+clickhouse = { version = "0.13.3", features = ["rustls-tls", "inserter", "chrono"] }

@@ -6,10 +6,14 @@ export default function getVersion() {
 	return `${JSON.parse(fs.readFileSync('../package.json', 'utf8')).version}:${system.execute('git rev-parse --short=10 HEAD').trim()}`
 }
 
-logger()
-	.text('MCJars API Database', (c) => c.yellowBright)
-	.text(`(${process.env.NODE_ENV === 'development' ? 'development' : 'production'} ${getVersion()})`, (c) => c.gray)
-	.info()
-logger()
-	.text('This is not meant to be ran directly, this only provides the database schema (and connection for build backend)', (c) => c.red)
-	.info()
+if (process.argv[2] === 'migrate-clickhouse') {
+	require('@/migrate-clickhouse')
+} else {
+	logger()
+		.text('MCJars API Database', (c) => c.yellowBright)
+		.text(`(${process.env.NODE_ENV === 'development' ? 'development' : 'production'} ${getVersion()})`, (c) => c.gray)
+		.info()
+	logger()
+		.text('This is not meant to be ran directly, this only provides the database schema (and connection for build backend)', (c) => c.red)
+		.info()
+}

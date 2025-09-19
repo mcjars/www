@@ -29,6 +29,11 @@ pub struct Env {
     pub s3_access_key: String,
     pub s3_secret_key: String,
 
+    pub clickhouse_url: String,
+    pub clickhouse_database: String,
+    pub clickhouse_username: String,
+    pub clickhouse_password: String,
+
     pub files_cache: String,
     pub files_location: String,
 
@@ -134,6 +139,23 @@ impl Env {
                 .to_string(),
             s3_secret_key: std::env::var("S3_SECRET_KEY")
                 .expect("S3_SECRET_KEY is required")
+                .trim_matches('"')
+                .to_string(),
+
+            clickhouse_url: std::env::var("CLICKHOUSE_URL")
+                .expect("CLICKHOUSE_URL is required")
+                .trim_matches('"')
+                .to_string(),
+            clickhouse_database: std::env::var("CLICKHOUSE_DATABASE")
+                .expect("CLICKHOUSE_DATABASE is required")
+                .trim_matches('"')
+                .to_string(),
+            clickhouse_username: std::env::var("CLICKHOUSE_USERNAME")
+                .expect("CLICKHOUSE_USERNAME is required")
+                .trim_matches('"')
+                .to_string(),
+            clickhouse_password: std::env::var("CLICKHOUSE_PASSWORD")
+                .expect("CLICKHOUSE_PASSWORD is required")
                 .trim_matches('"')
                 .to_string(),
 

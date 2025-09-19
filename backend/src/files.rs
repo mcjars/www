@@ -157,6 +157,7 @@ impl FileCache {
                             }
                             n => {
                                 file.write_all(&buffer[..n]).await?;
+                                file.flush().await?;
                                 file_allow_sender.send(false).ok();
                             }
                         }

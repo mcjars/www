@@ -1,4 +1,3 @@
-use colored::Colorize;
 use std::sync::Arc;
 
 pub struct S3 {
@@ -8,8 +7,6 @@ pub struct S3 {
 
 impl S3 {
     pub async fn new(env: Arc<crate::env::Env>) -> Self {
-        let start = std::time::Instant::now();
-
         let mut instance = Self {
             public_url: env.s3_url.clone(),
             bucket: s3::Bucket::new(
@@ -33,20 +30,6 @@ impl S3 {
         if env.s3_path_style {
             instance.bucket.set_path_style();
         }
-
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
-            format!(
-                "{} connected {}",
-                "s3".bright_cyan(),
-                format!(
-                    "(s3@{}, {}ms)",
-                    env.s3_region.bright_black(),
-                    start.elapsed().as_millis()
-                )
-                .bright_black()
-            ),
-        );
 
         instance
     }

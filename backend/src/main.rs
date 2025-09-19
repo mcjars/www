@@ -1,4 +1,5 @@
 mod cache;
+mod clickhouse;
 mod database;
 mod env;
 mod files;
@@ -188,6 +189,7 @@ async fn main() {
     let env = Arc::new(env);
     let s3 = Arc::new(s3::S3::new(env.clone()).await);
     let database = Arc::new(database::Database::new(env.clone()).await);
+    let clickhouse = Arc::new(clickhouse::Clickhouse::new(env.clone()).await);
     let cache = Arc::new(cache::Cache::new(env.clone()).await);
 
     let state = Arc::new(routes::AppState {
@@ -195,6 +197,7 @@ async fn main() {
         version: format!("{VERSION}:{GIT_COMMIT}"),
 
         database: database.clone(),
+        clickhouse,
         cache: cache.clone(),
         requests: requests::RequestLogger::new(database.clone(), cache.clone()),
         files: files::FileCache::new(database.clone(), env.clone()).await,
