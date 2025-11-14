@@ -239,6 +239,13 @@
       "when": 1757798739044,
       "tag": "0033_abnormal_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1763121494998,
+      "tag": "0034_red_polaris",
+      "breakpoints": true
     }
   ]
 }

@@ -86,6 +86,7 @@ pub enum ServerType {
     Magma,
     Leaf,
     VelocityCtd,
+    Youer,
 }
 
 impl FromStr for ServerType {
@@ -128,6 +129,7 @@ impl FromStr for ServerType {
             "VELOCITYCTD" => Ok(ServerType::VelocityCtd),
             "VELOCITY-CTD" => Ok(ServerType::VelocityCtd),
             "VELOCITY_CTD" => Ok(ServerType::VelocityCtd),
+            "YOUER" => Ok(ServerType::Youer),
             _ => Err(format!("Unknown server type: {s}")),
         }
     }
@@ -718,6 +720,25 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
                 description: "A fork of Velocity with various optimizations, commands, and more!".to_string(),
                 categories: vec!["plugins".to_string(), "proxy".to_string()],
                 compatibility: vec!["velocity".to_string()],
+                builds: 0,
+                versions: ServerTypeVersions {
+                    minecraft: 0,
+                    project: 0,
+                },
+            },
+        ),
+        (
+            ServerType::Youer,
+            ServerTypeInfo {
+                name: "Youer".to_string(),
+                icon: format!("{}/icons/youer.png", env.s3_url),
+                color: "#2A3294".to_string(),
+                homepage: "https://mohistmc.com/software/youer".to_string(),
+                deprecated: false,
+                experimental: false,
+                description: "A variation of NeoForge that allows loading Spigot plugins next to mods.".to_string(),
+                categories: vec!["modded".to_string(), "plugins".to_string()],
+                compatibility: vec!["neoforge".to_string(), "spigot".to_string(), "paper".to_string()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,

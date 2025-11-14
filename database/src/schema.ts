@@ -46,7 +46,8 @@ export const types = [
 	'DIVINEMC',
 	'MAGMA',
 	'LEAF',
-	'VELOCITY_CTD'
+	'VELOCITY_CTD',
+	'YOUER'
 ] as const
 
 export const formats = [

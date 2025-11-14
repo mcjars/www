@@ -13,11 +13,6 @@ mod get {
     use sqlx::Row;
     use utoipa::ToSchema;
 
-    #[derive(sqlx::FromRow, Serialize, Deserialize)]
-    struct Id {
-        id: String,
-    }
-
     #[derive(ToSchema, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct TypeStats {

@@ -71,6 +71,7 @@ mod get {
                             ServerType::VelocityCtd,
                             ServerType::Arclight,
                             ServerType::Mohist,
+                            ServerType::Youer,
                             ServerType::Magma,
                             ServerType::Divinemc,
                             ServerType::Leaf,
