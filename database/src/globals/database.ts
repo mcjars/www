@@ -123,6 +123,13 @@ export const configs: Record<string, {
 		aliases: ['mohist-config/mohist.yml', 'mohist.yml']
 	},
 
+	// Youer
+	'youer-config/youer.yml': {
+		type: 'YOUER',
+		format: 'YAML',
+		aliases: ['youer-config/youer.yml', 'youer.yml']
+	},
+
 	// Velocity
 	'velocity.toml': {
 		type: 'VELOCITY',

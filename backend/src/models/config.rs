@@ -387,6 +387,14 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "youer-config/youer.yml",
+            Config {
+                r#type: ServerType::Youer,
+                format: Format::Yaml,
+                aliases: &["youer-config/youer.yml", "youer.yml"],
+            },
+        ),
+        (
             "velocity.toml",
             Config {
                 r#type: ServerType::Velocity,
