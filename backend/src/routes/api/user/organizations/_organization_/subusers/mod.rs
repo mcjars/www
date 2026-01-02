@@ -6,6 +6,7 @@ mod _subuser_;
 mod get {
     use crate::{
         models::organization::OrganizationSubuser,
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use serde::Serialize;
@@ -26,24 +27,20 @@ mod get {
             example = 1,
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        organization: GetOrganization,
-    ) -> axum::Json<serde_json::Value> {
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                users: OrganizationSubuser::all_by_organization(&state.database, organization.id)
-                    .await,
-            })
-            .unwrap(),
-        )
+    pub async fn route(state: GetState, organization: GetOrganization) -> ApiResponseResult {
+        ApiResponse::json(Response {
+            success: true,
+            users: OrganizationSubuser::all_by_organization(&state.database, organization.id)
+                .await?,
+        })
+        .ok()
     }
 }
 
 mod post {
     use crate::{
         models::{organization::OrganizationSubuser, user::User},
+        response::{ApiResponse, ApiResponseResult},
         routes::{
             ApiError, GetState,
             api::user::{GetUser, organizations::_organization_::GetOrganization},
@@ -80,52 +77,46 @@ mod post {
         user: GetUser,
         organization: GetOrganization,
         axum::Json(payload): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if user.id != organization.owner.id {
-            return (
-                StatusCode::FORBIDDEN,
-                axum::Json(ApiError::new(&["only the owner can add subusers"]).to_value()),
-            );
+            return ApiResponse::error("only the owner can add subusers")
+                .with_status(StatusCode::FORBIDDEN)
+                .ok();
         }
 
-        let user = User::by_login(&state.database, &state.cache, &payload.login).await;
+        let user = User::by_login(&state.database, &state.cache, &payload.login).await?;
 
         let count =
             OrganizationSubuser::count_by_organization(&state.database, organization.id).await;
         if count >= 15 {
-            return (
-                StatusCode::CONFLICT,
-                axum::Json(ApiError::new(&["you cannot have more than 15 subusers"]).to_value()),
-            );
+            return ApiResponse::error("you cannot have more than 15 subusers")
+                .with_status(StatusCode::CONFLICT)
+                .ok();
         }
 
         if let Some(user) = user {
             if user.id == organization.owner.id {
-                return (
-                    StatusCode::CONFLICT,
-                    axum::Json(ApiError::new(&["user is the owner"]).to_value()),
-                );
+                return ApiResponse::error("user is the owner")
+                    .with_status(StatusCode::CONFLICT)
+                    .ok();
             }
 
             let inserted =
-                OrganizationSubuser::new(&state.database, organization.id, user.id).await;
+                OrganizationSubuser::new(&state.database, organization.id, user.id).await?;
 
             if inserted {
-                (
-                    StatusCode::CREATED,
-                    axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),
-                )
+                ApiResponse::json(Response { success: true })
+                    .with_status(StatusCode::CREATED)
+                    .ok()
             } else {
-                (
-                    StatusCode::CONFLICT,
-                    axum::Json(ApiError::new(&["user already a subuser"]).to_value()),
-                )
+                ApiResponse::error("user already a subuser")
+                    .with_status(StatusCode::CONFLICT)
+                    .ok()
             }
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["user not found"]).to_value()),
-            )
+            ApiResponse::error("user not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

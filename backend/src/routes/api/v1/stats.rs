@@ -2,7 +2,10 @@ use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
-    use crate::routes::GetState;
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use serde::{Deserialize, Serialize};
     use sqlx::Row;
     use utoipa::ToSchema;
@@ -42,7 +45,7 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState) -> ApiResponseResult {
         let stats = state
             .cache
             .cached("stats::all", 3600, || async {
@@ -64,31 +67,28 @@ mod get {
                     "#,
                 )
                 .fetch_all(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
-                Stats {
-                    builds: data[0].get(0),
-                    hashes: data[1].get(0),
-                    requests: data[2].get(0),
+                Ok::<_, anyhow::Error>(Stats {
+                    builds: data[0].try_get(0)?,
+                    hashes: data[1].try_get(0)?,
+                    requests: data[2].try_get(0)?,
                     size: StatsSize {
-                        database: data[1].get(1),
+                        database: data[1].try_get(1)?,
                     },
                     total: StatsTotal {
-                        jar_size: data[0].get(1),
-                        zip_size: data[0].get(2),
+                        jar_size: data[0].try_get(1)?,
+                        zip_size: data[0].try_get(2)?,
                     },
-                }
+                })
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                stats,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            stats,
+        })
+        .ok()
     }
 }
 

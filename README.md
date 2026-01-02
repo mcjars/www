@@ -16,7 +16,7 @@ The frontend is written in React + Typescript and uses Tailwind CSS for styling.
 
 ### Prerequisites (Frontend)
 
-- Node.js (v22 or higher)
+- Node.js (v24 or higher)
 - pnpm (v10 or higher)
 
 ### Getting Started (Frontend)
@@ -62,9 +62,9 @@ The backend is written in Rust and uses Axum for the web server. It is a REST AP
 
 ### Prerequisites (Backend)
 
-- Rust (v1.86 or higher)
+- Rust (v1.92 or higher)
 - PostgreSQL (v17)
-- Node.js (v22 or higher)
+- Node.js (v24 or higher)
 - pnpm (v10 or higher)
 
 ### Getting Started (Backend)

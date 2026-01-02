@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod post {
     use crate::{
         models::{BaseModel, build::Build, config::Config, r#type::ServerType},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::http::StatusCode;
@@ -40,24 +41,22 @@ mod post {
     pub async fn route(
         state: GetState,
         axum::Json(data): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         let config = match Config::by_alias(&data.file) {
             Some(config) => config,
             None => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    axum::Json(ApiError::new(&["invalid config file"]).to_value()),
-                );
+                return ApiResponse::error("invalid config file")
+                    .with_status(StatusCode::BAD_GATEWAY)
+                    .ok();
             }
         };
 
         let (formatted, contains) = match Config::format(&data.file, &data.config) {
             Ok((formatted, contains)) => (formatted, contains),
             Err(_) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    axum::Json(ApiError::new(&["unable to format config"]).to_value()),
-                );
+                return ApiResponse::error("unable to format config")
+                    .with_status(StatusCode::BAD_REQUEST)
+                    .ok();
             }
         };
 
@@ -95,7 +94,6 @@ mod post {
                         .bind(contains)
                         .fetch_all(state.database.read())
                         .await
-                        .unwrap()
                     } else {
                         sqlx::query(&format!(
                             r#"
@@ -124,13 +122,12 @@ mod post {
                         .bind(&formatted)
                         .fetch_all(state.database.read())
                         .await
-                        .unwrap()
-                    };
+                    }?;
 
                     let mut results = Vec::with_capacity(data.len());
                     for row in data {
-                        let build = Build::map(None, &row);
-                        let value: String = row.get("value");
+                        let build = Build::map(None, &row)?;
+                        let value: String = row.try_get("value")?;
 
                         results.push(Result {
                             from: build.r#type,
@@ -139,22 +136,17 @@ mod post {
                         });
                     }
 
-                    results
+                    Ok::<_, anyhow::Error>(results)
                 },
             )
-            .await;
+            .await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(
-                serde_json::to_value(&Response {
-                    success: true,
-                    formatted,
-                    configs,
-                })
-                .unwrap(),
-            ),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            formatted,
+            configs,
+        })
+        .ok()
     }
 }
 

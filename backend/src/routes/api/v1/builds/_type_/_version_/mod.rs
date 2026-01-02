@@ -6,6 +6,7 @@ mod _build_;
 mod get {
     use crate::{
         models::{build::Build, r#type::ServerType, version::Version},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetData, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -38,8 +39,8 @@ mod get {
         state: GetState,
         request_data: GetData,
         Path((r#type, version)): Path<(ServerType, String)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await;
+    ) -> ApiResponseResult {
+        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
 
         if let Some(location) = location {
             let data = state
@@ -47,7 +48,7 @@ mod get {
                 .cached(&format!("builds::{type}::{version}"), 1800, || {
                     Build::all_for_version(&state.database, r#type, &location, &version)
                 })
-                .await;
+                .await?;
 
             *request_data.lock().unwrap() = json!({
                 "type": "builds",
@@ -57,21 +58,15 @@ mod get {
                 }
             });
 
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        builds: data,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                builds: data,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            )
+            ApiResponse::error("version not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

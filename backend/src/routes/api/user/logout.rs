@@ -2,7 +2,11 @@ use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod post {
-    use crate::{models::user::UserSession, routes::GetState};
+    use crate::{
+        models::user::UserSession,
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use serde::Serialize;
     use tower_cookies::{Cookie, Cookies};
     use utoipa::ToSchema;
@@ -15,9 +19,9 @@ mod post {
     #[utoipa::path(post, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState, cookies: Cookies) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, cookies: Cookies) -> ApiResponseResult {
         let session = cookies.get("session").unwrap();
-        UserSession::delete_by_session(&state.database, session.value()).await;
+        UserSession::delete_by_session(&state.database, session.value()).await?;
 
         cookies.add(
             Cookie::build(("session", ""))
@@ -33,7 +37,7 @@ mod post {
                 .build(),
         );
 
-        axum::Json(serde_json::to_value(&Response { success: true }).unwrap())
+        ApiResponse::json(Response { success: true }).ok()
     }
 }
 

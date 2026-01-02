@@ -11,18 +11,22 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
             "/",
             get(
                 |state: GetState, Path(r#type): Path<ServerType>| async move {
-                    let versions = Version::all(&state.database, &state.cache, r#type).await;
+                    let versions = Version::all(&state.database, &state.cache, r#type).await?;
 
                     let files = versions
                         .into_iter()
                         .map(|(n, v)| IndexFile {
-                            name: format!("{n}/"),
-                            size: format!("{} builds", v.builds),
+                            name: compact_str::format_compact!("{n}/"),
+                            size: compact_str::format_compact!("{} builds", v.builds),
                             href: None,
                         })
                         .collect::<Vec<_>>();
 
-                    super::render(state, &format!("/{}/", r#type.infos().name), files)
+                    super::render(
+                        &state,
+                        &compact_str::format_compact!("/{}/", r#type.infos(&state.env).name),
+                        files,
+                    )
                 },
             ),
         )

@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::r#type::ServerType,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -28,7 +29,7 @@ mod get {
         root: TypeStats,
 
         #[schema(inline)]
-        versions: IndexMap<String, TypeStats>,
+        versions: IndexMap<compact_str::CompactString, TypeStats>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -63,19 +64,17 @@ mod get {
     pub async fn route(
         state: GetState,
         Path((r#type, year, month)): Path<(ServerType, u16, u8)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if year < 2024 || year > chrono::Utc::now().year() as u16 {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid year"]).to_value()),
-            );
+            return ApiResponse::error("invalid year")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         if !(1..=12).contains(&month) {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid month"]).to_value()),
-            );
+            return ApiResponse::error("invalid month")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         let start = chrono::NaiveDate::from_ymd_opt(year as i32, month as u32, 1).unwrap();
@@ -102,7 +101,7 @@ mod get {
                             day::smallint AS day,
                             SUM(total_requests)::bigint AS total,
                             SUM(unique_ips)::bigint AS unique_ips
-                        FROM mv_requests_stats_daily
+                        FROM ch_request_stats_daily
                         WHERE
                             request_type = 'builds'
                             AND search_type = $1
@@ -116,8 +115,7 @@ mod get {
                     .bind(start)
                     .bind(end)
                     .fetch_all(state.database.read())
-                    .await
-                    .unwrap();
+                    .await?;
 
                     let mut requests: Vec<Requests> = Vec::with_capacity(end.day() as usize);
                     for i in 0..end.day() {
@@ -132,10 +130,16 @@ mod get {
                     }
 
                     for row in data {
-                        let version = row.get::<Option<String>, _>("version");
+                        let version = row.try_get::<compact_str::CompactString, _>("version")?;
 
-                        if let Some(version) = version {
-                            let day = row.get::<i16, _>("day") as usize - 1;
+                        if version.is_empty() {
+                            let day = row.try_get::<i16, _>("day")? as usize - 1;
+                            requests[day].root = TypeStats {
+                                total: row.try_get::<i64, _>("total")?,
+                                unique_ips: row.try_get::<i64, _>("unique_ips")?,
+                            };
+                        } else {
+                            let day = row.try_get::<i16, _>("day")? as usize - 1;
 
                             if !requests[day].versions.contains_key(&version) {
                                 requests[day].versions.insert(
@@ -148,32 +152,21 @@ mod get {
                             }
 
                             let entry = requests[day].versions.get_mut(&version).unwrap();
-                            entry.total = row.get::<i64, _>("total");
-                            entry.unique_ips = row.get::<i64, _>("unique_ips");
-                        } else {
-                            let day = row.get::<i16, _>("day") as usize - 1;
-                            requests[day].root = TypeStats {
-                                total: row.get::<i64, _>("total"),
-                                unique_ips: row.get::<i64, _>("unique_ips"),
-                            };
+                            entry.total = row.try_get::<i64, _>("total")?;
+                            entry.unique_ips = row.try_get::<i64, _>("unique_ips")?;
                         }
                     }
 
-                    requests
+                    Ok::<_, anyhow::Error>(requests)
                 },
             )
-            .await;
+            .await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(
-                serde_json::to_value(&Response {
-                    success: true,
-                    requests,
-                })
-                .unwrap(),
-            ),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            requests,
+        })
+        .ok()
     }
 }
 

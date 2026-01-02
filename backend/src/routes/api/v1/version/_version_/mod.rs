@@ -6,6 +6,7 @@ mod builds;
 mod get {
     use crate::{
         models::version::MinifiedVersionStats,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -28,28 +29,20 @@ mod get {
             example = "1.17.1",
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path(version): Path<String>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let data = MinifiedVersionStats::by_id(&state.database, &state.cache, &version).await;
+    pub async fn route(state: GetState, Path(version): Path<String>) -> ApiResponseResult {
+        let data = MinifiedVersionStats::by_id(&state.database, &state.cache, &state.env, &version)
+            .await?;
 
         if let Some(data) = data {
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        version: data,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                version: data,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            )
+            ApiResponse::error("version not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

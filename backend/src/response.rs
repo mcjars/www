@@ -1,0 +1,123 @@
+use crate::ApiError;
+use axum::response::IntoResponse;
+use std::{borrow::Cow, fmt::Display};
+
+pub type ApiResponseResult = Result<ApiResponse, ApiResponse>;
+
+#[derive(Debug)]
+pub struct ApiResponse {
+    pub body: axum::body::Body,
+    pub status: axum::http::StatusCode,
+    pub headers: axum::http::HeaderMap,
+}
+
+impl ApiResponse {
+    #[inline]
+    pub fn new(body: axum::body::Body) -> Self {
+        Self {
+            body,
+            status: axum::http::StatusCode::OK,
+            headers: axum::http::HeaderMap::new(),
+        }
+    }
+
+    #[inline]
+    pub fn json(body: impl serde::Serialize) -> Self {
+        Self {
+            body: axum::body::Body::from(serde_json::to_vec(&body).unwrap()),
+            status: axum::http::StatusCode::OK,
+            headers: axum::http::HeaderMap::from_iter([(
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderValue::from_static("application/json"),
+            )]),
+        }
+    }
+
+    #[inline]
+    pub fn error(err: &str) -> Self {
+        Self::json(ApiError::new(&[err])).with_status(axum::http::StatusCode::BAD_REQUEST)
+    }
+
+    #[inline]
+    pub fn with_status(mut self, status: axum::http::StatusCode) -> Self {
+        self.status = status;
+        self
+    }
+
+    #[inline]
+    pub fn with_header(mut self, key: &'static str, value: &str) -> Self {
+        if let Ok(header_value) = axum::http::HeaderValue::from_str(value) {
+            self.headers.insert(key, header_value);
+        }
+
+        self
+    }
+
+    #[inline]
+    pub fn ok(self) -> ApiResponseResult {
+        Ok(self)
+    }
+}
+
+impl<T> From<T> for ApiResponse
+where
+    T: Into<anyhow::Error>,
+{
+    #[inline]
+    fn from(err: T) -> Self {
+        let err: anyhow::Error = err.into();
+
+        if let Some(error) = err.downcast_ref::<DisplayError>() {
+            return ApiResponse::error(&error.message).with_status(error.status);
+        }
+
+        tracing::error!("a request error occurred: {:?}", err);
+        sentry_anyhow::capture_anyhow(&err);
+
+        ApiResponse::error("internal server error")
+            .with_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+
+impl IntoResponse for ApiResponse {
+    #[inline]
+    fn into_response(self) -> axum::response::Response {
+        let mut response = axum::http::Response::new(self.body);
+        *response.status_mut() = self.status;
+        *response.headers_mut() = self.headers;
+
+        response
+    }
+}
+
+#[derive(Debug)]
+pub struct DisplayError<'a> {
+    status: axum::http::StatusCode,
+    message: Cow<'a, str>,
+}
+
+impl<'a> DisplayError<'a> {
+    pub fn new(message: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            status: axum::http::StatusCode::BAD_REQUEST,
+            message: message.into(),
+        }
+    }
+
+    pub fn with_status(mut self, status: axum::http::StatusCode) -> Self {
+        self.status = status;
+
+        self
+    }
+}
+
+impl<'a> Display for DisplayError<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DisplayError")
+            .field("status", &self.status)
+            .field("message", &self.message)
+            .finish()
+    }
+}
+
+impl<'a> std::error::Error for DisplayError<'a> {}

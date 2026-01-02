@@ -1,4 +1,7 @@
+use anyhow::Context;
 use dotenvy::dotenv;
+use std::sync::Arc;
+use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 #[derive(Clone)]
 pub enum RedisMode {
@@ -29,6 +32,7 @@ pub struct Env {
     pub s3_access_key: String,
     pub s3_secret_key: String,
 
+    pub clickhouse_refresh: bool,
     pub clickhouse_url: String,
     pub clickhouse_database: String,
     pub clickhouse_username: String,
@@ -40,14 +44,22 @@ pub struct Env {
     pub bind: String,
     pub port: u16,
 
+    pub app_debug: bool,
     pub app_url: String,
     pub app_frontend_url: String,
     pub app_cookie_domain: String,
+    pub app_log_directory: Option<String>,
     pub server_name: Option<String>,
 }
 
 impl Env {
-    pub fn parse() -> Env {
+    pub fn parse() -> Result<
+        (
+            Arc<Self>,
+            Option<tracing_appender::non_blocking::WorkerGuard>,
+        ),
+        anyhow::Error,
+    > {
         dotenv().ok();
 
         let redis_mode = match std::env::var("REDIS_MODE")
@@ -59,7 +71,7 @@ impl Env {
             _ => panic!("Invalid REDIS_MODE"),
         };
 
-        Self {
+        let env = Self {
             redis_url: match redis_mode {
                 RedisMode::Redis => Some(
                     std::env::var("REDIS_URL")
@@ -142,6 +154,11 @@ impl Env {
                 .trim_matches('"')
                 .to_string(),
 
+            clickhouse_refresh: std::env::var("CLICKHOUSE_REFRESH")
+                .unwrap_or("false".to_string())
+                .trim_matches('"')
+                .parse()
+                .unwrap(),
             clickhouse_url: std::env::var("CLICKHOUSE_URL")
                 .expect("CLICKHOUSE_URL is required")
                 .trim_matches('"')
@@ -177,6 +194,11 @@ impl Env {
                 .trim_matches('"')
                 .to_string(),
 
+            app_debug: std::env::var("APP_DEBUG")
+                .unwrap_or("false".to_string())
+                .trim_matches('"')
+                .parse()
+                .context("Invalid APP_DEBUG value")?,
             app_url: std::env::var("APP_URL")
                 .expect("APP_URL is required")
                 .trim_matches('"')
@@ -189,9 +211,76 @@ impl Env {
                 .expect("APP_COOKIE_DOMAIN is required")
                 .trim_matches('"')
                 .to_string(),
+            app_log_directory: std::env::var("APP_LOG_DIRECTORY")
+                .ok()
+                .map(|s| s.trim_matches('"').to_string()),
             server_name: std::env::var("SERVER_NAME")
                 .ok()
                 .map(|s| s.trim_matches('"').to_string()),
+        };
+
+        let (appender, guard) = if let Some(app_log_directory) = &env.app_log_directory {
+            if !std::path::Path::new(app_log_directory).exists() {
+                std::fs::create_dir_all(app_log_directory)
+                    .context("failed to create log directory")?;
+            }
+
+            let latest_log_path = std::path::Path::new(&app_log_directory).join("panel.log");
+            let latest_file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&latest_log_path)
+                .context("failed to open latest log file")?;
+
+            let rolling_appender = tracing_appender::rolling::Builder::new()
+                .filename_prefix("panel")
+                .filename_suffix("log")
+                .max_log_files(30)
+                .rotation(tracing_appender::rolling::Rotation::DAILY)
+                .build(app_log_directory)
+                .context("failed to create rolling log file appender")?;
+
+            let (appender, guard) = tracing_appender::non_blocking::NonBlockingBuilder::default()
+                .buffered_lines_limit(50)
+                .finish(latest_file.and(rolling_appender));
+
+            (Some(appender), Some(guard))
+        } else {
+            (None, None)
+        };
+        if let Some(file_appender) = appender {
+            tracing::subscriber::set_global_default(
+                tracing_subscriber::fmt()
+                    .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc_3339())
+                    .with_writer(std::io::stdout.and(file_appender))
+                    .with_target(false)
+                    .with_level(true)
+                    .with_file(true)
+                    .with_line_number(true)
+                    .with_max_level(if env.app_debug {
+                        tracing::Level::DEBUG
+                    } else {
+                        tracing::Level::INFO
+                    })
+                    .finish(),
+            )?;
+        } else {
+            tracing::subscriber::set_global_default(
+                tracing_subscriber::fmt()
+                    .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc_3339())
+                    .with_target(false)
+                    .with_level(true)
+                    .with_file(true)
+                    .with_line_number(true)
+                    .with_max_level(if env.app_debug {
+                        tracing::Level::DEBUG
+                    } else {
+                        tracing::Level::INFO
+                    })
+                    .finish(),
+            )?;
         }
+
+        Ok((Arc::new(env), guard))
     }
 }

@@ -6,6 +6,7 @@ mod _version_;
 mod get {
     use crate::{
         models::{r#type::ServerType, version::Version},
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetData, GetState},
     };
     use axum::extract::{Path, Query};
@@ -40,8 +41,8 @@ mod get {
         request_data: GetData,
         params: Query<Params>,
         Path(r#type): Path<ServerType>,
-    ) -> axum::Json<serde_json::Value> {
-        let data = Version::all(&state.database, &state.cache, r#type).await;
+    ) -> ApiResponseResult {
+        let data = Version::all(&state.database, &state.cache, r#type).await?;
 
         *request_data.lock().unwrap() = json!({
             "type": "builds",
@@ -56,7 +57,7 @@ mod get {
             .filter(|f| !f.is_empty())
             .collect::<Vec<_>>();
 
-        axum::Json(json!({
+        ApiResponse::json(json!({
             "success": true,
             "builds": data
                 .into_iter()
@@ -68,8 +69,9 @@ mod get {
                     "created": version.created,
                     "latest": crate::utils::extract_fields(version.latest, &fields),
                 })))
-                .collect::<IndexMap<String, serde_json::Value>>(),
+                .collect::<IndexMap<_, _>>(),
         }))
+        .ok()
     }
 }
 

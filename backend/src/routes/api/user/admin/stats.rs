@@ -2,21 +2,24 @@ use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
-    use crate::routes::GetState;
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use serde::{Deserialize, Serialize};
     use sqlx::Row;
     use utoipa::ToSchema;
 
     #[derive(ToSchema, Serialize, Deserialize)]
     struct StatsRequests {
-        total: i64,
+        total: u64,
 
-        minute: i64,
-        hour: i64,
-        day: i64,
-        week: i64,
-        month: i64,
-        year: i64,
+        minute: u64,
+        hour: u64,
+        day: u64,
+        week: u64,
+        month: u64,
+        year: u64,
     }
 
     #[derive(ToSchema, Serialize, Deserialize)]
@@ -54,57 +57,69 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState) -> ApiResponseResult {
         let stats = state
             .cache
             .cached("stats::admin::all", 60, || async {
-                let data = sqlx::query(
-                    r#"
-                    SELECT
-                        COUNT(*), 0, 0, 0, 0, 0, 0
-                    FROM organizations
-                    UNION ALL
-                    SELECT
-                        COUNT(*), 0, 0, 0, 0, 0, 0
-                    FROM users
-                    UNION ALL
-                    SELECT
-                        COUNT(*), 0, 0, 0, 0, 0, 0
-                    FROM user_sessions
-                    UNION ALL
-                    SELECT
-                        COUNT(*), 0, 0, 0, 0, 0, 0
-                    FROM webhooks
-                    UNION ALL
-                    SELECT
-                        COUNT(*), 
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 minute' THEN 1 ELSE 0 END),
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 hour' THEN 1 ELSE 0 END),
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 day' THEN 1 ELSE 0 END),
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 week' THEN 1 ELSE 0 END),
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 month' THEN 1 ELSE 0 END),
-                        SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 year' THEN 1 ELSE 0 END)
-                    FROM requests
-                    "#,
-                )
-                .fetch_all(state.database.read())
-                .await
-                .unwrap();
+                let (data, requests_data) = tokio::try_join!(
+                    async {
+                        let data = sqlx::query(
+                            r#"
+                            SELECT COUNT(*)
+                            FROM organizations
+                            UNION ALL
+                            SELECT COUNT(*)
+                            FROM users
+                            UNION ALL
+                            SELECT COUNT(*)
+                            FROM user_sessions
+                            UNION ALL
+                            SELECT COUNT(*)
+                            FROM webhooks
+                            "#,
+                        )
+                        .fetch_all(state.database.read())
+                        .await?;
 
-                Stats {
-                    organizations: data[0].get(0),
-                    users: data[1].get(0),
-                    sessions: data[2].get(0),
-                    webhooks: data[3].get(0),
+                        Ok::<_, anyhow::Error>(data)
+                    },
+                    async {
+                        let requests_data = state.clickhouse
+                            .client()
+                            .query(
+                                r#"
+                                SELECT
+                                    COUNT(*), 
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 minute' THEN 1 ELSE 0 END),
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 hour' THEN 1 ELSE 0 END),
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 day' THEN 1 ELSE 0 END),
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 week' THEN 1 ELSE 0 END),
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 month' THEN 1 ELSE 0 END),
+                                    SUM(CASE WHEN requests.created > NOW() - INTERVAL '1 year' THEN 1 ELSE 0 END)
+                                FROM requests
+                                "#
+                            )
+                            .fetch_one::<(u64, u64, u64, u64, u64, u64, u64)>()
+                            .await?;
+
+                        Ok(requests_data)
+                    },
+                )?;
+
+                Ok::<_, anyhow::Error>(Stats {
+                    organizations: data[0].try_get(0)?,
+                    users: data[1].try_get(0)?,
+                    sessions: data[2].try_get(0)?,
+                    webhooks: data[3].try_get(0)?,
                     requests: StatsRequests {
-                        total: data[4].get(0),
+                        total: requests_data.0,
 
-                        minute: data[4].get(1),
-                        hour: data[4].get(2),
-                        day: data[4].get(3),
-                        week: data[4].get(4),
-                        month: data[4].get(5),
-                        year: data[4].get(6),
+                        minute: requests_data.1,
+                        hour: requests_data.2,
+                        day: requests_data.3,
+                        week: requests_data.4,
+                        month: requests_data.5,
+                        year: requests_data.6,
                     },
                     internal: StatsInternal {
                         idle_read_connections: 0,
@@ -113,26 +128,24 @@ mod get {
                         cache_hits: 0,
                         cache_misses: 0,
                     },
-                }
+                })
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                stats: Stats {
-                    internal: StatsInternal {
-                        idle_read_connections: state.database.read().num_idle(),
-                        idle_write_connections: state.database.write().num_idle(),
+        ApiResponse::json(Response {
+            success: true,
+            stats: Stats {
+                internal: StatsInternal {
+                    idle_read_connections: state.database.read().num_idle(),
+                    idle_write_connections: state.database.write().num_idle(),
 
-                        cache_hits: state.cache.cache_hits(),
-                        cache_misses: state.cache.cache_misses(),
-                    },
-                    ..stats
+                    cache_hits: state.cache.cache_hits(),
+                    cache_misses: state.cache.cache_misses(),
                 },
-            })
-            .unwrap(),
-        )
+                ..stats
+            },
+        })
+        .ok()
     }
 }
 

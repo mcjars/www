@@ -1,45 +1,107 @@
 use crate::models::organization::Organization;
 use axum::http::{Method, request::Parts};
 use chrono::NaiveDateTime;
-use colored::Colorize;
+use compact_str::ToCompactString;
 use rand::distr::SampleString;
 use rustis::commands::{GenericCommands, SetCondition, SetExpiration, StringCommands};
 use serde::{Deserialize, Serialize};
 use sqlx::types::ipnetwork::IpNetwork;
 use std::{
     collections::{HashMap, HashSet},
+    net::Ipv6Addr,
     sync::Arc,
 };
 use tokio::sync::Mutex;
 
-#[derive(Deserialize, Serialize)]
 pub struct Request {
     id: String,
     organization_id: Option<i32>,
     end: bool,
 
     origin: String,
-    method: String,
+    method: Method,
     path: String,
     time: i32,
     status: i16,
     body: Option<serde_json::Value>,
 
     ip: IpNetwork,
-    continent: Option<String>,
-    country: Option<String>,
+    continent: Option<compact_str::CompactString>,
+    country: Option<compact_str::CompactString>,
 
     data: Option<serde_json::Value>,
     user_agent: String,
     created: NaiveDateTime,
 }
 
+#[derive(Debug, Serialize, clickhouse::Row)]
+pub struct ClickhouseRequest {
+    id: [u8; 12],
+    organization_id: Option<i32>,
+
+    origin: Option<String>,
+    method: i8,
+    path: String,
+    time: i32,
+    status: i16,
+
+    body: Option<String>,
+    data: Option<String>,
+
+    ip: Ipv6Addr,
+
+    continent: Option<[u8; 2]>,
+    country: Option<[u8; 2]>,
+
+    user_agent: String,
+
+    #[serde(with = "clickhouse::serde::chrono::datetime64::millis")]
+    created: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<Request> for ClickhouseRequest {
+    fn from(req: Request) -> Self {
+        Self {
+            id: req.id.as_bytes().try_into().unwrap_or([0u8; 12]),
+            organization_id: req.organization_id,
+            origin: if req.origin.is_empty() {
+                None
+            } else {
+                Some(req.origin)
+            },
+            method: match req.method {
+                Method::GET => 1,
+                Method::POST => 2,
+                Method::PUT => 3,
+                Method::DELETE => 4,
+                Method::PATCH => 5,
+                Method::OPTIONS => 6,
+                Method::HEAD => 7,
+                _ => 1,
+            },
+            path: req.path,
+            time: req.time,
+            status: req.status,
+            body: req.body.map(|b| b.to_string()),
+            data: req.data.map(|d| d.to_string()),
+            ip: match req.ip {
+                IpNetwork::V4(ipv4) => ipv4.ip().to_ipv6_mapped(),
+                IpNetwork::V6(ipv6) => ipv6.ip(),
+            },
+            continent: req.continent.and_then(|c| c.as_bytes().try_into().ok()),
+            country: req.country.and_then(|c| c.as_bytes().try_into().ok()),
+            user_agent: req.user_agent,
+            created: req.created.and_utc(),
+        }
+    }
+}
+
 const ACCEPTED_METHODS: &[Method] = &[
     Method::GET,
     Method::POST,
     Method::PUT,
-    Method::PATCH,
     Method::DELETE,
+    Method::PATCH,
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -53,18 +115,24 @@ pub struct RequestLogger {
     processing: Mutex<Vec<Request>>,
     uncounted_requests: Mutex<i64>,
     database: Arc<crate::database::Database>,
+    clickhouse: Arc<crate::clickhouse::Clickhouse>,
     cache: Arc<crate::cache::Cache>,
 
     client: reqwest::Client,
 }
 
 impl RequestLogger {
-    pub fn new(database: Arc<crate::database::Database>, cache: Arc<crate::cache::Cache>) -> Self {
+    pub fn new(
+        database: Arc<crate::database::Database>,
+        clickhouse: Arc<crate::clickhouse::Clickhouse>,
+        cache: Arc<crate::cache::Cache>,
+    ) -> Self {
         Self {
             pending: Mutex::new(Vec::new()),
             processing: Mutex::new(Vec::new()),
             uncounted_requests: Mutex::new(0),
             database,
+            clickhouse,
             cache,
 
             client: reqwest::Client::builder()
@@ -163,7 +231,7 @@ impl RequestLogger {
                 .map(|o| crate::utils::slice_up_to(o.to_str().unwrap_or("unknown"), 255))
                 .unwrap_or("")
                 .to_string(),
-            method: request.method.to_string(),
+            method: request.method.clone(),
             path: crate::utils::slice_up_to(
                 &format!(
                     "{}{}",
@@ -227,8 +295,9 @@ impl RequestLogger {
     #[inline]
     async fn lookup_ips(
         &self,
-        ips: Vec<String>,
-    ) -> Result<HashMap<String, [String; 2]>, reqwest::Error> {
+        ips: Vec<compact_str::CompactString>,
+    ) -> Result<HashMap<compact_str::CompactString, [compact_str::CompactString; 2]>, reqwest::Error>
+    {
         let mut result = HashMap::new();
 
         let data = self
@@ -253,9 +322,9 @@ impl RequestLogger {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
         struct IpApiResponse {
-            continent_code: String,
-            country_code: String,
-            query: String,
+            continent_code: compact_str::CompactString,
+            country_code: compact_str::CompactString,
+            query: compact_str::CompactString,
         }
 
         for entry in data {
@@ -265,7 +334,7 @@ impl RequestLogger {
         Ok(result)
     }
 
-    pub async fn process(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn process(&self) -> Result<(), anyhow::Error> {
         let mut processing = self.processing.lock().await;
         let now = chrono::Utc::now().naive_utc();
         let length = processing.len();
@@ -290,59 +359,31 @@ impl RequestLogger {
             .lookup_ips(
                 requests
                     .iter()
-                    .map(|t| t.ip.to_string())
+                    .map(|t| t.ip.to_compact_string())
                     .collect::<Vec<_>>(),
             )
             .await
             .unwrap_or_default();
 
         for r in requests.iter_mut() {
-            if let Some([continent, country]) = ips.get(&r.ip.to_string()) {
+            if let Some([continent, country]) = ips.get(&r.ip.to_compact_string()) {
                 r.continent = Some(continent.clone());
                 r.country = Some(country.clone());
             }
         }
 
-        for r in requests.iter() {
-            match sqlx::query!(
-                r#"
-                INSERT INTO requests (id, organization_id, origin, method, path, time, status, body, ip, continent, country, data, user_agent, created)
-                VALUES ($1, $2, $3, $4::text::Method, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                ON CONFLICT DO NOTHING
-                "#,
-                r.id,
-                r.organization_id,
-                r.origin,
-                r.method,
-                r.path,
-                r.time,
-                r.status,
-                r.body,
-                r.ip,
-                r.continent,
-                r.country,
-                r.data,
-                r.user_agent,
-                r.created
-            )
-            .execute(self.database.write())
-            .await {
-                Ok(_) => {}
-                Err(e) => {
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Error,
-                        format!("{} {}", "failed to insert request".red(), e),
-                    );
+        let requests_len = requests.len();
+        let mut insert = self
+            .clickhouse
+            .client()
+            .insert::<ClickhouseRequest>("requests")
+            .await?;
+        for r in requests {
+            let ch_request: ClickhouseRequest = r.into();
 
-                    self.processing
-                        .lock()
-                        .await
-                        .append(&mut requests);
-
-                    return Err(Box::new(e));
-                }
-            }
+            insert.write(&ch_request).await?;
         }
+        insert.end().await?;
 
         let mut uncounted_requests = self.uncounted_requests.lock().await;
         if *uncounted_requests > 0 {
@@ -350,18 +391,12 @@ impl RequestLogger {
             *uncounted_requests = 0;
             drop(uncounted_requests);
 
-            if let Err(e) = self.database.update_count("requests", count).await {
-                crate::logger::log(
-                    crate::logger::LoggerLevel::Error,
-                    format!("{} {}", "failed to update request count".red(), e),
-                );
+            if let Err(err) = self.database.update_count("requests", count).await {
+                tracing::error!("failed to update request count: {:?}", err);
             }
         }
 
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
-            format!("processed {} requests", requests.len().to_string().cyan()),
-        );
+        tracing::info!("processed {} requests", requests_len);
 
         Ok(())
     }

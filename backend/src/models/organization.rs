@@ -1,4 +1,5 @@
 use super::{BaseModel, r#type::ServerType};
+use crate::prelude::IteratorExtension;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
@@ -13,8 +14,8 @@ pub struct Organization {
     pub verified: bool,
     pub public: bool,
 
-    pub name: String,
-    pub icon: String,
+    pub name: compact_str::CompactString,
+    pub icon: compact_str::CompactString,
     pub types: Vec<ServerType>,
 
     #[serde(skip)]
@@ -23,42 +24,44 @@ pub struct Organization {
 }
 
 impl BaseModel for Organization {
-    #[inline]
-    fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
+    fn columns(
+        prefix: Option<&str>,
+        table: Option<&str>,
+    ) -> BTreeMap<compact_str::CompactString, compact_str::CompactString> {
         let table = table.unwrap_or("organizations");
 
         let mut columns = BTreeMap::from([
             (
-                format!("{table}.id"),
-                format!("{}id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.id"),
+                compact_str::format_compact!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.owner_id"),
-                format!("{}owner_id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.owner_id"),
+                compact_str::format_compact!("{}owner_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.verified"),
-                format!("{}verified", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.verified"),
+                compact_str::format_compact!("{}verified", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.public"),
-                format!("{}public", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.public"),
+                compact_str::format_compact!("{}public", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.name"),
-                format!("{}name", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.name"),
+                compact_str::format_compact!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.icon"),
-                format!("{}icon", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.icon"),
+                compact_str::format_compact!("{}icon", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.types"),
-                format!("{}types", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.types"),
+                compact_str::format_compact!("{}types", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.created"),
-                format!("{}created", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.created"),
+                compact_str::format_compact!("{}created", prefix.unwrap_or_default()),
             ),
         ]);
 
@@ -67,41 +70,45 @@ impl BaseModel for Organization {
         columns
     }
 
-    #[inline]
-    fn map(prefix: Option<&str>, row: &PgRow) -> Self {
+    fn map(prefix: Option<&str>, row: &PgRow) -> Result<Self, anyhow::Error> {
         let prefix = prefix.unwrap_or_default();
 
-        Self {
-            id: row.get(format!("{prefix}id").as_str()),
-            owner: super::user::User::map(Some("owner_"), row).api_user(false),
+        Ok(Self {
+            id: row.try_get(compact_str::format_compact!("{prefix}id").as_str())?,
+            owner: super::user::User::map(Some("owner_"), row)?.api_user(false),
 
-            verified: row.get(format!("{prefix}verified").as_str()),
-            public: row.get(format!("{prefix}public").as_str()),
-
-            name: row.get(format!("{prefix}name").as_str()),
-            icon: row.get(format!("{prefix}icon").as_str()),
-            types: serde_json::from_value(row.get(format!("{prefix}types").as_str())).unwrap(),
+            verified: row.try_get(compact_str::format_compact!("{prefix}verified").as_str())?,
+            public: row.try_get(compact_str::format_compact!("{prefix}public").as_str())?,
+            name: row.try_get(compact_str::format_compact!("{prefix}name").as_str())?,
+            icon: row.try_get(compact_str::format_compact!("{prefix}icon").as_str())?,
+            types: serde_json::from_value(
+                row.try_get(compact_str::format_compact!("{prefix}types").as_str())?,
+            )
+            .unwrap(),
 
             subuser_pending: row.try_get("pending").unwrap_or(false),
-            created: row.get(format!("{prefix}created").as_str()),
-        }
+            created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
+        })
     }
 }
 
 impl Organization {
     #[allow(clippy::new_ret_no_self)]
-    #[inline]
-    pub async fn new(database: &crate::database::Database, owner_id: i32, name: &str) {
+    pub async fn new(
+        database: &crate::database::Database,
+        owner_id: i32,
+        name: &str,
+    ) -> Result<(), anyhow::Error> {
         sqlx::query("INSERT INTO organizations (owner_id, name) VALUES ($1, $2)")
             .bind(owner_id)
             .bind(name)
             .execute(database.write())
-            .await
-            .unwrap();
+            .await?;
+
+        Ok(())
     }
 
-    #[inline]
-    pub async fn save(&self, database: &crate::database::Database) {
+    pub async fn save(&self, database: &crate::database::Database) -> Result<(), anyhow::Error> {
         sqlx::query(
             r#"
             UPDATE organizations
@@ -123,11 +130,11 @@ impl Organization {
         .bind(&self.icon)
         .bind(serde_json::to_value(&self.types).unwrap())
         .execute(database.write())
-        .await
-        .unwrap();
+        .await?;
+
+        Ok(())
     }
 
-    #[inline]
     pub async fn count_by_owner(database: &crate::database::Database, user_id: i32) -> i64 {
         sqlx::query(
             r#"
@@ -139,12 +146,13 @@ impl Organization {
         .bind(user_id)
         .fetch_one(database.read())
         .await
-        .unwrap()
-        .get(0)
+        .map_or(0, |row| row.try_get(0).unwrap_or(0))
     }
 
-    #[inline]
-    pub async fn all_by_owner(database: &crate::database::Database, user_id: i32) -> Vec<Self> {
+    pub async fn all_by_owner(
+        database: &crate::database::Database,
+        user_id: i32,
+    ) -> Result<Vec<Self>, anyhow::Error> {
         sqlx::query(&format!(
             r#"
             SELECT DISTINCT {}, organization_subusers.pending
@@ -160,23 +168,24 @@ impl Organization {
         ))
         .bind(user_id)
         .fetch_all(database.read())
-        .await
-        .unwrap().into_iter().map(|row| Self::map(None, &row)).collect()
+        .await?
+        .into_iter()
+        .map(|row| Self::map(None, &row))
+        .try_collect_vec()
     }
 
-    #[inline]
     pub async fn by_id(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         id: i32,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         if id < 1 {
-            return None;
+            return Ok(None);
         }
 
         cache
             .cached(&format!("organization::{id}"), 300, || async {
-                sqlx::query(&format!(
+                let data = sqlx::query(&format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -187,22 +196,21 @@ impl Organization {
                 ))
                 .bind(id)
                 .fetch_optional(database.read())
-                .await
-                .unwrap()
-                .map(|row| Self::map(None, &row))
+                .await?;
+
+                data.map(|row| Self::map(None, &row)).transpose()
             })
             .await
     }
 
-    #[inline]
     pub async fn by_key(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         key: &str,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("organization::key::{key}"), 300, || async {
-                sqlx::query(&format!(
+                let data = sqlx::query(&format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -214,24 +222,23 @@ impl Organization {
                 ))
                 .bind(key)
                 .fetch_optional(database.read())
-                .await
-                .unwrap_or(None)
-                .map(|row| Self::map(None, &row))
+                .await?;
+
+                data.map(|row| Self::map(None, &row)).transpose()
             })
             .await
     }
 
-    #[inline]
     pub async fn by_id_and_user(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         user_id: i32,
         user_admin: bool,
         organization_id: i32,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("organization::{organization_id}::user::{user_id}"), 60, || async {
-                sqlx::query(&format!(
+                let data = sqlx::query(&format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -252,16 +259,18 @@ impl Organization {
                 .bind(user_admin)
                 .bind(organization_id)
                 .fetch_optional(database.read())
-                .await
-                .unwrap()
-                .map(|row| Self::map(None, &row))
+                .await?;
+
+                data.map(|row| Self::map(None, &row)).transpose()
             })
             .await
     }
 
-    #[inline]
-    pub async fn delete_by_id(database: &crate::database::Database, id: i32) -> bool {
-        sqlx::query(
+    pub async fn delete_by_id(
+        database: &crate::database::Database,
+        id: i32,
+    ) -> Result<bool, anyhow::Error> {
+        Ok(sqlx::query(
             r#"
             DELETE FROM organizations
             WHERE organizations.id = $1
@@ -269,10 +278,9 @@ impl Organization {
         )
         .bind(id)
         .execute(database.write())
-        .await
-        .unwrap()
+        .await?
         .rows_affected()
-            == 1
+            == 1)
     }
 }
 
@@ -283,65 +291,66 @@ pub struct OrganizationKey {
     #[schema(ignore)]
     pub organization_id: i32,
 
-    pub name: String,
+    pub name: compact_str::CompactString,
 
     pub created: NaiveDateTime,
 }
 
 impl BaseModel for OrganizationKey {
-    #[inline]
-    fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
+    fn columns(
+        prefix: Option<&str>,
+        table: Option<&str>,
+    ) -> BTreeMap<compact_str::CompactString, compact_str::CompactString> {
         let table = table.unwrap_or("organization_keys");
 
         BTreeMap::from([
             (
-                format!("{table}.id"),
-                format!("{}id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.id"),
+                compact_str::format_compact!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.name"),
-                format!("{}name", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.name"),
+                compact_str::format_compact!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.organization_id"),
-                format!("{}organization_id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.organization_id"),
+                compact_str::format_compact!("{}organization_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.created"),
-                format!("{}created", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.created"),
+                compact_str::format_compact!("{}created", prefix.unwrap_or_default()),
             ),
         ])
     }
 
-    #[inline]
-    fn map(prefix: Option<&str>, row: &PgRow) -> Self {
+    fn map(prefix: Option<&str>, row: &PgRow) -> Result<Self, anyhow::Error> {
         let prefix = prefix.unwrap_or_default();
 
-        Self {
-            id: row.get(format!("{prefix}id").as_str()),
-            organization_id: row.get(format!("{prefix}organization_id").as_str()),
+        Ok(Self {
+            id: row.try_get(compact_str::format_compact!("{prefix}id").as_str())?,
+            organization_id: row
+                .try_get(compact_str::format_compact!("{prefix}organization_id").as_str())?,
 
-            name: row.get(format!("{prefix}name").as_str()),
+            name: row.try_get(compact_str::format_compact!("{prefix}name").as_str())?,
 
-            created: row.get(format!("{prefix}created").as_str()),
-        }
+            created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
+        })
     }
 }
 
 impl OrganizationKey {
     #[allow(clippy::new_ret_no_self)]
-    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         organization_id: i32,
         name: &str,
-    ) -> (bool, String) {
+    ) -> Result<(bool, String), anyhow::Error> {
         let mut hash = sha2::Sha256::new();
         hash.update(chrono::Utc::now().timestamp().to_be_bytes());
         hash.update(organization_id.to_be_bytes());
         let hash = format!("{:x}", hash.finalize());
 
-        (
+        Ok((
             sqlx::query(
                 r#"
                 INSERT INTO organization_keys (organization_id, name, key)
@@ -353,15 +362,13 @@ impl OrganizationKey {
             .bind(name)
             .bind(&hash)
             .execute(database.write())
-            .await
-            .unwrap()
+            .await?
             .rows_affected()
                 == 1,
             hash,
-        )
+        ))
     }
 
-    #[inline]
     pub async fn count_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -376,15 +383,13 @@ impl OrganizationKey {
         .bind(organization_id)
         .fetch_one(database.read())
         .await
-        .unwrap()
-        .get(0)
+        .map_or(0, |row| row.try_get(0).unwrap_or(0))
     }
 
-    #[inline]
     pub async fn all_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>, anyhow::Error> {
         sqlx::query(&format!(
             r#"
             SELECT {} FROM organization_keys
@@ -395,33 +400,36 @@ impl OrganizationKey {
         ))
         .bind(organization_id)
         .fetch_all(database.read())
-        .await
-        .unwrap()
+        .await?
         .into_iter()
         .map(|row| Self::map(None, &row))
-        .collect()
+        .try_collect_vec()
     }
 
-    #[inline]
-    pub async fn by_id(database: &crate::database::Database, id: i32) -> Option<Self> {
+    pub async fn by_id(
+        database: &crate::database::Database,
+        id: i32,
+    ) -> Result<Option<Self>, anyhow::Error> {
         if id < 1 {
-            return None;
+            return Ok(None);
         }
 
-        sqlx::query(&format!(
+        let data = sqlx::query(&format!(
             "SELECT {} FROM organization_keys WHERE organization_keys.id = $1",
             Self::columns_sql(None, None)
         ))
         .bind(id)
         .fetch_optional(database.read())
-        .await
-        .unwrap()
-        .map(|row| Self::map(None, &row))
+        .await?;
+
+        data.map(|row| Self::map(None, &row)).transpose()
     }
 
-    #[inline]
-    pub async fn delete_by_id(database: &crate::database::Database, id: i32) -> bool {
-        sqlx::query(
+    pub async fn delete_by_id(
+        database: &crate::database::Database,
+        id: i32,
+    ) -> Result<bool, anyhow::Error> {
+        Ok(sqlx::query(
             r#"
             DELETE FROM organization_keys
             WHERE organization_keys.id = $1
@@ -429,10 +437,9 @@ impl OrganizationKey {
         )
         .bind(id)
         .execute(database.write())
-        .await
-        .unwrap()
+        .await?
         .rows_affected()
-            == 1
+            == 1)
     }
 }
 
@@ -449,22 +456,24 @@ pub struct OrganizationSubuser {
 }
 
 impl BaseModel for OrganizationSubuser {
-    #[inline]
-    fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
+    fn columns(
+        prefix: Option<&str>,
+        table: Option<&str>,
+    ) -> BTreeMap<compact_str::CompactString, compact_str::CompactString> {
         let table = table.unwrap_or("organization_subusers");
 
         let mut columns = BTreeMap::from([
             (
-                format!("{table}.organization_id"),
-                format!("{}organization_id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.organization_id"),
+                compact_str::format_compact!("{}organization_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.pending"),
-                format!("{}pending", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.pending"),
+                compact_str::format_compact!("{}pending", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.created"),
-                format!("{}created", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.created"),
+                compact_str::format_compact!("{}created", prefix.unwrap_or_default()),
             ),
         ]);
 
@@ -473,29 +482,28 @@ impl BaseModel for OrganizationSubuser {
         columns
     }
 
-    #[inline]
-    fn map(prefix: Option<&str>, row: &PgRow) -> Self {
+    fn map(prefix: Option<&str>, row: &PgRow) -> Result<Self, anyhow::Error> {
         let prefix = prefix.unwrap_or_default();
-        let pending = row.get(format!("{prefix}pending").as_str());
+        let pending = row.try_get(compact_str::format_compact!("{prefix}pending").as_str())?;
 
-        Self {
-            organization_id: row.get(format!("{prefix}organization_id").as_str()),
-            user: super::user::User::map(Some("user_"), row).api_user(pending),
-            created: row.get(format!("{prefix}created").as_str()),
+        Ok(Self {
+            organization_id: row
+                .try_get(compact_str::format_compact!("{prefix}organization_id").as_str())?,
+            user: super::user::User::map(Some("user_"), row)?.api_user(pending),
+            created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
             pending,
-        }
+        })
     }
 }
 
 impl OrganizationSubuser {
     #[allow(clippy::new_ret_no_self)]
-    #[inline]
     pub async fn new(
         database: &crate::database::Database,
         organization_id: i32,
         user_id: i32,
-    ) -> bool {
-        sqlx::query(
+    ) -> Result<bool, anyhow::Error> {
+        Ok(sqlx::query(
             r#"
             INSERT INTO organization_subusers (organization_id, user_id)
             VALUES ($1, $2)
@@ -505,14 +513,12 @@ impl OrganizationSubuser {
         .bind(organization_id)
         .bind(user_id)
         .execute(database.write())
-        .await
-        .unwrap()
+        .await?
         .rows_affected()
-            == 1
+            == 1)
     }
 
-    #[inline]
-    pub async fn save(&self, database: &crate::database::Database) {
+    pub async fn save(&self, database: &crate::database::Database) -> Result<(), anyhow::Error> {
         sqlx::query(
             r#"
             UPDATE organization_subusers
@@ -527,11 +533,11 @@ impl OrganizationSubuser {
         .bind(self.user.id)
         .bind(self.pending)
         .execute(database.write())
-        .await
-        .unwrap();
+        .await?;
+
+        Ok(())
     }
 
-    #[inline]
     pub async fn count_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
@@ -546,15 +552,13 @@ impl OrganizationSubuser {
         .bind(organization_id)
         .fetch_one(database.read())
         .await
-        .unwrap()
-        .get(0)
+        .map_or(0, |row| row.try_get(0).unwrap_or(0))
     }
 
-    #[inline]
     pub async fn all_by_organization(
         database: &crate::database::Database,
         organization_id: i32,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>, anyhow::Error> {
         sqlx::query(&format!(
             r#"
             SELECT {}
@@ -567,20 +571,18 @@ impl OrganizationSubuser {
         ))
         .bind(organization_id)
         .fetch_all(database.read())
-        .await
-        .unwrap()
+        .await?
         .into_iter()
         .map(|row| Self::map(None, &row))
-        .collect()
+        .try_collect_vec()
     }
 
-    #[inline]
     pub async fn by_ids(
         database: &crate::database::Database,
         organization_id: i32,
         user_id: i32,
-    ) -> Option<Self> {
-        sqlx::query(&format!(
+    ) -> Result<Option<Self>, anyhow::Error> {
+        let data = sqlx::query(&format!(
             r#"
             SELECT {}
             FROM organization_subusers
@@ -594,18 +596,17 @@ impl OrganizationSubuser {
         .bind(organization_id)
         .bind(user_id)
         .fetch_optional(database.read())
-        .await
-        .unwrap()
-        .map(|row| Self::map(None, &row))
+        .await?;
+
+        data.map(|row| Self::map(None, &row)).transpose()
     }
 
-    #[inline]
     pub async fn delete_by_ids(
         database: &crate::database::Database,
         organization_id: i32,
         user_id: i32,
-    ) -> bool {
-        sqlx::query(
+    ) -> Result<bool, anyhow::Error> {
+        Ok(sqlx::query(
             r#"
             DELETE FROM organization_subusers
             WHERE
@@ -616,9 +617,8 @@ impl OrganizationSubuser {
         .bind(organization_id)
         .bind(user_id)
         .execute(database.write())
-        .await
-        .unwrap()
+        .await?
         .rows_affected()
-            == 1
+            == 1)
     }
 }

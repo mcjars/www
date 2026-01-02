@@ -6,6 +6,7 @@ mod history;
 mod get {
     use crate::{
         models::{r#type::ServerType, version::Version},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -68,8 +69,8 @@ mod get {
     pub async fn route(
         state: GetState,
         Path((r#type, version)): Path<(ServerType, String)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await;
+    ) -> ApiResponseResult {
+        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
 
         if let Some(location) = location {
             let stats = state
@@ -101,11 +102,10 @@ mod get {
                         .bind(r#type)
                         .bind(version)
                         .fetch_one(state.database.read())
-                        .await
-                        .unwrap();
+                        .await?;
 
-                        Stats {
-                            buids: data.get("builds"),
+                        Ok::<_, anyhow::Error>(Stats {
+                            buids: data.try_get("builds")?,
                             size: Size {
                                 total: TotalStats {
                                     jar: data.try_get("jar_total").unwrap_or_default(),
@@ -116,26 +116,20 @@ mod get {
                                     zip: data.try_get("zip_average").unwrap_or_default(),
                                 },
                             },
-                        }
+                        })
                     },
                 )
-                .await;
+                .await?;
 
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        stats,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                stats,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            )
+            ApiResponse::error("version not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

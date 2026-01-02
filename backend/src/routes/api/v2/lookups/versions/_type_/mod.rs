@@ -6,6 +6,7 @@ mod history;
 mod get {
     use crate::{
         models::r#type::{SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER, ServerType},
+        response::{ApiResponse, ApiResponseResult},
         routes::GetState,
     };
     use axum::extract::Path;
@@ -26,7 +27,7 @@ mod get {
         success: bool,
 
         #[schema(inline)]
-        versions: IndexMap<String, VersionStats>,
+        versions: IndexMap<compact_str::CompactString, VersionStats>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -38,10 +39,7 @@ mod get {
             example = "VANILLA",
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path(r#type): Path<ServerType>,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, Path(r#type): Path<ServerType>) -> ApiResponseResult {
         let versions = state
             .cache
             .cached(&format!("lookups::versions::{type}"), 10800, || async {
@@ -57,43 +55,40 @@ mod get {
                         build_{column}_id AS version,
                         SUM(total_requests)::bigint AS total,
                         SUM(unique_ips)::bigint AS unique_ips
-                    FROM mv_requests_stats
+                    FROM ch_request_stats
                     WHERE
                         request_type = 'lookup'
                         AND build_type = $1
-                        AND build_{column}_id IS NOT NULL
+                        AND build_{column}_id != ''
                     GROUP BY build_{column}_id
                     ORDER BY total DESC
                     "#
                 ))
                 .bind(r#type.to_string())
                 .fetch_all(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
                 let mut versions = IndexMap::new();
 
                 for row in data {
                     versions.insert(
-                        row.get("version"),
+                        row.try_get("version")?,
                         VersionStats {
-                            total: row.get("total"),
-                            unique_ips: row.get("unique_ips"),
+                            total: row.try_get("total")?,
+                            unique_ips: row.try_get("unique_ips")?,
                         },
                     );
                 }
 
-                versions
+                Ok::<_, anyhow::Error>(versions)
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                versions,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            versions,
+        })
+        .ok()
     }
 }
 

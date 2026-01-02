@@ -4,7 +4,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod history;
 
 mod get {
-    use crate::{models::r#type::ServerType, routes::GetState};
+    use crate::{
+        models::r#type::ServerType,
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use axum::extract::Path;
     use indexmap::IndexMap;
     use serde::{Deserialize, Serialize};
@@ -24,7 +28,7 @@ mod get {
         root: TypeStats,
 
         #[schema(inline)]
-        versions: IndexMap<String, TypeStats>,
+        versions: IndexMap<compact_str::CompactString, TypeStats>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -44,10 +48,7 @@ mod get {
             example = "VANILLA",
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path(r#type): Path<ServerType>,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, Path(r#type): Path<ServerType>) -> ApiResponseResult {
         let requests = state
             .cache
             .cached(&format!("requests::types::{type}"), 10800, || async {
@@ -57,7 +58,7 @@ mod get {
                         search_version AS version,
                         SUM(total_requests)::bigint AS total,
                         SUM(unique_ips)::bigint AS unique_ips
-                    FROM mv_requests_stats
+                    FROM ch_request_stats
                     WHERE
                         request_type = 'builds'
                         AND search_type = $1
@@ -67,8 +68,7 @@ mod get {
                 )
                 .bind(r#type.to_string())
                 .fetch_all(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
                 let mut requests = Requests {
                     root: TypeStats {
@@ -79,35 +79,33 @@ mod get {
                 };
 
                 for row in data {
-                    let version = row.get::<Option<String>, _>("version");
+                    let version = row.try_get::<compact_str::CompactString, _>("version")?;
 
-                    if let Some(version) = version {
+                    if version.is_empty() {
+                        requests.root = TypeStats {
+                            total: row.try_get::<i64, _>("total")?,
+                            unique_ips: row.try_get::<i64, _>("unique_ips")?,
+                        };
+                    } else {
                         requests.versions.insert(
                             version,
                             TypeStats {
-                                total: row.get("total"),
-                                unique_ips: row.get("unique_ips"),
+                                total: row.try_get::<i64, _>("total")?,
+                                unique_ips: row.try_get::<i64, _>("unique_ips")?,
                             },
                         );
-                    } else {
-                        requests.root = TypeStats {
-                            total: row.get("total"),
-                            unique_ips: row.get("unique_ips"),
-                        };
                     }
                 }
 
-                requests
+                Ok::<_, anyhow::Error>(requests)
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                requests,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            requests,
+        })
+        .ok()
     }
 }
 

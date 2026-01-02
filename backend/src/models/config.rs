@@ -23,7 +23,13 @@ impl Display for Format {
         write!(
             f,
             "{}",
-            serde_json::to_value(self).unwrap().as_str().unwrap()
+            match self {
+                Format::Properties => "PROPERTIES",
+                Format::Yaml => "YAML",
+                Format::Conf => "CONF",
+                Format::Toml => "TOML",
+                Format::Json5 => "JSON5",
+            }
         )
     }
 }
@@ -43,7 +49,6 @@ impl Config {
             .find(|config| config.aliases.contains(&alias))
     }
 
-    #[inline]
     pub fn format(
         file: &str,
         content: &str,

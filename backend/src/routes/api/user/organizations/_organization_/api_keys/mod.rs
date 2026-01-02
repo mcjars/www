@@ -6,6 +6,7 @@ mod _key_;
 mod get {
     use crate::{
         models::organization::OrganizationKey,
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use serde::Serialize;
@@ -28,24 +29,20 @@ mod get {
             example = 1,
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        organization: GetOrganization,
-    ) -> axum::Json<serde_json::Value> {
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                api_keys: OrganizationKey::all_by_organization(&state.database, organization.id)
-                    .await,
-            })
-            .unwrap(),
-        )
+    pub async fn route(state: GetState, organization: GetOrganization) -> ApiResponseResult {
+        ApiResponse::json(Response {
+            success: true,
+            api_keys: OrganizationKey::all_by_organization(&state.database, organization.id)
+                .await?,
+        })
+        .ok()
     }
 }
 
 mod post {
     use crate::{
         models::organization::OrganizationKey,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::http::StatusCode;
@@ -78,34 +75,30 @@ mod post {
         state: GetState,
         organization: GetOrganization,
         axum::Json(payload): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if !(1..32).contains(&payload.name.len()) {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["name must be between 1 and 32 characters"]).to_value()),
-            );
+            return ApiResponse::error("name must be between 1 and 32 characters")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         let count = OrganizationKey::count_by_organization(&state.database, organization.id).await;
         if count >= 15 {
-            return (
-                StatusCode::CONFLICT,
-                axum::Json(ApiError::new(&["you cannot have more than 15 keys"]).to_value()),
-            );
+            return ApiResponse::error("you cannot have more than 15 keys")
+                .with_status(StatusCode::CONFLICT)
+                .ok();
         }
 
         let (inserted, key) =
-            OrganizationKey::new(&state.database, organization.id, &payload.name).await;
+            OrganizationKey::new(&state.database, organization.id, &payload.name).await?;
         if inserted {
-            (
-                StatusCode::CREATED,
-                axum::Json(serde_json::to_value(&Response { success: true, key }).unwrap()),
-            )
+            ApiResponse::json(Response { success: true, key })
+                .with_status(StatusCode::CREATED)
+                .ok()
         } else {
-            (
-                StatusCode::CONFLICT,
-                axum::Json(ApiError::new(&["key already exists"]).to_value()),
-            )
+            ApiResponse::error("key already exists")
+                .with_status(StatusCode::CONFLICT)
+                .ok()
         }
     }
 }

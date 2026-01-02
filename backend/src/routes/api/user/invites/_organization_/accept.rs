@@ -4,9 +4,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod post {
     use crate::{
         models::organization::{Organization, OrganizationSubuser},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::GetUser},
     };
-    use axum::extract::Path;
+    use axum::{extract::Path, http::StatusCode};
     use serde::Serialize;
     use utoipa::ToSchema;
 
@@ -29,27 +30,33 @@ mod post {
         state: GetState,
         user: GetUser,
         Path(organization): Path<i32>,
-    ) -> axum::Json<serde_json::Value> {
-        let organization = Organization::by_id(&state.database, &state.cache, organization).await;
+    ) -> ApiResponseResult {
+        let organization = Organization::by_id(&state.database, &state.cache, organization).await?;
 
         if let Some(organization) = organization {
             let subuser =
-                OrganizationSubuser::by_ids(&state.database, organization.id, user.id).await;
+                OrganizationSubuser::by_ids(&state.database, organization.id, user.id).await?;
 
             if let Some(mut subuser) = subuser {
                 if !subuser.pending {
-                    return axum::Json(ApiError::new(&["subuser already accepted"]).to_value());
+                    return ApiResponse::error("subuser already accepted")
+                        .with_status(StatusCode::BAD_REQUEST)
+                        .ok();
                 }
 
                 subuser.pending = false;
-                subuser.save(&state.database).await;
+                subuser.save(&state.database).await?;
 
-                axum::Json(serde_json::to_value(&Response { success: true }).unwrap())
+                ApiResponse::json(Response { success: true }).ok()
             } else {
-                axum::Json(ApiError::new(&["organization not found"]).to_value())
+                ApiResponse::error("organization not found")
+                    .with_status(StatusCode::NOT_FOUND)
+                    .ok()
             }
         } else {
-            axum::Json(ApiError::new(&["organization not found"]).to_value())
+            ApiResponse::error("organization not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::{build::Build, r#type::ServerType, version::Version},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -40,31 +41,29 @@ mod get {
     pub async fn route(
         state: GetState,
         Path((r#type, version, build)): Path<(ServerType, String, String)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         let build: Option<i32> = if build == "latest" {
             None
         } else {
             match build.parse() {
                 Ok(build) => {
                     if build < 0 {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            axum::Json(ApiError::new(&["invalid build"]).to_value()),
-                        );
+                        return ApiResponse::error("invalid build")
+                            .with_status(StatusCode::BAD_REQUEST)
+                            .ok();
                     }
 
                     Some(build)
                 }
                 Err(_) => {
-                    return (
-                        StatusCode::BAD_REQUEST,
-                        axum::Json(ApiError::new(&["invalid build"]).to_value()),
-                    );
+                    return ApiResponse::error("invalid build")
+                        .with_status(StatusCode::BAD_REQUEST)
+                        .ok();
                 }
             }
         };
 
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await;
+        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
 
         if let Some(location) = location {
             let data = state
@@ -79,30 +78,23 @@ mod get {
                     3600,
                     || Build::by_build_number(&state.database, r#type, &location, &version, build),
                 )
-                .await;
+                .await?;
 
             if let Some(data) = data {
-                (
-                    StatusCode::OK,
-                    axum::Json(
-                        serde_json::to_value(&Response {
-                            success: true,
-                            build: data,
-                        })
-                        .unwrap(),
-                    ),
-                )
+                ApiResponse::json(Response {
+                    success: true,
+                    build: data,
+                })
+                .ok()
             } else {
-                (
-                    StatusCode::NOT_FOUND,
-                    axum::Json(ApiError::new(&["build not found"]).to_value()),
-                )
+                ApiResponse::error("build not found")
+                    .with_status(StatusCode::NOT_FOUND)
+                    .ok()
             }
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            )
+            ApiResponse::error("version not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

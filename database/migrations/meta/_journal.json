@@ -246,6 +246,27 @@
       "when": 1763121494998,
       "tag": "0034_red_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1767361052201,
+      "tag": "0035_huge_mentallo",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1767361107361,
+      "tag": "0036_normal_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1767364490217,
+      "tag": "0037_mushy_kingpin",
+      "breakpoints": true
     }
   ]
 }

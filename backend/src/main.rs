@@ -1,32 +1,21 @@
-mod cache;
-mod clickhouse;
-mod database;
-mod env;
-mod files;
-mod logger;
-mod models;
-mod requests;
-mod routes;
-mod s3;
-mod utils;
-
+use crate::response::{ApiResponse, ApiResponseResult};
 use axum::{
     ServiceExt,
     body::Body,
     extract::{Path, Request},
-    http::{HeaderMap, Method, StatusCode},
+    http::{Method, StatusCode},
     middleware::Next,
     response::Response,
     routing::get,
 };
 use colored::Colorize;
+use compact_str::ToCompactString;
 use include_dir::{Dir, include_dir};
 use models::r#type::ServerType;
 use routes::{ApiError, GetState};
 use sentry_tower::SentryHttpLayer;
 use sha2::Digest;
 use std::{collections::HashMap, sync::Arc, time::Instant};
-use tikv_jemallocator::Jemalloc;
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
@@ -35,15 +24,28 @@ use tower_http::{
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa_axum::router::OpenApiRouter;
 
+mod cache;
+mod clickhouse;
+mod database;
+mod env;
+mod files;
+mod models;
+mod prelude;
+mod requests;
+mod response;
+mod routes;
+mod s3;
+mod utils;
+
+#[cfg(target_os = "linux")]
 #[global_allocator]
-static ALLOC: Jemalloc = Jemalloc;
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
 const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
-#[inline]
-fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, HeaderMap, String) {
+fn render_index(meta: HashMap<&str, String>, state: GetState) -> ApiResponseResult {
     let index = FRONTEND_ASSETS
         .get_file("index.html")
         .unwrap()
@@ -56,24 +58,16 @@ fn render_index(meta: HashMap<&str, String>, state: GetState) -> (StatusCode, He
         metadata.push_str(&format!("<meta name=\"{key}\" content=\"{value}\">"));
     }
 
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", "text/html".parse().unwrap());
-
-    (
-        StatusCode::OK,
-        headers,
+    ApiResponse::new(Body::from(
         index
             .replace("<!-- META -->", &metadata)
             .replace("{{VERSION}}", &state.version),
-    )
+    ))
+    .with_header("Content-Type", "text/html")
+    .ok()
 }
 
 fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body> {
-    logger::log(
-        logger::LoggerLevel::Error,
-        "a request panic has occurred".bright_red().to_string(),
-    );
-
     Response::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .header("Content-Type", "application/json")
@@ -90,20 +84,17 @@ async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, Stat
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    logger::log(
-        logger::LoggerLevel::Info,
-        format!(
-            "{} {}{} {}",
-            format!("HTTP {}", req.method()).green().bold(),
-            req.uri().path().cyan(),
-            if let Some(query) = req.uri().query() {
-                format!("?{query}")
-            } else {
-                "".to_string()
-            }
-            .bright_cyan(),
-            format!("({ip})").bright_black(),
-        ),
+    tracing::info!(
+        "http {} {}{} (from {})",
+        req.method().to_string().to_lowercase(),
+        req.uri().path().cyan(),
+        if let Some(query) = req.uri().query() {
+            format!("?{query}")
+        } else {
+            "".to_string()
+        }
+        .bright_cyan(),
+        ip
     );
 
     Ok(next.run(req).await)
@@ -174,7 +165,13 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
 
 #[tokio::main]
 async fn main() {
-    let env = env::Env::parse();
+    let (env, _tracing_guard) = match env::Env::parse() {
+        Ok((env, tracing_guard)) => (env, tracing_guard),
+        Err(err) => {
+            eprintln!("{}: {err:#?}", "failed to parse environment".red());
+            std::process::exit(1);
+        }
+    };
 
     let _guard = sentry::init((
         env.sentry_url.clone(),
@@ -186,10 +183,9 @@ async fn main() {
         },
     ));
 
-    let env = Arc::new(env);
     let s3 = Arc::new(s3::S3::new(env.clone()).await);
     let database = Arc::new(database::Database::new(env.clone()).await);
-    let clickhouse = Arc::new(clickhouse::Clickhouse::new(env.clone()).await);
+    let clickhouse = Arc::new(clickhouse::Clickhouse::new(env.clone(), database.clone()).await);
     let cache = Arc::new(cache::Cache::new(env.clone()).await);
 
     let state = Arc::new(routes::AppState {
@@ -197,9 +193,9 @@ async fn main() {
         version: format!("{VERSION}:{GIT_COMMIT}"),
 
         database: database.clone(),
-        clickhouse,
+        clickhouse: clickhouse.clone(),
         cache: cache.clone(),
-        requests: requests::RequestLogger::new(database.clone(), cache.clone()),
+        requests: requests::RequestLogger::new(database.clone(), clickhouse.clone(), cache.clone()),
         files: files::FileCache::new(database.clone(), env.clone()).await,
         env,
         s3,
@@ -212,7 +208,10 @@ async fn main() {
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-                state.requests.process().await.unwrap_or_default();
+                if let Err(err) = state.requests.process().await {
+                    tracing::error!("failed to process requests: {:?}", err);
+                    sentry_anyhow::capture_anyhow(&err);
+                }
             }
         });
     }
@@ -224,7 +223,10 @@ async fn main() {
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 
-                state.files.process().await.unwrap_or_default();
+                if let Err(err) = state.files.process().await {
+                    tracing::error!("failed to process files: {:?}", err);
+                    sentry_anyhow::capture_anyhow(&err);
+                }
             }
         });
     }
@@ -235,20 +237,17 @@ async fn main() {
             .route(
                 "/icons/{type}",
                 get(|state: GetState, Path::<ServerType>(r#type)| async move {
-                    let mut headers = HeaderMap::new();
-
-                    headers.insert(
-                        "Location",
-                        format!(
-                            "{}/icons/{}.png",
-                            state.env.s3_url,
-                            r#type.to_string().to_lowercase()
+                    ApiResponse::new(Body::empty())
+                        .with_status(StatusCode::FOUND)
+                        .with_header(
+                            "Location",
+                            &format!(
+                                "{}/icons/{}.png",
+                                state.env.s3_url,
+                                r#type.to_string().to_lowercase()
+                            ),
                         )
-                        .parse()
-                        .unwrap(),
-                    );
-
-                    (StatusCode::FOUND, headers, "")
+                        .ok()
                 }),
             )
             .route(
@@ -260,8 +259,6 @@ async fn main() {
                         project_version,
                         installer_version,
                     ))| async move {
-                        let mut headers = HeaderMap::new();
-
                         let response = match project.as_str() {
                             "fabric" => reqwest::get(
                                 format!(
@@ -283,50 +280,43 @@ async fn main() {
                                 .as_str(),
                             )
                             .await,
-                            _ => return (
-                                StatusCode::NOT_FOUND,
-                                headers,
-                                Body::from("project not supported"),
-                            ),
+                            _ => return ApiResponse::error("project not supported")
+                                .with_status(StatusCode::NOT_FOUND)
+                                .ok(),
                         };
 
                         let response = match response {
                             Ok(response) => response,
                             Err(_) => {
-                                return (
-                                    StatusCode::NOT_FOUND,
-                                    headers,
-                                    Body::from("error fetching build"),
-                                );
+                                return ApiResponse::error("error fetching build")
+                                    .with_status(StatusCode::NOT_FOUND)
+                                    .ok();
                             }
                         };
 
                         if !response.status().is_success() {
-                            return (
-                                StatusCode::NOT_FOUND,
-                                headers,
-                                Body::from("build not found"),
-                            );
+                            return ApiResponse::error("build not found")
+                                .with_status(StatusCode::NOT_FOUND)
+                                .ok();
                         }
 
-                        headers.insert(
-                            "Content-Type",
-                            response.headers().get("Content-Type").unwrap().clone(),
-                        );
-                        headers.insert(
-                            "Content-Disposition",
-                            response
-                                .headers()
-                                .get("Content-Disposition")
-                                .unwrap()
-                                .clone(),
-                        );
+                        let content_type = response
+                            .headers()
+                            .get("Content-Type")
+                            .unwrap()
+                            .to_str()?
+                            .to_compact_string();
+                        let content_disposition = response
+                            .headers()
+                            .get("Content-Disposition")
+                            .unwrap()
+                            .to_str()?
+                            .to_compact_string();
 
-                        (
-                            StatusCode::OK,
-                            headers,
-                            Body::from(response.bytes().await.unwrap()),
-                        )
+                        ApiResponse::new(Body::from(response.bytes().await?))
+                            .with_header("Content-Type", &content_type)
+                            .with_header("Content-Disposition", &content_disposition)
+                            .ok()
                     },
                 ),
             )
@@ -375,7 +365,7 @@ async fn main() {
                 render_index(meta, state)
             }))
             .route("/{type}/versions", get(|state: GetState, Path::<ServerType>(r#type)| async move {
-                let types = ServerType::all(&state.database, &state.cache).await;
+                let types = ServerType::all(&state.database, &state.cache, &state.env).await?;
                 let data = types
                     .iter()
                     .find(|(k, _)| **k == r#type)
@@ -399,7 +389,7 @@ async fn main() {
                 render_index(meta, state)
             }))
             .route("/{type}/statistics", get(|state: GetState, Path::<ServerType>(r#type)| async move {
-                let data = r#type.infos();
+                let data = r#type.infos(&state.env);
 
                 let meta = HashMap::from([
                     ("description", format!("View the latest statistics for {}. Not affiliated with Mojang AB.", data.name).to_string()),
@@ -411,8 +401,7 @@ async fn main() {
 
                 render_index(meta, state)
             }))
-            .route("/sitemap.xml", get(|| async move {
-                let mut headers = HeaderMap::new();
+            .route("/sitemap.xml", get(|state: GetState| async move {
                 let mut sitemap = "
                 <?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
                 <url><loc>https://mcjars.app</loc></url>
@@ -421,7 +410,7 @@ async fn main() {
 
                 let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
-                for r#type in ServerType::variants() {
+                for r#type in ServerType::variants(&state.env) {
                     sitemap.push_str(&format!(
                         "<url><loc>https://mcjars.app/{type}/versions</loc><lastmod>{now}</lastmod></url>"
                     ));
@@ -432,12 +421,7 @@ async fn main() {
 
                 sitemap.push_str("</urlset>");
 
-                headers.insert(
-                    "Content-Type",
-                    "application/xml".parse().unwrap(),
-                );
-
-                (StatusCode::OK, headers, sitemap)
+                ApiResponse::new(Body::from(sitemap)).with_header("Content-Type", "application/xml").ok()
             }))
             .fallback(|state: GetState, req: Request<Body>| async move {
                 if !req.uri().path().starts_with("/api") {
@@ -460,24 +444,22 @@ async fn main() {
                         content = content.replace("{{VERSION}}", &state.version);
                     }
 
-                    return Response::builder()
-                        .header("Content-Type", match file.path().extension() {
-                            Some(ext) if ext == "js" => "application/javascript",
-                            Some(ext) if ext == "css" => "text/css",
-                            Some(ext) if ext == "html" => "text/html",
-                            _ => "text/plain",
-                        })
-                        .body(content)
-                        .unwrap();
+                    return ApiResponse::new(Body::from(content))
+                        .with_header(
+                            "Content-Type",
+                            match file.path().extension() {
+                                Some(ext) if ext == "js" => "application/javascript",
+                                Some(ext) if ext == "css" => "text/css",
+                                Some(ext) if ext == "html" => "text/html",
+                                _ => "text/plain",
+                            },
+                        )
+                        .ok();
                 }
 
-                Response::builder()
-                    .status(StatusCode::NOT_FOUND)
-                    .header("Content-Type", "application/json")
-                    .body(
-                        ApiError::new(&["route not found"]).to_value().to_string(),
-                    )
-                    .unwrap()
+                ApiResponse::error("route not found")
+                    .with_status(StatusCode::NOT_FOUND)
+                    .ok()
             })
             .layer(CatchPanicLayer::custom(handle_panic))
             .layer(CorsLayer::permissive().allow_methods([Method::GET, Method::POST]))
@@ -491,19 +473,15 @@ async fn main() {
         .await
         .unwrap();
 
-    logger::log(
-        logger::LoggerLevel::Info,
+    tracing::info!(
+        "{} listening on {} {}",
+        "http server".bright_red(),
+        state.env.bind.cyan(),
         format!(
-            "{} listening on {} {}",
-            "http server".bright_red(),
-            listener.local_addr().unwrap().to_string().cyan(),
-            format!(
-                "(app@{}, {}ms)",
-                VERSION,
-                state.start_time.elapsed().as_millis()
-            )
-            .bright_black()
-        ),
+            "(app@{VERSION}, {}ms)",
+            state.start_time.elapsed().as_millis()
+        )
+        .bright_black()
     );
 
     let (router, mut openapi) = app.split_for_parts();
@@ -520,6 +498,27 @@ async fn main() {
         SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("Authorization"))),
     );
 
+    for (path, item) in openapi.paths.paths.iter_mut() {
+        let operations = [
+            ("get", &mut item.get),
+            ("post", &mut item.post),
+            ("put", &mut item.put),
+            ("patch", &mut item.patch),
+            ("delete", &mut item.delete),
+        ];
+
+        let path = path
+            .replace('/', "_")
+            .replace(|c| ['{', '}'].contains(&c), "");
+
+        for (method, operation) in operations {
+            if let Some(operation) = operation {
+                operation.operation_id = Some(format!("{method}{path}"))
+            }
+        }
+    }
+
+    let openapi = Arc::new(openapi);
     let router = router.route("/openapi.json", get(|| async move { axum::Json(openapi) }));
 
     axum::serve(

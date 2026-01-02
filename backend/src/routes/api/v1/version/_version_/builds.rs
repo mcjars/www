@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::{build::Build, r#type::ServerType},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -28,17 +29,14 @@ mod get {
         ),
     ))]
     #[deprecated]
-    pub async fn route(
-        state: GetState,
-        Path(version): Path<String>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    pub async fn route(state: GetState, Path(version): Path<String>) -> ApiResponseResult {
         let data = state
             .cache
             .cached(&format!("version::{version}::builds"), 1800, || async {
-                let data = Build::all_for_minecraft_version(&state.database, &version).await;
+                let data = Build::all_for_minecraft_version(&state.database, &version).await?;
 
                 let mut builds = IndexMap::new();
-                for r#type in ServerType::variants() {
+                for r#type in ServerType::variants(&state.env) {
                     builds.insert(r#type, vec![]);
                 }
 
@@ -46,26 +44,20 @@ mod get {
                     builds[&build.r#type].push(build);
                 }
 
-                builds
+                Ok::<_, anyhow::Error>(builds)
             })
-            .await;
+            .await?;
 
         if data.is_empty() {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["build not found"]).to_value()),
-            )
+            ApiResponse::error("build not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         } else {
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        builds: data,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                builds: data,
+            })
+            .ok()
         }
     }
 }

@@ -1,7 +1,10 @@
-use crate::models::user::{User, UserSession};
-
 use super::{GetState, State};
+use crate::{
+    models::user::{User, UserSession},
+    response::ApiResponse,
+};
 use axum::{
+    body::Body,
     extract::Query,
     http::{HeaderMap, StatusCode},
     routing::get,
@@ -35,9 +38,8 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
             "/callback",
             get(|state: GetState, headers: HeaderMap, cookies: Cookies, params: Query<Params>| async move {
                 let client = reqwest::Client::builder()
-                .user_agent("MCJars API https://mcjars.app")
-                    .build()
-                    .unwrap();
+                    .user_agent("MCJars API https://mcjars.app")
+                    .build()?;
                 let user = client
                     .post("https://github.com/login/oauth/access_token")
                     .header("Accept", "application/json")
@@ -48,15 +50,16 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         "redirect_uri": format!("{}/api/github/callback", state.env.app_url),
                     }))
                     .send()
-                    .await
-                    .unwrap()
+                    .await?
                     .json::<OAuthResponse>()
                     .await;
 
                 let user = match user {
                     Ok(user) => user,
                     Err(_) => {
-                        return (StatusCode::BAD_REQUEST, HeaderMap::new(), "Invalid access token returned");
+                        return ApiResponse::error("invalid access token returned")
+                            .with_status(StatusCode::BAD_REQUEST)
+                            .ok();
                     }
                 };
 
@@ -99,7 +102,9 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 let (data, email) = match (data, email) {
                     (Ok(data), Ok(email)) => (data, email),
                     _ => {
-                        return (StatusCode::BAD_REQUEST, HeaderMap::new(), "invalid user data returned");
+                        return ApiResponse::error("invalid user data returned")
+                            .with_status(StatusCode::BAD_REQUEST)
+                            .ok();
                     }
                 };
 
@@ -108,7 +113,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                     .find(|email| email.primary)
                     .unwrap();
 
-                let user = User::new(&state.database, data.id, data.name, email.email, data.login).await;
+                let user = User::new(&state.database, data.id, data.name, email.email, data.login).await?;
 
                 let (_, key) = UserSession::new(
                     &state.database,
@@ -118,7 +123,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         .get("User-Agent")
                         .map(|ua| crate::utils::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))
                         .unwrap_or("unknown"),
-                ).await;
+                ).await?;
 
                 cookies.add(
                     Cookie::build(("session", key))
@@ -134,14 +139,10 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                         .build(),
                 );
 
-                let mut headers = HeaderMap::new();
-
-                headers.insert(
+                ApiResponse::new(Body::empty()).with_status(StatusCode::FOUND).with_header(
                     "Location",
-                    state.env.app_frontend_url.parse().unwrap(),
-                );
-
-                (StatusCode::FOUND, headers, "")
+                    &state.env.app_frontend_url,
+                ).ok()
             }),
         )
         .with_state(state.clone())

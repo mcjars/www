@@ -2,7 +2,6 @@ use colored::Colorize;
 use sqlx::{Row, postgres::PgPoolOptions};
 use std::sync::Arc;
 
-#[inline]
 async fn update_count(pool: &sqlx::PgPool, key: &str, value: i64) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO counts (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = counts.value + $2")
         .bind(key)
@@ -13,7 +12,6 @@ async fn update_count(pool: &sqlx::PgPool, key: &str, value: i64) -> Result<(), 
     Ok(())
 }
 
-#[inline]
 async fn reset_count(pool: &sqlx::PgPool, key: &str, value: i64) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO counts (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2")
         .bind(key)
@@ -71,18 +69,15 @@ impl Database {
             .await
             .unwrap();
 
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
+        tracing::info!(
+            "{} connected {}",
+            "database".bright_cyan(),
             format!(
-                "{} connected {}",
-                "database".bright_cyan(),
-                format!(
-                    "(postgres@{}, {}ms)",
-                    version.0[..version.0.len() - 1].bright_black(),
-                    start.elapsed().as_millis()
-                )
-                .bright_black()
-            ),
+                "(postgres@{}, {}ms)",
+                version.0.bright_black(),
+                start.elapsed().as_millis()
+            )
+            .bright_black()
         );
 
         if env.database_migrate {
@@ -95,13 +90,10 @@ impl Database {
                     .await
                     .unwrap();
 
-                crate::logger::log(
-                    crate::logger::LoggerLevel::Info,
-                    format!(
-                        "{} migrated {}",
-                        "database".bright_cyan(),
-                        format!("({}ms)", start.elapsed().as_millis()).bright_black()
-                    ),
+                tracing::info!(
+                    "{} migrated {}",
+                    "database".bright_cyan(),
+                    format!("({}ms)", start.elapsed().as_millis()).bright_black()
                 );
             });
         }
@@ -110,39 +102,15 @@ impl Database {
             let writer = instance.write.clone();
             tokio::spawn(async move {
                 loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(60 * 30)).await;
-
-                    let start = std::time::Instant::now();
-
-                    let (_, _) = tokio::join!(
-                        sqlx::query("REFRESH MATERIALIZED VIEW mv_requests_stats").execute(&writer),
-                        sqlx::query("REFRESH MATERIALIZED VIEW mv_requests_stats_daily")
-                            .execute(&writer)
-                    );
-
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Info,
-                        format!(
-                            "{} views refreshed {}",
-                            "database".bright_cyan(),
-                            format!("({}ms)", start.elapsed().as_millis()).bright_black()
-                        ),
-                    );
+                    tokio::time::sleep(std::time::Duration::from_mins(30)).await;
 
                     let (builds, build_hashes) = match tokio::try_join!(
                         sqlx::query("SELECT COUNT(*) FROM builds").fetch_one(&writer),
                         sqlx::query("SELECT COUNT(*) FROM build_hashes").fetch_one(&writer)
                     ) {
                         Ok((b, h)) => (b, h),
-                        Err(e) => {
-                            crate::logger::log(
-                                crate::logger::LoggerLevel::Error,
-                                format!(
-                                    "{} failed to refresh counts: {}",
-                                    "database".bright_cyan(),
-                                    e.to_string().bright_red()
-                                ),
-                            );
+                        Err(err) => {
+                            tracing::error!("failed to refresh counts: {:?}", err);
                             continue;
                         }
                     };
@@ -155,31 +123,21 @@ impl Database {
                         reset_count(&writer, "build_hashes", build_hashes_count)
                     ) {
                         Ok(_) => {}
-                        Err(e) => {
-                            crate::logger::log(
-                                crate::logger::LoggerLevel::Error,
-                                format!(
-                                    "{} failed to update counts: {}",
-                                    "database".bright_cyan(),
-                                    e.to_string().bright_red()
-                                ),
-                            );
+                        Err(err) => {
+                            tracing::error!("failed to update counts: {:?}", err);
                             continue;
                         }
                     }
 
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Info,
+                    tracing::info!(
+                        "{} counts updated {}",
+                        "database".bright_cyan(),
                         format!(
-                            "{} counts updated {}",
-                            "database".bright_cyan(),
-                            format!(
-                                "(builds: {}, hashes: {})",
-                                builds_count.to_string().bright_black(),
-                                build_hashes_count.to_string().bright_black()
-                            )
-                            .bright_black()
-                        ),
+                            "(builds: {}, hashes: {})",
+                            builds_count.to_string().bright_black(),
+                            build_hashes_count.to_string().bright_black()
+                        )
+                        .bright_black()
                     );
                 }
             });

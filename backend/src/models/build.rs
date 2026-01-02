@@ -1,4 +1,5 @@
 use super::{BaseModel, r#type::ServerType, version::VersionType};
+use crate::prelude::IteratorExtension;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
 use std::collections::BTreeMap;
@@ -17,18 +18,18 @@ pub enum InstallationStep {
 
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct InstallationStepDownload {
-    pub url: String,
-    pub file: String,
+    pub url: compact_str::CompactString,
+    pub file: compact_str::CompactString,
     pub size: u64,
 }
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct InstallationStepUnzip {
-    pub file: String,
-    pub location: String,
+    pub file: compact_str::CompactString,
+    pub location: compact_str::CompactString,
 }
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct InstallationStepRemove {
-    pub location: String,
+    pub location: compact_str::CompactString,
 }
 
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
@@ -37,125 +38,133 @@ pub struct Build {
 
     #[serde(rename(serialize = "versionId"), alias = "versionId")]
     #[schema(rename = "versionId", example = "1.17.1")]
-    pub version_id: Option<String>,
+    pub version_id: Option<compact_str::CompactString>,
     #[serde(rename(serialize = "projectVersionId"), alias = "projectVersionId")]
     #[schema(rename = "projectVersionId")]
-    pub project_version_id: Option<String>,
+    pub project_version_id: Option<compact_str::CompactString>,
 
     pub r#type: ServerType,
     pub experimental: bool,
 
-    pub name: String,
+    pub name: compact_str::CompactString,
     #[serde(rename(serialize = "buildNumber"), alias = "buildNumber")]
     #[schema(rename = "buildNumber")]
     pub build_number: i32,
     #[serde(rename(serialize = "jarUrl"), alias = "jarUrl")]
     #[schema(rename = "jarUrl")]
-    pub jar_url: Option<String>,
+    pub jar_url: Option<compact_str::CompactString>,
     #[serde(rename(serialize = "jarSize"), alias = "jarSize")]
     #[schema(rename = "jarSize")]
     pub jar_size: Option<i32>,
     #[serde(rename(serialize = "zipUrl"), alias = "zipUrl")]
     #[schema(rename = "zipUrl")]
-    pub zip_url: Option<String>,
+    pub zip_url: Option<compact_str::CompactString>,
     #[serde(rename(serialize = "zipSize"), alias = "zipSize")]
     #[schema(rename = "zipSize")]
     pub zip_size: Option<i32>,
 
     pub installation: Vec<Vec<InstallationStep>>,
-    pub changes: Vec<String>,
+    pub changes: Vec<compact_str::CompactString>,
 
     pub created: Option<NaiveDateTime>,
 }
 
 impl BaseModel for Build {
-    #[inline]
-    fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
+    fn columns(
+        prefix: Option<&str>,
+        table: Option<&str>,
+    ) -> BTreeMap<compact_str::CompactString, compact_str::CompactString> {
         let table = table.unwrap_or("builds");
 
         BTreeMap::from([
             (
-                format!("{table}.id"),
-                format!("{}id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.id"),
+                compact_str::format_compact!("{}id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.version_id"),
-                format!("{}version_id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.version_id"),
+                compact_str::format_compact!("{}version_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.project_version_id"),
-                format!("{}project_version_id", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.project_version_id"),
+                compact_str::format_compact!("{}project_version_id", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.type"),
-                format!("{}type", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.type"),
+                compact_str::format_compact!("{}type", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.experimental"),
-                format!("{}experimental", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.experimental"),
+                compact_str::format_compact!("{}experimental", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.name"),
-                format!("{}name", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.name"),
+                compact_str::format_compact!("{}name", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.build_number"),
-                format!("{}build_number", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.build_number"),
+                compact_str::format_compact!("{}build_number", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.jar_url"),
-                format!("{}jar_url", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.jar_url"),
+                compact_str::format_compact!("{}jar_url", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.jar_size"),
-                format!("{}jar_size", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.jar_size"),
+                compact_str::format_compact!("{}jar_size", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.zip_url"),
-                format!("{}zip_url", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.zip_url"),
+                compact_str::format_compact!("{}zip_url", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.zip_size"),
-                format!("{}zip_size", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.zip_size"),
+                compact_str::format_compact!("{}zip_size", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.installation"),
-                format!("{}installation", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.installation"),
+                compact_str::format_compact!("{}installation", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.changes"),
-                format!("{}changes", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.changes"),
+                compact_str::format_compact!("{}changes", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.created"),
-                format!("{}created", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.created"),
+                compact_str::format_compact!("{}created", prefix.unwrap_or_default()),
             ),
         ])
     }
 
-    #[inline]
-    fn map(prefix: Option<&str>, row: &PgRow) -> Self {
+    fn map(prefix: Option<&str>, row: &PgRow) -> Result<Self, anyhow::Error> {
         let prefix = prefix.unwrap_or_default();
 
-        Self {
-            id: row.get(format!("{prefix}id").as_str()),
-            version_id: row.try_get(format!("{prefix}version_id").as_str()).ok(),
-            project_version_id: row
-                .try_get(format!("{prefix}project_version_id").as_str())
+        Ok(Self {
+            id: row.try_get(compact_str::format_compact!("{prefix}id").as_str())?,
+            version_id: row
+                .try_get(compact_str::format_compact!("{prefix}version_id").as_str())
                 .ok(),
-            r#type: row.get(format!("{prefix}type").as_str()),
-            experimental: row.get(format!("{prefix}experimental").as_str()),
-            name: row.get(format!("{prefix}name").as_str()),
-            build_number: row.get(format!("{prefix}build_number").as_str()),
-            jar_url: row.get(format!("{prefix}jar_url").as_str()),
-            jar_size: row.get(format!("{prefix}jar_size").as_str()),
-            zip_url: row.get(format!("{prefix}zip_url").as_str()),
-            zip_size: row.get(format!("{prefix}zip_size").as_str()),
-            installation: serde_json::from_value(row.get(format!("{prefix}installation").as_str()))
-                .unwrap(),
-            changes: serde_json::from_value(row.get(format!("{prefix}changes").as_str())).unwrap(),
-            created: row.get(format!("{prefix}created").as_str()),
-        }
+            project_version_id: row
+                .try_get(compact_str::format_compact!("{prefix}project_version_id").as_str())
+                .ok(),
+            r#type: row.try_get(compact_str::format_compact!("{prefix}type").as_str())?,
+            experimental: row
+                .try_get(compact_str::format_compact!("{prefix}experimental").as_str())?,
+            name: row.try_get(compact_str::format_compact!("{prefix}name").as_str())?,
+            build_number: row
+                .try_get(compact_str::format_compact!("{prefix}build_number").as_str())?,
+            jar_url: row.try_get(compact_str::format_compact!("{prefix}jar_url").as_str())?,
+            jar_size: row.try_get(compact_str::format_compact!("{prefix}jar_size").as_str())?,
+            zip_url: row.try_get(compact_str::format_compact!("{prefix}zip_url").as_str())?,
+            zip_size: row.try_get(compact_str::format_compact!("{prefix}zip_size").as_str())?,
+            installation: serde_json::from_value(
+                row.try_get(compact_str::format_compact!("{prefix}installation").as_str())?,
+            )?,
+            changes: serde_json::from_value(
+                row.try_get(compact_str::format_compact!("{prefix}changes").as_str())?,
+            )?,
+            created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
+        })
     }
 }
 
@@ -172,12 +181,11 @@ impl Build {
             .sum()
     }
 
-    #[inline]
     pub async fn by_v1_identifier(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         identifier: &str,
-    ) -> Option<(Self, Self, super::version::MinifiedVersion)> {
+    ) -> Result<Option<(Self, Self, super::version::MinifiedVersion)>, anyhow::Error> {
         cache.cached(&format!("build::{identifier}"), 3600, || async {
             let hash: Option<&str> = match identifier.len() {
                 32 => Some("md5"),
@@ -189,12 +197,12 @@ impl Build {
                 _ => {
                     if let Ok(id) = identifier.parse::<i32>() {
                         if id < 1 {
-                            return None;
+                            return Ok(None);
                         } else {
                             None
                         }
                     } else {
-                        return None;
+                        return Ok(None);
                     }
                 }
             };
@@ -260,25 +268,24 @@ impl Build {
                 "#,
                 Self::columns_sql(None, None),
                 if let Some(hash) = hash {
-                    format!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {hash} = decode($1, 'hex')")
+                    compact_str::format_compact!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {hash} = decode($1, 'hex')")
                 } else {
-                    "builds WHERE builds.id = $1::int".to_string()
+                    "builds WHERE builds.id = $1::int".into()
                 },
                 Self::columns_sql(None, Some("b")),
                 Self::columns_sql(None, Some("b"))
             ))
             .bind(identifier)
             .fetch_all(database.read())
-            .await
-            .unwrap();
+            .await?;
 
             if query.len() != 2 {
-                return None;
+                return Ok(None);
             }
 
-            Some((
-                Self::map(None, &query[0]),
-                Self::map(None, &query[1]),
+            Ok::<_, anyhow::Error>(Some((
+                Self::map(None, &query[0])?,
+                Self::map(None, &query[1])?,
                 super::version::MinifiedVersion {
                     id: query[1]
                         .try_get("version_id")
@@ -291,18 +298,17 @@ impl Build {
                         .try_get("version_created")
                         .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
                 },
-            ))})
+            )))})
         .await
     }
 
-    #[inline]
     pub async fn by_build_number(
         database: &crate::database::Database,
         r#type: ServerType,
         version_location: &str,
         version_id: &str,
         build_number: Option<i32>,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         let data = sqlx::query(&format!(
             r#"
             SELECT {}
@@ -324,22 +330,18 @@ impl Build {
         .bind(version_id)
         .bind(r#type)
         .bind(build_number)
-        .fetch_one(database.read())
-        .await;
+        .fetch_optional(database.read())
+        .await?;
 
-        match data {
-            Ok(data) => Some(Self::map(None, &data)),
-            Err(_) => None,
-        }
+        data.map(|row| Self::map(None, &row)).transpose()
     }
 
-    #[inline]
     pub async fn all_for_version(
         database: &crate::database::Database,
         r#type: ServerType,
         version_location: &str,
         version_id: &str,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>, anyhow::Error> {
         sqlx::query(&format!(
             r#"
             SELECT {}
@@ -355,18 +357,16 @@ impl Build {
         .bind(version_id)
         .bind(r#type)
         .fetch_all(database.read())
-        .await
-        .unwrap()
+        .await?
         .into_iter()
         .map(|row| Self::map(None, &row))
-        .collect()
+        .try_collect_vec()
     }
 
-    #[inline]
     pub async fn all_for_minecraft_version(
         database: &crate::database::Database,
         version_id: &str,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>, anyhow::Error> {
         sqlx::query(&format!(
             r#"
             SELECT {}
@@ -378,10 +378,9 @@ impl Build {
         ))
         .bind(version_id)
         .fetch_all(database.read())
-        .await
-        .unwrap()
+        .await?
         .into_iter()
         .map(|row| Self::map(None, &row))
-        .collect()
+        .try_collect_vec()
     }
 }

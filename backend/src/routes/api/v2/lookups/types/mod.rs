@@ -4,7 +4,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod history;
 
 mod get {
-    use crate::routes::GetState;
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use indexmap::IndexMap;
     use serde::{Deserialize, Serialize};
     use sqlx::Row;
@@ -22,13 +25,13 @@ mod get {
         success: bool,
 
         #[schema(inline)]
-        types: IndexMap<String, TypeStats>,
+        types: IndexMap<compact_str::CompactString, TypeStats>,
     }
 
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState) -> ApiResponseResult {
         let types = state
             .cache
             .cached("lookups::types::all", 10800, || async {
@@ -38,41 +41,38 @@ mod get {
                         search_type AS type,
                         SUM(total_requests)::bigint AS total,
                         SUM(unique_ips)::bigint AS unique_ips
-                    FROM mv_requests_stats
+                    FROM ch_request_stats
                     WHERE
                         request_type = 'builds'
-                        AND search_type IS NOT NULL
+                        AND search_type != ''
                     GROUP BY search_type
                     ORDER BY total DESC
                     "#,
                 )
                 .fetch_all(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
                 let mut types = IndexMap::new();
 
                 for row in data {
                     types.insert(
-                        row.get("type"),
+                        row.try_get("type")?,
                         TypeStats {
-                            total: row.get("total"),
-                            unique_ips: row.get("unique_ips"),
+                            total: row.try_get("total")?,
+                            unique_ips: row.try_get("unique_ips")?,
                         },
                     );
                 }
 
-                types
+                Ok::<_, anyhow::Error>(types)
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                types,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            types,
+        })
+        .ok()
     }
 }
 

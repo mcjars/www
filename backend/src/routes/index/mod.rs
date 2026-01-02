@@ -1,6 +1,9 @@
 use super::{GetState, State};
-use crate::models::r#type::ServerType;
-use axum::{body::Body, http::Response, routing::get};
+use crate::{
+    models::r#type::ServerType,
+    response::{ApiResponse, ApiResponseResult},
+};
+use axum::{body::Body, routing::get};
 use utoipa_axum::router::OpenApiRouter;
 
 mod _type_;
@@ -8,12 +11,12 @@ mod _type_;
 const INDEX_HTML: &str = include_str!("../../../static/index.html");
 
 pub struct IndexFile {
-    pub name: String,
-    pub size: String,
-    pub href: Option<String>,
+    pub name: compact_str::CompactString,
+    pub size: compact_str::CompactString,
+    pub href: Option<compact_str::CompactString>,
 }
 
-pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Response<Body> {
+pub fn render(state: &GetState, location: &str, files: Vec<IndexFile>) -> ApiResponseResult {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
         .replace("{{LOCATION}}", location)
@@ -43,7 +46,7 @@ pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Respons
                         if href.starts_with("https") {
                             href
                         } else {
-                            format!("./{href}")
+                            compact_str::format_compact!("./{href}")
                         },
                         f.name,
                         f.size
@@ -53,11 +56,10 @@ pub fn render(state: GetState, location: &str, files: Vec<IndexFile>) -> Respons
                 .join("\n"),
         );
 
-    Response::builder()
-        .header("Content-Type", "text/html")
-        .header("Cache-Control", "no-cache")
-        .body(Body::from(html))
-        .unwrap()
+    ApiResponse::new(Body::from(html))
+        .with_header("Content-Type", "text/html")
+        .with_header("Cache-Control", "no-cache")
+        .ok()
 }
 
 pub fn router(state: &State) -> OpenApiRouter<State> {
@@ -65,18 +67,21 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
         .route(
             "/",
             get(|state: GetState| async move {
-                let types = ServerType::all(&state.database, &state.cache).await;
+                let types = ServerType::all(&state.database, &state.cache, &state.env).await?;
 
                 let files = types
                     .into_iter()
                     .map(|(k, t)| IndexFile {
-                        name: format!("{}/", t.name),
-                        size: format!("{} builds", t.builds),
-                        href: Some(format!("{}/", k.to_string().to_lowercase())),
+                        name: compact_str::format_compact!("{}/", t.name),
+                        size: compact_str::format_compact!("{} builds", t.builds),
+                        href: Some(compact_str::format_compact!(
+                            "{}/",
+                            k.to_string().to_lowercase()
+                        )),
                     })
                     .collect::<Vec<_>>();
 
-                render(state, "/", files)
+                render(&state, "/", files)
             }),
         )
         .nest("/{type}", _type_::router(state))

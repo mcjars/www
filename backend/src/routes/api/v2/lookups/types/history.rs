@@ -2,7 +2,10 @@ use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
-    use crate::routes::{ApiError, GetState};
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::{ApiError, GetState},
+    };
     use axum::{extract::Path, http::StatusCode};
     use chrono::Datelike;
     use indexmap::IndexMap;
@@ -23,7 +26,7 @@ mod get {
         success: bool,
 
         #[schema(inline)]
-        types: IndexMap<String, Vec<TypeStats>>,
+        types: IndexMap<compact_str::CompactString, Vec<TypeStats>>,
     }
 
     #[utoipa::path(get, path = "/{year}/{month}", responses(
@@ -42,22 +45,17 @@ mod get {
             maximum = 12,
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path((year, month)): Path<(u16, u8)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    pub async fn route(state: GetState, Path((year, month)): Path<(u16, u8)>) -> ApiResponseResult {
         if year < 2024 || year > chrono::Utc::now().year() as u16 {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid year"]).to_value()),
-            );
+            return ApiResponse::error("invalid year")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         if !(1..=12).contains(&month) {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid month"]).to_value()),
-            );
+            return ApiResponse::error("invalid month")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         let start = chrono::NaiveDate::from_ymd_opt(year as i32, month as u32, 1).unwrap();
@@ -84,10 +82,10 @@ mod get {
                             day::smallint AS day,
                             SUM(total_requests)::bigint AS total,
                             SUM(unique_ips)::bigint AS unique_ips
-                        FROM mv_requests_stats_daily
+                        FROM ch_request_stats_daily
                         WHERE
                             request_type = 'builds'
-                            AND search_type IS NOT NULL
+                            AND search_type != ''
                             AND date_only >= $1::date
                             AND date_only <= $2::date
                         GROUP BY day, search_type
@@ -97,12 +95,11 @@ mod get {
                     .bind(start)
                     .bind(end)
                     .fetch_all(state.database.read())
-                    .await
-                    .unwrap();
+                    .await?;
 
                     let mut types = IndexMap::new();
                     for row in &data {
-                        let r#type = row.get::<String, _>("type");
+                        let r#type = row.try_get::<compact_str::CompactString, _>("type")?;
                         if !types.contains_key(&r#type) {
                             let mut stats = Vec::with_capacity(end.day() as usize);
 
@@ -119,29 +116,24 @@ mod get {
                     }
 
                     for row in data {
-                        let r#type = row.get::<String, _>("type");
-                        let day = row.get::<i16, _>("day") as usize - 1;
+                        let r#type = row.try_get::<compact_str::CompactString, _>("type")?;
+                        let day = row.try_get::<i16, _>("day")? as usize - 1;
 
                         let entry = types.get_mut(&r#type).unwrap().get_mut(day).unwrap();
-                        entry.total = row.get("total");
-                        entry.unique_ips = row.get("unique_ips");
+                        entry.total = row.try_get("total")?;
+                        entry.unique_ips = row.try_get("unique_ips")?;
                     }
 
-                    types
+                    Ok::<_, anyhow::Error>(types)
                 },
             )
-            .await;
+            .await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(
-                serde_json::to_value(&Response {
-                    success: true,
-                    types,
-                })
-                .unwrap(),
-            ),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            types,
+        })
+        .ok()
     }
 }
 

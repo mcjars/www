@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::r#type::{ServerType, ServerTypeInfo},
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::organization::GetOrganization},
     };
     use indexmap::IndexMap;
@@ -19,30 +20,26 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(
-        state: GetState,
-        organization: GetOrganization,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, organization: GetOrganization) -> ApiResponseResult {
         let organization = organization.as_ref().unwrap();
-        let data = ServerType::all(&state.database, &state.cache).await;
+        let data = ServerType::all(&state.database, &state.cache, &state.env).await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                types: if organization.types.is_empty() {
-                    data.iter().map(|(k, v)| (*k, v)).collect()
-                } else {
-                    ServerType::extract(&data, &organization.types)
-                },
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            types: if organization.types.is_empty() {
+                data.iter().map(|(k, v)| (*k, v)).collect()
+            } else {
+                ServerType::extract(&data, &organization.types)
+            },
+        })
+        .ok()
     }
 }
 
 mod patch {
     use crate::{
         models::r#type::ServerType,
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::organization::GetOrganization},
     };
     use rustis::commands::GenericCommands;
@@ -66,23 +63,22 @@ mod patch {
         state: GetState,
         mut organization: GetOrganization,
         axum::Json(data): axum::Json<Payload>,
-    ) -> axum::Json<serde_json::Value> {
+    ) -> ApiResponseResult {
         let organization = organization.as_mut().unwrap();
 
         organization.types = data.types;
-        organization.save(&state.database).await;
+        organization.save(&state.database).await?;
 
         let keys: Vec<String> = state
             .cache
             .client
             .keys(format!("organization::{}*", organization.id))
-            .await
-            .unwrap();
+            .await?;
         if !keys.is_empty() {
-            state.cache.client.del(keys).await.unwrap();
+            state.cache.client.del(keys).await?;
         }
 
-        axum::Json(serde_json::to_value(&Response { success: true }).unwrap())
+        ApiResponse::json(Response { success: true }).ok()
     }
 }
 

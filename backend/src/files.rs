@@ -1,6 +1,6 @@
 use crate::models::file::File;
 use chrono::NaiveDateTime;
-use colored::Colorize;
+use compact_str::ToCompactString;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -72,7 +72,8 @@ impl FileCache {
                     Path::new(&self.env.files_cache).join(cached_file.id.to_string()),
                 )
                 .await?,
-            ));
+            )
+                as Box<dyn tokio::io::AsyncRead + Send + Unpin>);
         }
 
         drop(cached_files);
@@ -219,14 +220,11 @@ impl FileCache {
         let current_size = self.total_size.load(std::sync::atomic::Ordering::SeqCst);
         let target_size = current_size + required_size - self.max_cache_size;
 
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
-            format!(
-                "cache size: {}/{} bytes, need to free {} bytes",
-                current_size.to_string().cyan(),
-                self.max_cache_size.to_string().cyan(),
-                target_size.to_string().cyan()
-            ),
+        tracing::info!(
+            "cache size: {}/{} bytes, need to free {} bytes",
+            current_size,
+            self.max_cache_size,
+            target_size
         );
 
         let mut freed_size = 0;
@@ -249,35 +247,26 @@ impl FileCache {
                     self.total_size
                         .fetch_sub(size, std::sync::atomic::Ordering::SeqCst);
 
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Info,
-                        format!(
-                            "removed file {} from cache, freed {} bytes",
-                            path.display().to_string().yellow(),
-                            size.to_string().cyan()
-                        ),
+                    tracing::debug!(
+                        "removed file {} from cache, freed {} bytes",
+                        path.display(),
+                        size
                     );
                 }
-                Err(e) => {
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Error,
-                        format!(
-                            "failed to remove file {} from cache: {}",
-                            path.display().to_string().red(),
-                            e
-                        ),
+                Err(err) => {
+                    tracing::error!(
+                        "failed to remove file {} from cache: {:?}",
+                        path.display(),
+                        err
                     );
                 }
             }
         }
 
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
-            format!(
-                "freed {} bytes by removing {} files from cache",
-                freed_size.to_string().cyan(),
-                removed_count.to_string().cyan()
-            ),
+        tracing::info!(
+            "freed {} bytes by removing {} files from cache",
+            freed_size,
+            removed_count
         );
 
         if freed_size < target_size {
@@ -290,7 +279,7 @@ impl FileCache {
         Ok(())
     }
 
-    pub async fn process(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn process(&self) -> Result<(), anyhow::Error> {
         let pending_files = self
             .cached_files
             .read()
@@ -313,40 +302,31 @@ impl FileCache {
                 SET last_access = $1
                 WHERE files.path = $2::varchar[] AND (files.last_access IS NULL OR files.last_access < $1)
                 "#,
-                Some(last_access),
+                last_access,
                 &path
                     .components()
                     .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
-                    .map(|c| c.as_os_str().to_string_lossy().to_string())
-                    .collect::<Vec<_>>()
+                    .map(|c| c.as_os_str().to_string_lossy().to_compact_string())
+                    .collect::<Vec<_>>() as &[compact_str::CompactString]
             )
             .execute(self.database.write())
             .await
             {
                 Ok(_) => {}
-                Err(e) => {
-                    crate::logger::log(
-                        crate::logger::LoggerLevel::Error,
-                        format!("{} {}", "failed to update file".red(), e),
-                    );
+                Err(err) => {
+                    tracing::error!("failed to update file {}: {:?}", path.display(), err);
 
-                    return Err(Box::new(e));
+                    return Err(err.into());
                 }
             }
         }
 
         if pending_files_len > 0 {
-            crate::logger::log(
-                crate::logger::LoggerLevel::Info,
-                format!(
-                    "processed {} pending files",
-                    pending_files_len.to_string().cyan()
-                ),
-            );
+            tracing::info!("processed {} pending files", pending_files_len);
         }
 
         let deletion_threshold =
-            chrono::Utc::now().naive_utc() - std::time::Duration::from_secs(24 * 60 * 60);
+            chrono::Utc::now().naive_utc() - std::time::Duration::from_hours(24);
         let mut deletable_files_lock = self.cached_files.write().await;
         let deletable_files = deletable_files_lock
             .iter()

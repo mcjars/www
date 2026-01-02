@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize};
 use sqlx::{Row, prelude::Type};
-use std::{fmt::Display, str::FromStr, sync::LazyLock};
+use std::{fmt::Display, str::FromStr, sync::OnceLock};
 use utoipa::ToSchema;
 
 pub const SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER: [ServerType; 3] = [
@@ -39,24 +39,23 @@ pub struct ServerTypeVersions {
 
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct ServerTypeInfo {
-    pub name: String,
-    pub icon: String,
-    pub color: String,
-    pub homepage: String,
+    pub name: compact_str::CompactString,
+    pub icon: compact_str::CompactString,
+    pub color: compact_str::CompactString,
+    pub homepage: compact_str::CompactString,
     pub deprecated: bool,
     pub experimental: bool,
-    pub description: String,
+    pub description: compact_str::CompactString,
 
-    pub categories: Vec<String>,
-    pub compatibility: Vec<String>,
+    pub categories: Vec<compact_str::CompactString>,
+    pub compatibility: Vec<compact_str::CompactString>,
 
     pub builds: i64,
     #[schema(inline)]
     pub versions: ServerTypeVersions,
 }
 
-#[derive(ToSchema, Serialize, Type, PartialEq, Eq, Hash, Clone, Copy)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(ToSchema, Type, PartialEq, Eq, Hash, Clone, Copy)]
 #[schema(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "server_type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ServerType {
@@ -90,7 +89,7 @@ pub enum ServerType {
 }
 
 impl FromStr for ServerType {
-    type Err = String;
+    type Err = crate::response::DisplayError<'static>;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -130,7 +129,10 @@ impl FromStr for ServerType {
             "VELOCITY-CTD" => Ok(ServerType::VelocityCtd),
             "VELOCITY_CTD" => Ok(ServerType::VelocityCtd),
             "YOUER" => Ok(ServerType::Youer),
-            _ => Err(format!("Unknown server type: {s}")),
+            _ => Err(
+                crate::response::DisplayError::new(format!("Unknown server type: `{s}`"))
+                    .with_status(axum::http::StatusCode::BAD_REQUEST),
+            ),
         }
     }
 }
@@ -143,6 +145,16 @@ impl<'de> Deserialize<'de> for ServerType {
     {
         let s = String::deserialize(deserializer)?;
         FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for ServerType {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
     }
 }
 
@@ -159,15 +171,53 @@ impl Display for ServerType {
 
 impl ServerType {
     #[inline]
-    pub fn variants() -> Vec<ServerType> {
-        TYPE_INFOS.keys().copied().collect()
+    pub fn variants(env: &crate::env::Env) -> Vec<ServerType> {
+        TYPE_INFOS
+            .get_or_init(|| default_type_infos(env))
+            .keys()
+            .copied()
+            .collect()
+    }
+
+    #[inline]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ServerType::Vanilla => "VANILLA",
+            ServerType::Paper => "PAPER",
+            ServerType::Pufferfish => "PUFFERFISH",
+            ServerType::Spigot => "SPIGOT",
+            ServerType::Folia => "FOLIA",
+            ServerType::Purpur => "PURPUR",
+            ServerType::Waterfall => "WATERFALL",
+            ServerType::Velocity => "VELOCITY",
+            ServerType::Fabric => "FABRIC",
+            ServerType::Bungeecord => "BUNGEECORD",
+            ServerType::Quilt => "QUILT",
+            ServerType::Forge => "FORGE",
+            ServerType::Neoforge => "NEOFORGE",
+            ServerType::Mohist => "MOHIST",
+            ServerType::Arclight => "ARCLIGHT",
+            ServerType::Sponge => "SPONGE",
+            ServerType::Leaves => "LEAVES",
+            ServerType::Canvas => "CANVAS",
+            ServerType::Aspaper => "ASPAPER",
+            ServerType::LegacyFabric => "LEGACYFABRIC",
+            ServerType::LoohpLimbo => "LOOHPLIMBO",
+            ServerType::Nanolimbo => "NANOLIMBO",
+            ServerType::Divinemc => "DIVINEMC",
+            ServerType::Magma => "MAGMA",
+            ServerType::Leaf => "LEAF",
+            ServerType::VelocityCtd => "VELOCITY_CTD",
+            ServerType::Youer => "YOUER",
+        }
     }
 
     #[inline]
     pub async fn all(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
-    ) -> IndexMap<ServerType, ServerTypeInfo> {
+        env: &crate::env::Env,
+    ) -> Result<IndexMap<ServerType, ServerTypeInfo>, anyhow::Error> {
         cache
             .cached("types::all", 1800, || async {
                 let data = sqlx::query(
@@ -182,27 +232,26 @@ impl ServerType {
                     "#,
                 )
                 .fetch_all(database.read())
-                .await
-                .unwrap();
+                .await?;
 
                 let mut types = IndexMap::new();
                 for row in data {
-                    let r#type: ServerType = row.get("type");
+                    let r#type: ServerType = row.try_get("type")?;
 
                     types.insert(
                         r#type,
                         ServerTypeInfo {
-                            builds: row.get("builds"),
+                            builds: row.try_get("builds")?,
                             versions: ServerTypeVersions {
-                                minecraft: row.get("versions_minecraft"),
-                                project: row.get("versions_project"),
+                                minecraft: row.try_get("versions_minecraft")?,
+                                project: row.try_get("versions_project")?,
                             },
-                            ..r#type.infos().clone()
+                            ..r#type.infos(env).clone()
                         },
                     );
                 }
 
-                types
+                Ok::<_, anyhow::Error>(types)
             })
             .await
     }
@@ -224,25 +273,28 @@ impl ServerType {
     }
 
     #[inline]
-    pub fn infos(&self) -> &ServerTypeInfo {
-        TYPE_INFOS.get(self).unwrap()
+    pub fn infos(&self, env: &crate::env::Env) -> &ServerTypeInfo {
+        TYPE_INFOS
+            .get_or_init(|| default_type_infos(env))
+            .get(self)
+            .unwrap()
     }
 }
 
-static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::new(|| {
-    let env = crate::env::Env::parse();
+static TYPE_INFOS: OnceLock<IndexMap<ServerType, ServerTypeInfo>> = OnceLock::new();
 
+fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeInfo> {
     IndexMap::from([
         (
             ServerType::Vanilla,
             ServerTypeInfo {
-                name: "Vanilla".to_string(),
-                icon: format!("{}/icons/vanilla.png", env.s3_url),
-                color: "#3B2A22".to_string(),
-                homepage: "https://minecraft.net/en-us/download/server".to_string(),
+                name: "Vanilla".into(),
+                icon: compact_str::format_compact!("{}/icons/vanilla.png", env.s3_url),
+                color: "#3B2A22".into(),
+                homepage: "https://minecraft.net/en-us/download/server".into(),
                 deprecated: false,
                 experimental: false,
-                description: "The official Minecraft server software.".to_string(),
+                description: "The official Minecraft server software.".into(),
                 categories: vec![],
                 compatibility: vec![],
                 builds: 0,
@@ -255,15 +307,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Paper,
             ServerTypeInfo {
-                name: "Paper".to_string(),
-                icon: format!("{}/icons/paper.png", env.s3_url),
-                color: "#444444".to_string(),
-                homepage: "https://papermc.io/software/paper".to_string(),
+                name: "Paper".into(),
+                icon: compact_str::format_compact!("{}/icons/paper.png", env.s3_url),
+                color: "#444444".into(),
+                homepage: "https://papermc.io/software/paper".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Paper is a Minecraft game server based on Spigot, designed to greatly improve performance and offer more advanced features and API.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                description: "Paper is a Minecraft game server based on Spigot, designed to greatly improve performance and offer more advanced features and API.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -274,15 +326,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Pufferfish,
             ServerTypeInfo {
-                name: "Pufferfish".to_string(),
-                icon: format!("{}/icons/pufferfish.png", env.s3_url),
-                color: "#FFA647".to_string(),
-                homepage: "https://pufferfish.host/downloads".to_string(),
+                name: "Pufferfish".into(),
+                icon: compact_str::format_compact!("{}/icons/pufferfish.png", env.s3_url),
+                color: "#FFA647".into(),
+                homepage: "https://pufferfish.host/downloads".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A fork of Paper that aims to be even more performant.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                description: "A fork of Paper that aims to be even more performant.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -293,15 +345,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Spigot,
             ServerTypeInfo {
-                name: "Spigot".to_string(),
-                icon: format!("{}/icons/spigot.png", env.s3_url),
-                color: "#F7CF0D".to_string(),
-                homepage: "https://www.spigotmc.org".to_string(),
+                name: "Spigot".into(),
+                icon: compact_str::format_compact!("{}/icons/spigot.png", env.s3_url),
+                color: "#F7CF0D".into(),
+                homepage: "https://www.spigotmc.org".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A high performance fork of the Bukkit Minecraft Server.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string()],
+                description: "A high performance fork of the Bukkit Minecraft Server.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -312,15 +364,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Folia,
             ServerTypeInfo {
-                name: "Folia".to_string(),
-                icon: format!("{}/icons/folia.png", env.s3_url),
-                color: "#3CC5D2".to_string(),
-                homepage: "https://papermc.io/software/folia".to_string(),
+                name: "Folia".into(),
+                icon: compact_str::format_compact!("{}/icons/folia.png", env.s3_url),
+                color: "#3CC5D2".into(),
+                homepage: "https://papermc.io/software/folia".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Folia is a fork of Paper that adds regionized multithreading to the server.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["folia".to_string()],
+                description: "Folia is a fork of Paper that adds regionized multithreading to the server.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["folia".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -331,15 +383,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Purpur,
             ServerTypeInfo {
-                name: "Purpur".to_string(),
-                icon: format!("{}/icons/purpur.png", env.s3_url),
-                color: "#C92BFF".to_string(),
-                homepage: "https://purpurmc.org".to_string(),
+                name: "Purpur".into(),
+                icon: compact_str::format_compact!("{}/icons/purpur.png", env.s3_url),
+                color: "#C92BFF".into(),
+                homepage: "https://purpurmc.org".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Purpur is a drop-in replacement for Paper servers designed for configurability, new fun and exciting gameplay features.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string(), "purpur".to_string()],
+                description: "Purpur is a drop-in replacement for Paper servers designed for configurability, new fun and exciting gameplay features.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into(), "purpur".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -350,15 +402,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Waterfall,
             ServerTypeInfo {
-                name: "Waterfall".to_string(),
-                icon: format!("{}/icons/waterfall.png", env.s3_url),
-                color: "#193CB2".to_string(),
-                homepage: "https://papermc.io/software/waterfall".to_string(),
+                name: "Waterfall".into(),
+                icon: compact_str::format_compact!("{}/icons/waterfall.png", env.s3_url),
+                color: "#193CB2".into(),
+                homepage: "https://papermc.io/software/waterfall".into(),
                 deprecated: true,
                 experimental: false,
-                description: "Waterfall is the BungeeCord fork that aims to improve performance and stability.".to_string(),
-                categories: vec!["plugins".to_string(), "proxy".to_string()],
-                compatibility: vec!["bungeecord".to_string()],
+                description: "Waterfall is the BungeeCord fork that aims to improve performance and stability.".into(),
+                categories: vec!["plugins".into(), "proxy".into()],
+                compatibility: vec!["bungeecord".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -369,15 +421,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Velocity,
             ServerTypeInfo {
-                name: "Velocity".to_string(),
-                icon: format!("{}/icons/velocity.png", env.s3_url),
-                color: "#1BBAE0".to_string(),
-                homepage: "https://papermc.io/software/velocity".to_string(),
+                name: "Velocity".into(),
+                icon: compact_str::format_compact!("{}/icons/velocity.png", env.s3_url),
+                color: "#1BBAE0".into(),
+                homepage: "https://papermc.io/software/velocity".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A modern, high performance, extensible proxy server alternative for Waterfall.".to_string(),
-                categories: vec!["plugins".to_string(), "proxy".to_string()],
-                compatibility: vec!["velocity".to_string()],
+                description: "A modern, high performance, extensible proxy server alternative for Waterfall.".into(),
+                categories: vec!["plugins".into(), "proxy".into()],
+                compatibility: vec!["velocity".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -388,15 +440,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Fabric,
             ServerTypeInfo {
-                name: "Fabric".to_string(),
-                icon: format!("{}/icons/fabric.png", env.s3_url),
-                color: "#C6BBA5".to_string(),
-                homepage: "https://fabricmc.net".to_string(),
+                name: "Fabric".into(),
+                icon: compact_str::format_compact!("{}/icons/fabric.png", env.s3_url),
+                color: "#C6BBA5".into(),
+                homepage: "https://fabricmc.net".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A lightweight and modular Minecraft server software.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["fabric".to_string()],
+                description: "A lightweight and modular Minecraft server software.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["fabric".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -407,15 +459,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Bungeecord,
             ServerTypeInfo {
-                name: "BungeeCord".to_string(),
-                icon: format!("{}/icons/bungeecord.png", env.s3_url),
-                color: "#D4B451".to_string(),
-                homepage: "https://www.spigotmc.org/wiki/bungeecord-installation".to_string(),
+                name: "BungeeCord".into(),
+                icon: compact_str::format_compact!("{}/icons/bungeecord.png", env.s3_url),
+                color: "#D4B451".into(),
+                homepage: "https://www.spigotmc.org/wiki/bungeecord-installation".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A proxy server software for Minecraft.".to_string(),
-                categories: vec!["plugins".to_string(), "proxy".to_string()],
-                compatibility: vec!["bungeecord".to_string()],
+                description: "A proxy server software for Minecraft.".into(),
+                categories: vec!["plugins".into(), "proxy".into()],
+                compatibility: vec!["bungeecord".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -426,15 +478,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Quilt,
             ServerTypeInfo {
-                name: "Quilt".to_string(),
-                icon: format!("{}/icons/quilt.png", env.s3_url),
-                color: "#9722FF".to_string(),
-                homepage: "https://quiltmc.org".to_string(),
+                name: "Quilt".into(),
+                icon: compact_str::format_compact!("{}/icons/quilt.png", env.s3_url),
+                color: "#9722FF".into(),
+                homepage: "https://quiltmc.org".into(),
                 deprecated: false,
                 experimental: true,
-                description: "The Quilt project is an open-source, community-driven modding toolchain designed for Minecraft.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["fabric".to_string(), "quilt".to_string()],
+                description: "The Quilt project is an open-source, community-driven modding toolchain designed for Minecraft.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["fabric".into(), "quilt".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -445,15 +497,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Forge,
             ServerTypeInfo {
-                name: "Forge".to_string(),
-                icon: format!("{}/icons/forge.png", env.s3_url),
-                color: "#DFA86A".to_string(),
-                homepage: "https://files.minecraftforge.net/net/minecraftforge/forge".to_string(),
+                name: "Forge".into(),
+                icon: compact_str::format_compact!("{}/icons/forge.png", env.s3_url),
+                color: "#DFA86A".into(),
+                homepage: "https://files.minecraftforge.net/net/minecraftforge/forge".into(),
                 deprecated: false,
                 experimental: false,
-                description: "The original Minecraft modding platform.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["forge".to_string()],
+                description: "The original Minecraft modding platform.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["forge".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -464,15 +516,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Neoforge,
             ServerTypeInfo {
-                name: "NeoForge".to_string(),
-                icon: format!("{}/icons/neoforge.png", env.s3_url),
-                color: "#D7742F".to_string(),
-                homepage: "https://neoforged.net".to_string(),
+                name: "NeoForge".into(),
+                icon: compact_str::format_compact!("{}/icons/neoforge.png", env.s3_url),
+                color: "#D7742F".into(),
+                homepage: "https://neoforged.net".into(),
                 deprecated: false,
                 experimental: false,
-                description: "NeoForge is a free, open-source, community-oriented modding API for Minecraft.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["forge".to_string(), "neoforge".to_string()],
+                description: "NeoForge is a free, open-source, community-oriented modding API for Minecraft.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["forge".into(), "neoforge".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -483,15 +535,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Mohist,
             ServerTypeInfo {
-                name: "Mohist".to_string(),
-                icon: format!("{}/icons/mohist.png", env.s3_url),
-                color: "#2A3294".to_string(),
-                homepage: "https://mohistmc.com/software/mohist".to_string(),
+                name: "Mohist".into(),
+                icon: compact_str::format_compact!("{}/icons/mohist.png", env.s3_url),
+                color: "#2A3294".into(),
+                homepage: "https://mohistmc.com/software/mohist".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A variation of Forge/NeoForge that allows loading Spigot plugins next to mods.".to_string(),
-                categories: vec!["modded".to_string(), "plugins".to_string()],
-                compatibility: vec!["forge".to_string(), "spigot".to_string(), "paper".to_string()],
+                description: "A variation of Forge/NeoForge that allows loading Spigot plugins next to mods.".into(),
+                categories: vec!["modded".into(), "plugins".into()],
+                compatibility: vec!["forge".into(), "spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -502,15 +554,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Arclight,
             ServerTypeInfo {
-                name: "Arclight".to_string(),
-                icon: format!("{}/icons/arclight.png", env.s3_url),
-                color: "#F4FDE5".to_string(),
-                homepage: "https://github.com/IzzelAliz/Arclight".to_string(),
+                name: "Arclight".into(),
+                icon: compact_str::format_compact!("{}/icons/arclight.png", env.s3_url),
+                color: "#F4FDE5".into(),
+                homepage: "https://github.com/IzzelAliz/Arclight".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A Bukkit server implementation utilizing Mixins for modding support.".to_string(),
-                categories: vec!["modded".to_string(), "plugins".to_string()],
-                compatibility: vec!["fabric".to_string(), "spigot".to_string(), "forge".to_string(), "neoforge".to_string()],
+                description: "A Bukkit server implementation utilizing Mixins for modding support.".into(),
+                categories: vec!["modded".into(), "plugins".into()],
+                compatibility: vec!["fabric".into(), "spigot".into(), "forge".into(), "neoforge".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -521,15 +573,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Sponge,
             ServerTypeInfo {
-                name: "Sponge".to_string(),
-                icon: format!("{}/icons/sponge.png", env.s3_url),
-                color: "#F7CF0D".to_string(),
-                homepage: "https://www.spongepowered.org".to_string(),
+                name: "Sponge".into(),
+                icon: compact_str::format_compact!("{}/icons/sponge.png", env.s3_url),
+                color: "#F7CF0D".into(),
+                homepage: "https://www.spongepowered.org".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A modding platform for Minecraft.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["sponge".to_string()],
+                description: "A modding platform for Minecraft.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["sponge".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -540,15 +592,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Leaves,
             ServerTypeInfo {
-                name: "Leaves".to_string(),
-                icon: format!("{}/icons/leaves.png", env.s3_url),
-                color: "#40794F".to_string(),
-                homepage: "https://leavesmc.org/software/leaves".to_string(),
+                name: "Leaves".into(),
+                icon: compact_str::format_compact!("{}/icons/leaves.png", env.s3_url),
+                color: "#40794F".into(),
+                homepage: "https://leavesmc.org/software/leaves".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Leaves is a Minecraft game server based on Paper, aimed at repairing broken vanilla properties.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                description: "Leaves is a Minecraft game server based on Paper, aimed at repairing broken vanilla properties.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -559,15 +611,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Canvas,
             ServerTypeInfo {
-                name: "Canvas".to_string(),
-                icon: format!("{}/icons/canvas.png", env.s3_url),
-                color: "#3D11AE".to_string(),
-                homepage: "https://github.com/CraftCanvasMC/Canvas".to_string(),
+                name: "Canvas".into(),
+                icon: compact_str::format_compact!("{}/icons/canvas.png", env.s3_url),
+                color: "#3D11AE".into(),
+                homepage: "https://github.com/CraftCanvasMC/Canvas".into(),
                 deprecated: false,
                 experimental: true,
-                description: "A fork of Folia that aims to be more performant and have better APIs.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["folia".to_string()],
+                description: "A fork of Folia that aims to be more performant and have better APIs.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["folia".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -578,15 +630,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Aspaper,
             ServerTypeInfo {
-                name: "ASPaper".to_string(),
-                icon: format!("{}/icons/aspaper.png", env.s3_url),
-                color: "#FF821C".to_string(),
-                homepage: "https://github.com/InfernalSuite/AdvancedSlimePaper".to_string(),
+                name: "ASPaper".into(),
+                icon: compact_str::format_compact!("{}/icons/aspaper.png", env.s3_url),
+                color: "#FF821C".into(),
+                homepage: "https://github.com/InfernalSuite/AdvancedSlimePaper".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Advanced Slime Paper is a fork of Paper implementing the Slime Region Format developed by Hypixel.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                description: "Advanced Slime Paper is a fork of Paper implementing the Slime Region Format developed by Hypixel.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -597,15 +649,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::LegacyFabric,
             ServerTypeInfo {
-                name: "Legacy Fabric".to_string(),
-                icon: format!("{}/icons/legacy_fabric.png", env.s3_url),
-                color: "#4903AA".to_string(),
-                homepage: "https://legacyfabric.net".to_string(),
+                name: "Legacy Fabric".into(),
+                icon: compact_str::format_compact!("{}/icons/legacy_fabric.png", env.s3_url),
+                color: "#4903AA".into(),
+                homepage: "https://legacyfabric.net".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Legacy Fabric is a project based on the Fabric Project, with the main priority to keep parity with upstream for older versions.".to_string(),
-                categories: vec!["modded".to_string()],
-                compatibility: vec!["fabric".to_string()],
+                description: "Legacy Fabric is a project based on the Fabric Project, with the main priority to keep parity with upstream for older versions.".into(),
+                categories: vec!["modded".into()],
+                compatibility: vec!["fabric".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -616,14 +668,14 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::LoohpLimbo,
             ServerTypeInfo {
-                name: "LooHP Limbo".to_string(),
-                icon: format!("{}/icons/loohp_limbo.png", env.s3_url),
-                color: "#93ACFF".to_string(),
-                homepage: "https://github.com/LOOHP/Limbo".to_string(),
+                name: "LooHP Limbo".into(),
+                icon: compact_str::format_compact!("{}/icons/loohp_limbo.png", env.s3_url),
+                color: "#93ACFF".into(),
+                homepage: "https://github.com/LOOHP/Limbo".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Standalone Limbo Minecraft Server.".to_string(),
-                categories: vec!["limbo".to_string()],
+                description: "Standalone Limbo Minecraft Server.".into(),
+                categories: vec!["limbo".into()],
                 compatibility: vec![],
                 builds: 0,
                 versions: ServerTypeVersions {
@@ -635,14 +687,14 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Nanolimbo,
             ServerTypeInfo {
-                name: "NanoLimbo".to_string(),
-                icon: format!("{}/icons/nanolimbo.png", env.s3_url),
-                color: "#AEAEAE".to_string(),
-                homepage: "https://github.com/Nan1t/NanoLimbo".to_string(),
+                name: "NanoLimbo".into(),
+                icon: compact_str::format_compact!("{}/icons/nanolimbo.png", env.s3_url),
+                color: "#AEAEAE".into(),
+                homepage: "https://github.com/Nan1t/NanoLimbo".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A lightweight Limbo Minecraft Server, written in Java with Netty. Maximum simplicity with a minimum number of sent and processed packets.".to_string(),
-                categories: vec!["limbo".to_string()],
+                description: "A lightweight Limbo Minecraft Server, written in Java with Netty. Maximum simplicity with a minimum number of sent and processed packets.".into(),
+                categories: vec!["limbo".into()],
                 compatibility: vec![],
                 builds: 0,
                 versions: ServerTypeVersions {
@@ -654,15 +706,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Divinemc,
             ServerTypeInfo {
-                name: "DivineMC".to_string(),
-                icon: format!("{}/icons/divinemc.png", env.s3_url),
-                color: "#4B484B".to_string(),
-                homepage: "https://github.com/BX-Team/DivineMC".to_string(),
+                name: "DivineMC".into(),
+                icon: compact_str::format_compact!("{}/icons/divinemc.png", env.s3_url),
+                color: "#4B484B".into(),
+                homepage: "https://github.com/BX-Team/DivineMC".into(),
                 deprecated: false,
                 experimental: false,
-                description: "DivineMC is a multi-functional fork of Purpur, which focuses on the flexibility of your server and its optimization.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string(), "purpur".to_string()],
+                description: "DivineMC is a multi-functional fork of Purpur, which focuses on the flexibility of your server and its optimization.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into(), "purpur".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -673,15 +725,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Magma,
             ServerTypeInfo {
-                name: "Magma".to_string(),
-                icon: format!("{}/icons/magma.png", env.s3_url),
-                color: "#FE974E".to_string(),
-                homepage: "https://magmafoundation.org".to_string(),
+                name: "Magma".into(),
+                icon: compact_str::format_compact!("{}/icons/magma.png", env.s3_url),
+                color: "#FE974E".into(),
+                homepage: "https://magmafoundation.org".into(),
                 deprecated: false,
                 experimental: false,
-                description: "Magma is the ultimate Minecraft server software that combines the power of NeoForge mods and Bukkit plugins in one experience.".to_string(),
-                categories: vec!["plugins".to_string(), "modded".to_string()],
-                compatibility: vec!["spigot".to_string(), "neoforge".to_string()],
+                description: "Magma is the ultimate Minecraft server software that combines the power of NeoForge mods and Bukkit plugins in one experience.".into(),
+                categories: vec!["plugins".into(), "modded".into()],
+                compatibility: vec!["spigot".into(), "neoforge".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -692,15 +744,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Leaf,
             ServerTypeInfo {
-                name: "Leaf".to_string(),
-                icon: format!("{}/icons/leaf.png", env.s3_url),
-                color: "#65BE75".to_string(),
-                homepage: "https://www.leafmc.one".to_string(),
+                name: "Leaf".into(),
+                icon: compact_str::format_compact!("{}/icons/leaf.png", env.s3_url),
+                color: "#65BE75".into(),
+                homepage: "https://www.leafmc.one".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A Paper fork aimed to find balance between performance, vanilla and stability.".to_string(),
-                categories: vec!["plugins".to_string()],
-                compatibility: vec!["spigot".to_string(), "paper".to_string()],
+                description: "A Paper fork aimed to find balance between performance, vanilla and stability.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -711,15 +763,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::VelocityCtd,
             ServerTypeInfo {
-                name: "Velocity-CTD".to_string(),
-                icon: format!("{}/icons/velocity_ctd.png", env.s3_url),
-                color: "#054EC4".to_string(),
-                homepage: "https://github.com/GemstoneGG/Velocity-CTD".to_string(),
+                name: "Velocity-CTD".into(),
+                icon: compact_str::format_compact!("{}/icons/velocity_ctd.png", env.s3_url),
+                color: "#054EC4".into(),
+                homepage: "https://github.com/GemstoneGG/Velocity-CTD".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A fork of Velocity with various optimizations, commands, and more!".to_string(),
-                categories: vec!["plugins".to_string(), "proxy".to_string()],
-                compatibility: vec!["velocity".to_string()],
+                description: "A fork of Velocity with various optimizations, commands, and more!".into(),
+                categories: vec!["plugins".into(), "proxy".into()],
+                compatibility: vec!["velocity".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -730,15 +782,15 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
         (
             ServerType::Youer,
             ServerTypeInfo {
-                name: "Youer".to_string(),
-                icon: format!("{}/icons/youer.png", env.s3_url),
-                color: "#2A3294".to_string(),
-                homepage: "https://mohistmc.com/software/youer".to_string(),
+                name: "Youer".into(),
+                icon: compact_str::format_compact!("{}/icons/youer.png", env.s3_url),
+                color: "#2A3294".into(),
+                homepage: "https://mohistmc.com/software/youer".into(),
                 deprecated: false,
                 experimental: false,
-                description: "A variation of NeoForge that allows loading Spigot plugins next to mods.".to_string(),
-                categories: vec!["modded".to_string(), "plugins".to_string()],
-                compatibility: vec!["neoforge".to_string(), "spigot".to_string(), "paper".to_string()],
+                description: "A variation of NeoForge that allows loading Spigot plugins next to mods.".into(),
+                categories: vec!["modded".into(), "plugins".into()],
+                compatibility: vec!["neoforge".into(), "spigot".into(), "paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -747,4 +799,4 @@ static TYPE_INFOS: LazyLock<IndexMap<ServerType, ServerTypeInfo>> = LazyLock::ne
             },
         ),
     ])
-});
+}

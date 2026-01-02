@@ -19,7 +19,7 @@ pub enum VersionType {
 
 #[derive(ToSchema, Serialize, Deserialize)]
 pub struct MinifiedVersion {
-    pub id: String,
+    pub id: compact_str::CompactString,
 
     pub r#type: VersionType,
     pub supported: bool,
@@ -45,8 +45,9 @@ impl MinifiedVersionStats {
     pub async fn by_id(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
+        env: &crate::env::Env,
         id: &str,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("version::{id}::stats"), 3600, || async {
                 let data = sqlx::query(
@@ -71,15 +72,14 @@ impl MinifiedVersionStats {
                 )
                 .bind(id)
                 .fetch_all(database.read())
-                .await
-                .unwrap();
+                .await?;
 
                 if data.is_empty() {
-                    return None;
+                    return Ok(None);
                 }
 
                 let mut builds = IndexMap::new();
-                for r#type in ServerType::variants() {
+                for r#type in ServerType::variants(env) {
                     builds.insert(
                         r#type,
                         data.iter()
@@ -89,13 +89,13 @@ impl MinifiedVersionStats {
                     );
                 }
 
-                Some(MinifiedVersionStats {
-                    r#type: data[0].get("minecraft_version_type"),
-                    supported: data[0].get("minecraft_version_supported"),
-                    java: data[0].get("minecraft_version_java"),
+                Ok::<_, anyhow::Error>(Some(MinifiedVersionStats {
+                    r#type: data[0].try_get("minecraft_version_type")?,
+                    supported: data[0].try_get("minecraft_version_supported")?,
+                    java: data[0].try_get("minecraft_version_java")?,
                     builds,
-                    created: data[0].get("minecraft_version_created"),
-                })
+                    created: data[0].try_get("minecraft_version_created")?,
+                }))
             })
             .await
     }
@@ -120,7 +120,7 @@ impl Version {
         cache: &crate::cache::Cache,
         r#type: ServerType,
         id: &str,
-    ) -> Option<String> {
+    ) -> Result<Option<compact_str::CompactString>, anyhow::Error> {
         cache
             .cached(
                 &format!("version_location::{type}::{id}"),
@@ -152,13 +152,13 @@ impl Version {
                         .fetch_optional(database.read()),
                     );
 
-                    if project.map(|x| x.is_some()).unwrap_or_default() {
-                        Some("project_version_id".to_string())
+                    Ok::<_, anyhow::Error>(if project.map(|x| x.is_some()).unwrap_or_default() {
+                        Some("project_version_id".into())
                     } else if minecraft.map(|x| x.is_some()).unwrap_or_default() {
-                        Some("version_id".to_string())
+                        Some("version_id".into())
                     } else {
                         None
-                    }
+                    })
                 },
             )
             .await
@@ -169,7 +169,7 @@ impl Version {
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         r#type: ServerType,
-    ) -> IndexMap<String, Self> {
+    ) -> Result<IndexMap<compact_str::CompactString, Self>, anyhow::Error> {
         cache
             .cached(&format!("versions::{type}"), 1800, || async {
                 let mut versions = IndexMap::new();
@@ -200,11 +200,10 @@ impl Version {
                     ))
                     .bind(r#type)
                     .fetch_all(database.read())
-                    .await
-                    .unwrap();
+                    .await?;
 
                     for (i, row) in data.iter().enumerate() {
-                        let latest = super::build::Build::map(None, row);
+                        let latest = super::build::Build::map(None, row)?;
                         let id = latest.project_version_id.clone().unwrap();
 
                         let version = Version {
@@ -251,24 +250,23 @@ impl Version {
                     ))
                     .bind(r#type)
                     .fetch_all(database.read())
-                    .await
-                    .unwrap();
+                    .await?;
 
                     for row in data {
                         let version = Version {
-                            r#type: row.get("minecraft_version_type"),
-                            supported: row.get("minecraft_version_supported"),
-                            java: row.get("minecraft_version_java"),
-                            builds: row.get("builds"),
-                            created: row.get("minecraft_version_created"),
-                            latest: super::build::Build::map(None, &row),
+                            r#type: row.try_get("minecraft_version_type")?,
+                            supported: row.try_get("minecraft_version_supported")?,
+                            java: row.try_get("minecraft_version_java")?,
+                            builds: row.try_get("builds")?,
+                            created: row.try_get("minecraft_version_created")?,
+                            latest: super::build::Build::map(None, &row)?,
                         };
 
-                        versions.insert(row.get("minecraft_version_id"), version);
+                        versions.insert(row.try_get("minecraft_version_id")?, version);
                     }
                 }
 
-                versions
+                Ok::<_, anyhow::Error>(versions)
             })
             .await
     }

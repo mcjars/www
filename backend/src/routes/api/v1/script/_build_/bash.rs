@@ -4,9 +4,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::build::{Build, InstallationStep},
+        response::{ApiResponse, ApiResponseResult},
         routes::GetState,
     };
     use axum::{
+        body::Body,
         extract::{Path, Query},
         http::StatusCode,
     };
@@ -39,8 +41,8 @@ mod get {
         state: GetState,
         Path(identifier): Path<String>,
         Query(query): Query<Params>,
-    ) -> (StatusCode, String) {
-        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await;
+    ) -> ApiResponseResult {
+        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await?;
 
         if let Some((build, _, version)) = data {
             let mut script = format!(
@@ -122,26 +124,28 @@ exit 0
                 .trim_end(),
             );
 
-            (
-                StatusCode::OK,
+            ApiResponse::new(Body::from(
                 script
                     .lines()
                     .filter(|l| !l.starts_with("echo") || query.echo)
                     .collect::<Vec<&str>>()
                     .join("\n"),
-            )
+            ))
+            .with_header("Content-Type", "text/plain")
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
+            ApiResponse::new(Body::from(
                 r#"
 #!/bin/bash
 
 echo "Build not found"
 exit 1
                 "#
-                .trim()
-                .to_string(),
-            )
+                .trim(),
+            ))
+            .with_status(StatusCode::NOT_FOUND)
+            .with_header("Content-Type", "text/plain")
+            .ok()
         }
     }
 }

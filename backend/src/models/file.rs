@@ -1,4 +1,5 @@
 use super::BaseModel;
+use crate::prelude::IteratorExtension;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
 use std::{collections::BTreeMap, path::Path};
@@ -6,7 +7,7 @@ use utoipa::ToSchema;
 
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct File {
-    pub name: String,
+    pub name: compact_str::CompactString,
 
     pub is_directory: bool,
     pub size: i64,
@@ -24,81 +25,82 @@ pub struct File {
 }
 
 impl BaseModel for File {
-    #[inline]
-    fn columns(prefix: Option<&str>, table: Option<&str>) -> BTreeMap<String, String> {
+    fn columns(
+        prefix: Option<&str>,
+        table: Option<&str>,
+    ) -> BTreeMap<compact_str::CompactString, compact_str::CompactString> {
         let table = table.unwrap_or("files");
 
         BTreeMap::from([
             (
-                format!("{table}.path[array_upper({table}.path, 1)]"),
-                format!("{}current_entry", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.path[array_upper({table}.path, 1)]"),
+                compact_str::format_compact!("{}current_entry", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.size::int8"),
-                format!("{}total_size", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.size::int8"),
+                compact_str::format_compact!("{}total_size", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.md5"),
-                format!("{}md5", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.md5"),
+                compact_str::format_compact!("{}md5", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.sha1"),
-                format!("{}sha1", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.sha1"),
+                compact_str::format_compact!("{}sha1", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.sha224"),
-                format!("{}sha224", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.sha224"),
+                compact_str::format_compact!("{}sha224", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.sha256"),
-                format!("{}sha256", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.sha256"),
+                compact_str::format_compact!("{}sha256", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.sha384"),
-                format!("{}sha384", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.sha384"),
+                compact_str::format_compact!("{}sha384", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.sha512"),
-                format!("{}sha512", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.sha512"),
+                compact_str::format_compact!("{}sha512", prefix.unwrap_or_default()),
             ),
             (
-                format!("{table}.last_access"),
-                format!("{}last_access", prefix.unwrap_or_default()),
+                compact_str::format_compact!("{table}.last_access"),
+                compact_str::format_compact!("{}last_access", prefix.unwrap_or_default()),
             ),
         ])
     }
 
-    #[inline]
-    fn map(prefix: Option<&str>, row: &PgRow) -> Self {
+    fn map(prefix: Option<&str>, row: &PgRow) -> Result<Self, anyhow::Error> {
         let prefix = prefix.unwrap_or_default();
 
-        Self {
-            name: row.get(format!("{prefix}current_entry").as_str()),
+        Ok(Self {
+            name: row.try_get(compact_str::format_compact!("{prefix}current_entry").as_str())?,
             is_directory: row
-                .try_get(format!("{prefix}is_directory").as_str())
+                .try_get(compact_str::format_compact!("{prefix}is_directory").as_str())
                 .unwrap_or_default(),
-            size: row.get(format!("{prefix}total_size").as_str()),
-            md5: row.get(format!("{prefix}md5").as_str()),
-            sha1: row.get(format!("{prefix}sha1").as_str()),
-            sha224: row.get(format!("{prefix}sha224").as_str()),
-            sha256: row.get(format!("{prefix}sha256").as_str()),
-            sha384: row.get(format!("{prefix}sha384").as_str()),
-            sha512: row.get(format!("{prefix}sha512").as_str()),
-            last_access: row.get(format!("{prefix}last_access").as_str()),
-        }
+            size: row.try_get(compact_str::format_compact!("{prefix}total_size").as_str())?,
+            md5: row.try_get(compact_str::format_compact!("{prefix}md5").as_str())?,
+            sha1: row.try_get(compact_str::format_compact!("{prefix}sha1").as_str())?,
+            sha224: row.try_get(compact_str::format_compact!("{prefix}sha224").as_str())?,
+            sha256: row.try_get(compact_str::format_compact!("{prefix}sha256").as_str())?,
+            sha384: row.try_get(compact_str::format_compact!("{prefix}sha384").as_str())?,
+            sha512: row.try_get(compact_str::format_compact!("{prefix}sha512").as_str())?,
+            last_access: row
+                .try_get(compact_str::format_compact!("{prefix}last_access").as_str())?,
+        })
     }
 }
 
 impl File {
-    #[inline]
     pub async fn by_path(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         path: &Path,
-    ) -> Option<Self> {
+    ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("file::{}", path.display()), 3600, || async {
-                sqlx::query(&format!(
+                let data = sqlx::query(&format!(
                     r#"
                     SELECT {}
                     FROM files
@@ -113,19 +115,18 @@ impl File {
                         .collect::<Vec<_>>(),
                 )
                 .fetch_optional(database.read())
-                .await
-                .unwrap()
-                .map(|row| Self::map(None, &row))
+                .await?;
+
+                data.map(|row| Self::map(None, &row)).transpose()
             })
             .await
     }
 
-    #[inline]
     pub async fn all_for_root(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         root: &Path,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>, anyhow::Error> {
         cache
             .cached(&format!("files::{}", root.display()), 3600, || async {
                 sqlx::query(
@@ -185,11 +186,10 @@ impl File {
                         .collect::<Vec<String>>()
                 )
                 .fetch_all(database.read())
-                .await
-                .unwrap()
+                .await?
                 .into_iter()
                 .map(|row| Self::map(None, &row))
-                .collect()
+                .try_collect_vec()
             })
             .await
     }

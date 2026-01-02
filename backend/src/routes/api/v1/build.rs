@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::{build::Build, version::MinifiedVersion},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetData, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -33,8 +34,8 @@ mod get {
         state: GetState,
         request_data: GetData,
         Path(identifier): Path<String>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await;
+    ) -> ApiResponseResult {
+        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await?;
 
         if let Some((build, latest, version)) = data {
             *request_data.lock().unwrap() = json!({
@@ -49,23 +50,17 @@ mod get {
                 }
             });
 
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        build,
-                        latest,
-                        version,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                build,
+                latest,
+                version,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["build not found"]).to_value()),
-            )
+            ApiResponse::error("build not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

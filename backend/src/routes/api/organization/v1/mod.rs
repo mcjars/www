@@ -6,16 +6,16 @@ mod types;
 mod get {
     use crate::{
         models::r#type::ServerType,
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::organization::GetOrganization},
     };
     use serde::{Deserialize, Serialize};
-    use sqlx::Row;
     use utoipa::ToSchema;
 
     #[derive(ToSchema, Serialize)]
     struct Infos {
-        icon: String,
-        name: String,
+        icon: compact_str::CompactString,
+        name: compact_str::CompactString,
         types: Vec<ServerType>,
     }
 
@@ -23,7 +23,7 @@ mod get {
     #[serde(rename_all = "camelCase")]
     #[schema(rename_all = "camelCase")]
     struct Stats {
-        requests: i64,
+        requests: u64,
         user_agents: Vec<String>,
         origins: Vec<String>,
     }
@@ -41,10 +41,7 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(
-        state: GetState,
-        mut organization: GetOrganization,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, mut organization: GetOrganization) -> ApiResponseResult {
         let organization = organization.take().unwrap();
 
         let stats = state
@@ -53,67 +50,66 @@ mod get {
                 &format!("organization::{}::stats", organization.id),
                 300,
                 || async {
-                    let (requests, user_agents, origins) = tokio::join!(
-                        sqlx::query(
-                            r#"
-                            SELECT COUNT(*)
-                            FROM requests
-                            WHERE requests.organization_id = $1
-                            "#,
-                        )
-                        .bind(organization.id)
-                        .fetch_one(state.database.read()),
-                        sqlx::query(
-                            r#"
-                            SELECT requests.user_agent
-                            FROM requests
-                            WHERE requests.organization_id = $1
-                            GROUP BY requests.user_agent
-                            "#,
-                        )
-                        .bind(organization.id)
-                        .fetch_all(state.database.read()),
-                        sqlx::query(
-                            r#"
-                            SELECT requests.origin
-                            FROM requests
-                            WHERE requests.organization_id = $1 AND requests.origin IS NOT NULL
-                            GROUP BY requests.origin
-                            "#,
-                        )
-                        .bind(organization.id)
-                        .fetch_all(state.database.read())
-                    );
+                    let (requests, user_agents, origins) = tokio::try_join!(
+                        state
+                            .clickhouse
+                            .client()
+                            .query(
+                                r#"
+                                SELECT COUNT(*)
+                                FROM requests
+                                WHERE requests.organization_id = ?
+                                "#,
+                            )
+                            .bind(organization.id)
+                            .fetch_one::<u64>(),
+                        state
+                            .clickhouse
+                            .client()
+                            .query(
+                                r#"
+                                SELECT requests.user_agent
+                                FROM requests
+                                WHERE requests.organization_id = ?
+                                GROUP BY requests.user_agent
+                                "#,
+                            )
+                            .bind(organization.id)
+                            .fetch_all::<String>(),
+                        state
+                            .clickhouse
+                            .client()
+                            .query(
+                                r#"
+                                SELECT COALESCE(requests.origin, '')
+                                FROM requests
+                                WHERE requests.organization_id = ? AND requests.origin IS NOT NULL
+                                GROUP BY requests.origin
+                                "#,
+                            )
+                            .bind(organization.id)
+                            .fetch_all::<String>(),
+                    )?;
 
-                    let requests = requests.unwrap();
-                    let user_agents = user_agents
-                        .unwrap()
-                        .into_iter()
-                        .map(|row| row.get(0))
-                        .collect();
-                    let origins = origins.unwrap().into_iter().map(|row| row.get(0)).collect();
-
-                    Stats {
-                        requests: requests.get(0),
+                    Ok::<_, anyhow::Error>(Stats {
+                        requests,
                         user_agents,
                         origins,
-                    }
+                    })
                 },
             )
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                infos: Infos {
-                    icon: organization.icon,
-                    name: organization.name,
-                    types: organization.types,
-                },
-                stats,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            infos: Infos {
+                icon: organization.icon,
+                name: organization.name,
+                types: organization.types,
+            },
+            stats,
+        })
+        .ok()
     }
 }
 

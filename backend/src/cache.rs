@@ -2,8 +2,10 @@ use crate::env::RedisMode;
 use colored::Colorize;
 use rustis::{
     client::Client,
-    commands::{GenericCommands, SetCondition, SetExpiration, StringCommands},
-    resp::cmd,
+    commands::{
+        GenericCommands, InfoSection, ServerCommands, SetCondition, SetExpiration, StringCommands,
+    },
+    resp::BulkString,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
@@ -41,30 +43,19 @@ impl Cache {
             cache_misses: AtomicUsize::new(0),
         };
 
-        let version = String::from_utf8(
-            instance
-                .client
-                .send(cmd("INFO"), None)
-                .await
-                .unwrap()
-                .as_bytes()
-                .into(),
-        )
-        .unwrap()
-        .lines()
-        .find(|line| line.starts_with("redis_version:"))
-        .unwrap()
-        .split(':')
-        .collect::<Vec<&str>>()[1]
+        let version: String = instance.client.info([InfoSection::Server]).await.unwrap();
+        let version = version
+            .lines()
+            .find(|line| line.starts_with("redis_version:"))
+            .unwrap()
+            .split(':')
+            .collect::<Vec<&str>>()[1]
             .to_string();
 
-        crate::logger::log(
-            crate::logger::LoggerLevel::Info,
-            format!(
-                "{} connected {}",
-                "cache".bright_yellow(),
-                format!("(redis@{}, {}ms)", version, start.elapsed().as_millis()).bright_black()
-            ),
+        tracing::info!(
+            "{} connected {}",
+            "cache".bright_yellow(),
+            format!("(redis@{}, {}ms)", version, start.elapsed().as_millis()).bright_black()
         );
 
         instance
@@ -80,29 +71,38 @@ impl Cache {
         self.cache_misses.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    #[inline]
-    pub async fn cached<T, F, Fut>(&self, key: &str, ttl: u64, fn_compute: F) -> T
+    #[tracing::instrument(skip(self, fn_compute))]
+    pub async fn cached<T, F, Fut, FutErr>(
+        &self,
+        key: &str,
+        ttl: u64,
+        fn_compute: F,
+    ) -> Result<T, anyhow::Error>
     where
-        T: Serialize + DeserializeOwned,
+        T: Serialize + DeserializeOwned + Send,
         F: FnOnce() -> Fut,
-        Fut: Future<Output = T>,
+        Fut: Future<Output = Result<T, FutErr>>,
+        FutErr: Into<anyhow::Error> + Send + Sync + 'static,
     {
-        let cached_value: Option<String> = self.client.get(key).await.unwrap();
+        let cached_value: Option<BulkString> = self.client.get(key).await?;
 
         match cached_value {
             Some(value) => {
-                let result: T = serde_json::from_str(&value).unwrap();
+                let result: T = serde_json::from_slice(value.as_bytes())?;
                 self.cache_hits
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                result
+                Ok(result)
             }
             None => {
-                let result = fn_compute().await;
+                let result = match fn_compute().await {
+                    Ok(result) => result,
+                    Err(err) => return Err(err.into()),
+                };
                 self.cache_misses
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                let serialized = serde_json::to_string(&result).unwrap();
+                let serialized = serde_json::to_vec(&result)?;
                 self.client
                     .set_with_options(
                         key,
@@ -111,24 +111,23 @@ impl Cache {
                         SetExpiration::Ex(ttl),
                         false,
                     )
-                    .await
-                    .unwrap();
+                    .await?;
 
-                result
+                Ok(result)
             }
         }
     }
 
-    #[inline]
-    pub async fn clear_organization(&self, organization: i32) {
+    pub async fn clear_organization(&self, organization: i32) -> Result<(), anyhow::Error> {
         let keys: Vec<String> = self
             .client
             .keys(format!("organization::{organization}*"))
-            .await
-            .unwrap();
+            .await?;
 
         if !keys.is_empty() {
-            self.client.del(keys).await.unwrap();
+            self.client.del(keys).await?;
         }
+
+        Ok(())
     }
 }

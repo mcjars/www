@@ -59,8 +59,8 @@ async fn auth(
     )
     .await
     {
-        Some(organization) => organization,
-        None => {
+        Ok(Some(organization)) => organization,
+        Ok(None) | Err(_) => {
             return Ok(Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .header("Content-Type", "application/json")
@@ -78,7 +78,10 @@ async fn auth(
 
 mod get {
     use super::GetOrganization;
-    use crate::models::organization::Organization;
+    use crate::{
+        models::organization::Organization,
+        response::{ApiResponse, ApiResponseResult},
+    };
     use serde::Serialize;
     use utoipa::ToSchema;
 
@@ -97,14 +100,12 @@ mod get {
             example = 1,
         ),
     ))]
-    pub async fn route(organization: GetOrganization) -> axum::Json<serde_json::Value> {
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                organization: organization.0,
-            })
-            .unwrap(),
-        )
+    pub async fn route(organization: GetOrganization) -> ApiResponseResult {
+        ApiResponse::json(Response {
+            success: true,
+            organization: organization.0,
+        })
+        .ok()
     }
 }
 
@@ -116,6 +117,7 @@ mod patch {
             r#type::ServerType,
             user::User,
         },
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::GetUser},
     };
     use axum::http::StatusCode;
@@ -150,41 +152,36 @@ mod patch {
         user: GetUser,
         mut organization: GetOrganization,
         axum::Json(data): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         let mut owner_id = organization.owner.id;
         if let Some(owner) = data.owner {
             if user.id != organization.owner.id {
-                return (
-                    StatusCode::UNAUTHORIZED,
-                    axum::Json(ApiError::new(&["unauthorized"]).to_value()),
-                );
+                return ApiResponse::error("unauthorized")
+                    .with_status(StatusCode::UNAUTHORIZED)
+                    .ok();
             }
 
-            owner_id = match User::by_login(&state.database, &state.cache, &owner).await {
+            owner_id = match User::by_login(&state.database, &state.cache, &owner).await? {
                 Some(user) => user.id,
                 None => {
-                    return (
-                        StatusCode::NOT_FOUND,
-                        axum::Json(ApiError::new(&["owner not found"]).to_value()),
-                    );
+                    return ApiResponse::error("owner not found")
+                        .with_status(StatusCode::NOT_FOUND)
+                        .ok();
                 }
             };
 
             let count = Organization::count_by_owner(&state.database, owner_id).await;
             if count >= 1 {
-                return (
-                    StatusCode::CONFLICT,
-                    axum::Json(
-                        ApiError::new(&["new owner already has an organization"]).to_value(),
-                    ),
-                );
+                return ApiResponse::error("new owner already has an organization")
+                    .with_status(StatusCode::CONFLICT)
+                    .ok();
             }
 
-            OrganizationSubuser::delete_by_ids(&state.database, organization.id, owner_id).await;
+            OrganizationSubuser::delete_by_ids(&state.database, organization.id, owner_id).await?;
         }
 
         if let Some(name) = data.name {
-            organization.name = name;
+            organization.name = name.into();
         }
 
         if let Some(public) = data.public {
@@ -196,14 +193,11 @@ mod patch {
         }
 
         organization.owner.id = owner_id;
-        organization.save(&state.database).await;
+        organization.save(&state.database).await?;
 
-        state.cache.clear_organization(organization.id).await;
+        state.cache.clear_organization(organization.id).await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),
-        )
+        ApiResponse::json(Response { success: true }).ok()
     }
 }
 
@@ -211,7 +205,8 @@ mod delete {
     use super::GetOrganization;
     use crate::{
         models::organization::Organization,
-        routes::{ApiError, GetState, api::user::GetUser},
+        response::{ApiResponse, ApiResponseResult},
+        routes::{GetState, api::user::GetUser},
     };
     use axum::http::StatusCode;
     use serde::Serialize;
@@ -235,12 +230,11 @@ mod delete {
         state: GetState,
         user: GetUser,
         organization: GetOrganization,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if user.id != organization.owner.id {
-            return (
-                StatusCode::UNAUTHORIZED,
-                axum::Json(ApiError::new(&["unauthorized"]).to_value()),
-            );
+            return ApiResponse::error("unauthorized")
+                .with_status(StatusCode::UNAUTHORIZED)
+                .ok();
         }
 
         if organization.icon.starts_with(&state.env.s3_url)
@@ -255,12 +249,9 @@ mod delete {
                 .unwrap_or_default();
         }
 
-        Organization::delete_by_id(&state.database, organization.id).await;
+        Organization::delete_by_id(&state.database, organization.id).await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),
-        )
+        ApiResponse::json(Response { success: true }).ok()
     }
 }
 

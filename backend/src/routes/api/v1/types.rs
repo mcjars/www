@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::r#type::{ServerType, ServerTypeInfo, V1_TYPES},
+        response::{ApiResponse, ApiResponseResult},
         routes::GetState,
     };
     use indexmap::IndexMap;
@@ -19,19 +20,19 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState) -> axum::Json<serde_json::Value> {
-        let data = ServerType::all(&state.database, &state.cache).await;
+    #[deprecated]
+    pub async fn route(state: GetState) -> ApiResponseResult {
+        let data = ServerType::all(&state.database, &state.cache, &state.env).await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                types: ServerType::extract(&data, &V1_TYPES),
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            types: ServerType::extract(&data, &V1_TYPES),
+        })
+        .ok()
     }
 }
 
+#[allow(deprecated)]
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get::route))

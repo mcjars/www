@@ -34,17 +34,20 @@ impl S3 {
         instance
     }
 
-    #[inline]
-    pub async fn url(&self, path: &str, content: &[u8], content_type: Option<&str>) -> String {
+    pub async fn url(
+        &self,
+        path: &str,
+        content: &[u8],
+        content_type: Option<&str>,
+    ) -> Result<String, s3::error::S3Error> {
         self.bucket
             .put_object_with_content_type(
                 path,
                 content,
                 content_type.unwrap_or("application/octet-stream"),
             )
-            .await
-            .unwrap();
+            .await?;
 
-        format!("{}/{}", self.public_url, path)
+        Ok(format!("{}/{}", self.public_url, path))
     }
 }

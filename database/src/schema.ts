@@ -1,5 +1,5 @@
 import { isNotNull, relations, sql } from "drizzle-orm"
-import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType, bigint } from "drizzle-orm/pg-core"
+import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType, bigint, date } from "drizzle-orm/pg-core"
 
 export const bytea = customType<{ data: string; notNull: false; default: false }>({
   dataType() {
@@ -179,31 +179,6 @@ export const userSessions = pgTable('user_sessions', {
 }, (userSessions) => [
 	index('userSessions_user_idx').on(userSessions.userId),
 	uniqueIndex('userSessions_session_idx').on(userSessions.session)
-])
-
-export const requests = pgTable('requests', {
-	id: char('id', { length: 12 }).primaryKey().notNull(),
-	organizationId: integer('organization_id').references(() => organizations.id, { onDelete: 'set null' }),
-
-	origin: varchar('origin', { length: 255 }),
-	method: methodEnum('method').notNull(),
-	path: varchar('path', { length: 255 }).notNull(),
-	time: integer('time').notNull(),
-	status: smallint('status').notNull(),
-	body: jsonb('body'),
-	ip: inet('ip').notNull(),
-	continent: char('continent', { length: 2 }),
-	country: char('country', { length: 2 }),
-	data: jsonb('data'),
-	userAgent: varchar('user_agent', { length: 255 }).notNull(),
-	created: timestamp('created').notNull()
-}, (requests) => [
-	index('requests_organization_idx').on(requests.organizationId).where(isNotNull(requests.organizationId)),
-	index('requests_status_idx').on(requests.status).where(sql`status = 200`),
-	index('requests_ip_idx').on(requests.ip),
-	index('requests_continent_idx').on(requests.continent).where(isNotNull(requests.continent)),
-	index('requests_country_idx').on(requests.country).where(isNotNull(requests.country)),
-	index('requests_created_idx').using('brin', requests.created)
 ])
 
 export const minecraftVersions = pgTable('minecraft_versions', {
@@ -386,3 +361,47 @@ export const buildConfigs = pgTable('build_configs', {
 	index('buildConfigs_config_idx').on(buildConfigs.configId),
 	index('buildConfigs_config_value_idx').on(buildConfigs.configValueId)
 ])
+
+export const chRequestStats = pgTable('ch_request_stats', {
+  requestType: text('request_type').notNull(),
+  searchType: text('search_type').notNull(),
+  searchVersion: text('search_version').notNull(),
+  buildType: text('build_type').notNull(),
+  buildVersionId: text('build_version_id').notNull(),
+  buildProjectVersionId: text('build_project_version_id').notNull(),
+  
+  totalRequests: bigint('total_requests', { mode: 'number' }).notNull(), 
+  uniqueIps: bigint('unique_ips', { mode: 'number' }).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.requestType, t.searchType, t.searchVersion, t.buildType, t.buildVersionId, t.buildProjectVersionId] }),
+
+  index('chRequestStats_req_search_type_idx').on(t.requestType, t.searchType),
+  index('chRequestStats_req_search_ver_idx').on(t.requestType, t.searchVersion),
+  index('chRequestStats_req_build_ver_idx').on(t.requestType, t.buildVersionId),
+  index('chRequestStats_search_ver_idx').on(t.searchVersion), 
+  index('chRequestStats_build_type_idx').on(t.buildType),
+  index('chRequestStats_build_vid_idx').on(t.buildVersionId),
+  index('chRequestStats_build_pvid_idx').on(t.buildProjectVersionId),
+]);
+
+export const chRequestStatsDaily = pgTable('ch_request_stats_daily', {
+  requestType: text('request_type').notNull(),
+  searchType: text('search_type').notNull(),
+  searchVersion: text('search_version').notNull(),
+  buildType: text('build_type').notNull(),
+  buildVersionId: text('build_version_id').notNull(),
+  buildProjectVersionId: text('build_project_version_id').notNull(),
+  dateOnly: date('date_only').notNull(),
+  day: smallint('day').notNull(),
+
+  totalRequests: bigint('total_requests', { mode: 'number' }).notNull(),
+  uniqueIps: bigint('unique_ips', { mode: 'number' }).notNull()
+}, (t) => [
+  primaryKey({ columns: [t.requestType, t.searchType, t.searchVersion, t.buildType, t.buildVersionId, t.buildProjectVersionId, t.dateOnly] }),
+
+  index('chRequestStatsDaily_req_date_idx').on(t.requestType, t.dateOnly),
+  index('chRequestStatsDaily_search_ver_date_idx').on(t.searchVersion, t.dateOnly),
+  index('chRequestStatsDaily_build_ver_date_idx').on(t.buildVersionId, t.dateOnly),
+  index('chRequestStatsDaily_date_idx').on(t.dateOnly),
+  index('chRequestStatsDaily_day_idx').on(t.day),
+]);

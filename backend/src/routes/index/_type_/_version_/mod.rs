@@ -12,7 +12,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
             get(
                 |state: GetState, Path((r#type, version)): Path<(ServerType, String)>| async move {
                     let location =
-                        Version::location(&state.database, &state.cache, r#type, &version).await;
+                        Version::location(&state.database, &state.cache, r#type, &version).await?;
 
                     let mut files = Vec::new();
                     if let Some(location) = location {
@@ -21,22 +21,26 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             .cached(&format!("builds::{type}::{version}"), 1800, || {
                                 Build::all_for_version(&state.database, r#type, &location, &version)
                             })
-                            .await;
+                            .await?;
 
                         files = data
                             .into_iter()
                             .rev()
                             .map(|b| IndexFile {
-                                name: format!("{}/", b.name),
-                                size: human_bytes::human_bytes(b.installation_size() as f64),
-                                href: Some(format!("{}/", b.id)),
+                                name: compact_str::format_compact!("{}/", b.name),
+                                size: human_bytes::human_bytes(b.installation_size() as f64).into(),
+                                href: Some(compact_str::format_compact!("{}/", b.id)),
                             })
                             .collect::<Vec<_>>();
                     }
 
                     crate::routes::index::render(
-                        state,
-                        &format!("/{}/{}/", r#type.infos().name, version),
+                        &state,
+                        &compact_str::format_compact!(
+                            "/{}/{}/",
+                            r#type.infos(&state.env).name,
+                            version
+                        ),
                         files,
                     )
                 },

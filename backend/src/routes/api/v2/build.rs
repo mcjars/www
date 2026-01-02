@@ -10,6 +10,7 @@ mod post {
             r#type::ServerType,
             version::{MinifiedVersion, VersionType},
         },
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetData, GetState},
     };
     use axum::{extract::Query, http::StatusCode};
@@ -100,7 +101,7 @@ mod post {
     }
 
     #[derive(ToSchema, Serialize, Deserialize)]
-    struct Result {
+    struct BuildResult {
         build: Build,
         latest: Build,
         version: MinifiedVersion,
@@ -125,7 +126,7 @@ mod post {
         success: bool,
 
         #[schema(inline)]
-        builds: Vec<Option<Result>>,
+        builds: Vec<Option<BuildResult>>,
     }
 
     #[utoipa::path(post, path = "/", responses(
@@ -139,7 +140,7 @@ mod post {
         request_data: GetData,
         params: Query<Params>,
         axum::Json(data): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         let fields = params
             .fields
             .split(',')
@@ -148,7 +149,7 @@ mod post {
 
         match data {
             Payload::One(search) => {
-                if let Some(result) = lookup_build(&state.database, &state.cache, *search).await {
+                if let Some(result) = lookup_build(&state.database, &state.cache, *search).await? {
                     *request_data.lock().unwrap() = json!({
                         "type": "lookup",
                         "build": {
@@ -161,32 +162,25 @@ mod post {
                         }
                     });
 
-                    (
-                        StatusCode::OK,
-                        axum::Json(json!({
-                            "success": true,
-                            "build": crate::utils::extract_fields(result.build, &fields),
-                            "latest": crate::utils::extract_fields(result.latest, &fields),
-                            "version": result.version,
-                            "configs": result.configs,
-                        })),
-                    )
+                    ApiResponse::json(json!({
+                        "success": true,
+                        "build": crate::utils::extract_fields(result.build, &fields),
+                        "latest": crate::utils::extract_fields(result.latest, &fields),
+                        "version": result.version,
+                        "configs": result.configs,
+                    }))
+                    .ok()
                 } else {
-                    (
-                        StatusCode::NOT_FOUND,
-                        axum::Json(ApiError::new(&["build not found"]).to_value()),
-                    )
+                    ApiResponse::error("build not found")
+                        .with_status(StatusCode::NOT_FOUND)
+                        .ok()
                 }
             }
             Payload::Many(searches) => {
                 if searches.len() > 10 {
-                    return (
-                        StatusCode::PAYLOAD_TOO_LARGE,
-                        axum::Json(
-                            ApiError::new(&["you can only search for up to 10 builds at a time"])
-                                .to_value(),
-                        ),
-                    );
+                    return ApiResponse::error("you can only search for up to 10 builds at a time")
+                        .with_status(StatusCode::PAYLOAD_TOO_LARGE)
+                        .ok();
                 }
 
                 let mut results = Vec::with_capacity(searches.len());
@@ -194,7 +188,7 @@ mod post {
                     results.push(lookup_build(&state.database, &state.cache, search));
                 }
 
-                let results = futures_util::future::join_all(results).await;
+                let results = futures_util::future::try_join_all(results).await?;
 
                 if let Some(result) = results.iter().flatten().next() {
                     *request_data.lock().unwrap() = json!({
@@ -210,22 +204,20 @@ mod post {
                     });
                 }
 
-                (
-                    StatusCode::MULTI_STATUS,
-                    axum::Json(json!({
-                        "success": true,
-                        "builds": results.into_iter().map(|r| {
-                            r.map(|result| {
-                                json!({
-                                    "build": crate::utils::extract_fields(result.build, &fields),
-                                    "latest": crate::utils::extract_fields(result.latest, &fields),
-                                    "version": result.version,
-                                    "configs": result.configs,
-                                })
+                ApiResponse::json(json!({
+                    "success": true,
+                    "builds": results.into_iter().map(|r| {
+                        r.map(|result| {
+                            json!({
+                                "build": crate::utils::extract_fields(result.build, &fields),
+                                "latest": crate::utils::extract_fields(result.latest, &fields),
+                                "version": result.version,
+                                "configs": result.configs,
                             })
-                        }).collect::<Vec<_>>()
-                    })),
-                )
+                        })
+                    }).collect::<Vec<_>>()
+                }))
+                .ok()
             }
         }
     }
@@ -235,9 +227,9 @@ mod post {
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         search: BuildSearch,
-    ) -> Option<Result> {
+    ) -> Result<Option<BuildResult>, anyhow::Error> {
         if !search.has_any() {
-            return None;
+            return Ok(None);
         }
 
         cache.cached(&format!("build::{}", serde_json::to_string(&search).unwrap()), 3600, || async {
@@ -392,11 +384,10 @@ mod post {
             ))
             .bind(serde_json::to_value(data).unwrap())
             .fetch_all(database.read())
-            .await
-            .unwrap();
+            .await?;
 
             if query.len() != 2 {
-                return None;
+                return Ok(None);
             }
 
             let mut configs = IndexMap::new();
@@ -414,14 +405,13 @@ mod post {
                 ORDER BY configs.id ASC
                 "#,
             )
-            .bind(query[0].get::<i32, _>("id"))
+            .bind(query[0].try_get::<i32, _>("id")?)
             .fetch_all(database.read())
-            .await
-            .unwrap()
+            .await?
             {
-                let r#type = row.get("type");
-                let format = row.get("format");
-                let value = row.get("value");
+                let r#type = row.try_get("type")?;
+                let format = row.try_get("format")?;
+                let value = row.try_get("value")?;
 
                 configs.insert(
                     row.get("location"),
@@ -429,9 +419,9 @@ mod post {
                 );
             }
 
-            Some(Result {
-                build: Build::map(None, &query[0]),
-                latest: Build::map(None, &query[1]),
+            Ok::<_, anyhow::Error>(Some(BuildResult {
+                build: Build::map(None, &query[0])?,
+                latest: Build::map(None, &query[1])?,
                 version: MinifiedVersion {
                     id: query[1]
                         .try_get("version_id")
@@ -445,7 +435,7 @@ mod post {
                         .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
                 },
                 configs
-            })
+            }))
         })
         .await
     }

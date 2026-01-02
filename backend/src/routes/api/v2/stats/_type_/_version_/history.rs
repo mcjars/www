@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::{r#type::ServerType, version::Version},
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -80,22 +81,20 @@ mod get {
     pub async fn route(
         state: GetState,
         Path((r#type, version, year, month)): Path<(ServerType, String, u16, u8)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if year < 2024 || year > chrono::Utc::now().year() as u16 {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid year"]).to_value()),
-            );
+            return ApiResponse::error("invalid year")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         if !(1..=12).contains(&month) {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["Invalid month"]).to_value()),
-            );
+            return ApiResponse::error("invalid month")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await;
+        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
 
         if let Some(location) = location {
             let start = chrono::NaiveDate::from_ymd_opt(year as i32, month as u32, 1).unwrap();
@@ -145,8 +144,7 @@ mod get {
                         .bind(start)
                         .bind(end)
                         .fetch_all(state.database.read())
-                        .await
-                        .unwrap();
+                        .await?;
 
                         let mut stats = Vec::with_capacity(end.day() as usize);
                         for i in 0..end.day() {
@@ -161,35 +159,31 @@ mod get {
                         }
 
                         for row in data {
-                            let entry = stats.get_mut(row.get::<i16, _>("day") as usize).unwrap();
+                            let entry = stats
+                                .get_mut(row.try_get::<i16, _>("day")? as usize)
+                                .unwrap();
 
-                            entry.buids = row.get("builds");
+                            entry.buids = row.try_get("builds")?;
                             entry.size.total.jar = row.try_get("jar_total").unwrap_or_default();
                             entry.size.total.zip = row.try_get("zip_total").unwrap_or_default();
                             entry.size.average.jar = row.try_get("jar_average").unwrap_or_default();
                             entry.size.average.zip = row.try_get("zip_average").unwrap_or_default();
                         }
 
-                        stats
+                        Ok::<_, anyhow::Error>(stats)
                     },
                 )
-                .await;
+                .await?;
 
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        stats,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                stats,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["version not found"]).to_value()),
-            )
+            ApiResponse::error("version not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }

@@ -5,7 +5,11 @@ mod _version_;
 mod history;
 
 mod get {
-    use crate::{models::r#type::ServerType, routes::GetState};
+    use crate::{
+        models::r#type::ServerType,
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use axum::extract::Path;
     use serde::{Deserialize, Serialize};
     use sqlx::Row;
@@ -57,10 +61,7 @@ mod get {
             example = "VANILLA",
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path(r#type): Path<ServerType>,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, Path(r#type): Path<ServerType>) -> ApiResponseResult {
         let stats = state
             .cache
             .cached(&format!("stats::types::{type}::all"), 10800, || async {
@@ -83,11 +84,10 @@ mod get {
                 ))
                 .bind(r#type)
                 .fetch_one(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
-                Stats {
-                    buids: data.get("builds"),
+                Ok::<_, anyhow::Error>(Stats {
+                    buids: data.try_get("builds")?,
                     size: Size {
                         total: TotalStats {
                             jar: data.try_get("jar_total").unwrap_or_default(),
@@ -98,17 +98,15 @@ mod get {
                             zip: data.try_get("zip_average").unwrap_or_default(),
                         },
                     },
-                }
+                })
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                stats,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            stats,
+        })
+        .ok()
     }
 }
 

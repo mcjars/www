@@ -6,6 +6,7 @@ mod _organization_;
 mod get {
     use crate::{
         models::organization::Organization,
+        response::{ApiResponse, ApiResponseResult},
         routes::{GetState, api::user::GetUser},
     };
     use indexmap::IndexSet;
@@ -30,8 +31,8 @@ mod get {
     #[utoipa::path(get, path = "/", responses(
         (status = OK, body = inline(Response)),
     ))]
-    pub async fn route(state: GetState, user: GetUser) -> axum::Json<serde_json::Value> {
-        let raw_organizations = Organization::all_by_owner(&state.database, user.id).await;
+    pub async fn route(state: GetState, user: GetUser) -> ApiResponseResult {
+        let raw_organizations = Organization::all_by_owner(&state.database, user.id).await?;
         let mut used_organization_ids = IndexSet::new();
         let mut organizations = Organizations {
             owned: Vec::new(),
@@ -55,19 +56,18 @@ mod get {
             }
         }
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                organizations,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            organizations,
+        })
+        .ok()
     }
 }
 
 mod post {
     use crate::{
         models::organization::Organization,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::GetUser},
     };
     use axum::http::StatusCode;
@@ -94,28 +94,23 @@ mod post {
         state: GetState,
         user: GetUser,
         axum::Json(payload): axum::Json<Payload>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         if !(3..16).contains(&payload.name.len()) {
-            return (
-                StatusCode::BAD_REQUEST,
-                axum::Json(ApiError::new(&["name must be between 3 and 16 characters"]).to_value()),
-            );
+            return ApiResponse::error("name must be between 3 and 16 characters")
+                .with_status(StatusCode::BAD_REQUEST)
+                .ok();
         }
 
         let count = Organization::count_by_owner(&state.database, user.id).await;
         if count >= 1 {
-            return (
-                StatusCode::CONFLICT,
-                axum::Json(ApiError::new(&["you already have an organization"]).to_value()),
-            );
+            return ApiResponse::error("you already have an organization")
+                .with_status(StatusCode::CONFLICT)
+                .ok();
         }
 
-        Organization::new(&state.database, user.id, &payload.name).await;
+        Organization::new(&state.database, user.id, &payload.name).await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),
-        )
+        ApiResponse::json(Response { success: true }).ok()
     }
 }
 

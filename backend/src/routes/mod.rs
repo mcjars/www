@@ -1,9 +1,10 @@
-use crate::models::organization::Organization;
+use crate::{models::organization::Organization, response::ApiResponse};
 use axum::{
     body::Body,
     extract::Request,
     http::{HeaderMap, Response, StatusCode},
     middleware::Next,
+    response::IntoResponse,
 };
 use serde::Serialize;
 use std::{
@@ -59,37 +60,28 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
     if let Some(authorization) = req.headers().get("Authorization")
         && let Ok(authorization) = authorization.to_str()
         && authorization.len() == 64
+        && let Ok(org) = Organization::by_key(&state.database, &state.cache, authorization).await
     {
-        organization = Organization::by_key(&state.database, &state.cache, authorization).await;
+        organization = org;
     }
 
     let (parts, body) = req.into_parts();
     let request_id = state.requests.log(&parts, organization.as_ref()).await;
 
     if let Err(Some(ratelimit)) = request_id {
-        return Response::builder()
-            .status(StatusCode::TOO_MANY_REQUESTS)
-            .header("Content-Type", "application/json")
-            .header("X-RateLimit-Limit", ratelimit.limit.to_string())
-            .header(
+        return ApiResponse::error("too many requests")
+            .with_status(StatusCode::TOO_MANY_REQUESTS)
+            .with_header("X-RateLimit-Limit", &ratelimit.limit.to_string())
+            .with_header(
                 "X-RateLimit-Remaining",
-                (ratelimit.limit - ratelimit.hits).to_string(),
+                &(ratelimit.limit - ratelimit.hits).to_string(),
             )
-            .header("X-RateLimit-Reset", "60")
-            .body(Body::from(
-                ApiError::new(&["too many requests"]).to_value().to_string(),
-            ))
-            .unwrap();
+            .with_header("X-RateLimit-Reset", "60")
+            .into_response();
     } else if let Err(None) = request_id {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .header("Content-Type", "application/json")
-            .body(Body::from(
-                ApiError::new(&["broken request, likely invalid IP"])
-                    .to_value()
-                    .to_string(),
-            ))
-            .unwrap();
+        return ApiResponse::error("broken request, likely invalid IP")
+            .with_status(StatusCode::BAD_REQUEST)
+            .into_response();
     }
 
     let mut headers = HeaderMap::new();

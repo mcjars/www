@@ -4,7 +4,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod history;
 
 mod get {
-    use crate::routes::GetState;
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::GetState,
+    };
     use axum::extract::Path;
     use serde::{Deserialize, Serialize};
     use sqlx::Row;
@@ -56,10 +59,7 @@ mod get {
             example = "1.17.1",
         ),
     ))]
-    pub async fn route(
-        state: GetState,
-        Path(version): Path<String>,
-    ) -> axum::Json<serde_json::Value> {
+    pub async fn route(state: GetState, Path(version): Path<String>) -> ApiResponseResult {
         let stats = state
             .cache
             .cached(&format!("stats::versions::{version}"), 10800, || async {
@@ -77,11 +77,10 @@ mod get {
                 )
                 .bind(version)
                 .fetch_one(state.database.read())
-                .await
-                .unwrap();
+                .await?;
 
-                Stats {
-                    buids: data.get("builds"),
+                Ok::<_, anyhow::Error>(Stats {
+                    buids: data.try_get("builds")?,
                     size: Size {
                         total: TotalStats {
                             jar: data.try_get("jar_total").unwrap_or_default(),
@@ -92,17 +91,15 @@ mod get {
                             zip: data.try_get("zip_average").unwrap_or_default(),
                         },
                     },
-                }
+                })
             })
-            .await;
+            .await?;
 
-        axum::Json(
-            serde_json::to_value(&Response {
-                success: true,
-                stats,
-            })
-            .unwrap(),
-        )
+        ApiResponse::json(Response {
+            success: true,
+            stats,
+        })
+        .ok()
     }
 }
 

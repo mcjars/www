@@ -2,10 +2,12 @@ use super::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod post {
-    use crate::routes::{
-        ApiError, GetState, api::user::organizations::_organization_::GetOrganization,
+    use crate::{
+        response::{ApiResponse, ApiResponseResult},
+        routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::{body::Bytes, http::StatusCode};
+    use compact_str::ToCompactString;
     use image::{ImageReader, codecs::webp::WebPEncoder, imageops::FilterType};
     use serde::Serialize;
     use utoipa::ToSchema;
@@ -30,34 +32,35 @@ mod post {
         state: GetState,
         mut organization: GetOrganization,
         image: Bytes,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
+    ) -> ApiResponseResult {
         let image = match ImageReader::new(std::io::Cursor::new(image)).with_guessed_format() {
             Ok(reader) => reader,
             Err(_) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    axum::Json(ApiError::new(&["invalid image"]).to_value()),
-                );
+                return ApiResponse::error("invalid image")
+                    .with_status(StatusCode::BAD_REQUEST)
+                    .ok();
             }
         };
 
-        let image = match image.decode() {
+        let image = match tokio::task::spawn_blocking(move || image.decode()).await? {
             Ok(image) => image,
             Err(_) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    axum::Json(ApiError::new(&["invalid image"]).to_value()),
-                );
+                return ApiResponse::error("image: unable to decode")
+                    .with_status(StatusCode::BAD_REQUEST)
+                    .ok();
             }
         };
 
-        let image = image.resize_exact(512, 512, FilterType::Triangle);
-        let mut data: Vec<u8> = Vec::new();
-        let encoder = WebPEncoder::new_lossless(&mut data);
-        let color = image.color();
-        encoder
-            .encode(image.into_bytes().as_slice(), 512, 512, color.into())
-            .unwrap();
+        let data = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, image::ImageError> {
+            let image = image.resize_exact(512, 512, FilterType::Triangle);
+            let mut data: Vec<u8> = Vec::new();
+            let encoder = WebPEncoder::new_lossless(&mut data);
+            let color = image.color();
+            encoder.encode(image.as_bytes(), 512, 512, color.into())?;
+
+            Ok(data)
+        })
+        .await??;
 
         let url = state
             .s3
@@ -70,7 +73,7 @@ mod post {
                 &data,
                 Some("image/webp"),
             )
-            .await;
+            .await?;
 
         if organization.icon.starts_with(&state.env.s3_url)
             && !organization.icon.ends_with("default.webp")
@@ -80,19 +83,15 @@ mod post {
                 .bucket
                 .delete_object(&organization.icon[state.env.s3_url.len() + 1..])
                 .await
-                .map(|_| ())
-                .unwrap_or_default();
+                .ok();
         }
 
-        organization.icon = url.clone();
-        organization.save(&state.database).await;
+        organization.icon = url.to_compact_string();
+        organization.save(&state.database).await?;
 
-        state.cache.clear_organization(organization.id).await;
+        state.cache.clear_organization(organization.id).await?;
 
-        (
-            StatusCode::OK,
-            axum::Json(serde_json::to_value(&Response { success: true, url }).unwrap()),
-        )
+        ApiResponse::json(Response { success: true, url }).ok()
     }
 }
 

@@ -1,6 +1,10 @@
 {
   "name": "database",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "build": "rm -rf lib && esbuild `find src \\( -name '*.ts' -o -name '*.tsx' \\)` --platform='node' --sourcemap --ignore-annotations --format='cjs' --target='es2022' --outdir='lib' && esbuild src/index.ts --platform='node' --sourcemap --ignore-annotations --format='cjs' --target='es2022' --outdir='lib' --banner:js='require(\"module-alias\").addAlias(\"@\", __dirname);'",
     "kit": "drizzle-kit",
@@ -13,23 +17,23 @@
   "author": "MCJars",
   "license": "MIT",
   "dependencies": {
-    "@clickhouse/client": "^1.12.1",
-    "@rjweb/utils": "^1.12.28",
+    "@clickhouse/client": "^1.15.0",
+    "@rjweb/utils": "^1.12.29",
     "ansi-colors": "^4.1.3",
     "drizzle-orm": "^0.41.0",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "json5": "^2.2.3",
     "module-alias": "^2.2.3",
-    "pg": "^8.14.1",
-    "zod": "^3.24.2"
+    "pg": "^8.16.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.13.13",
-    "@types/pg": "^8.11.11",
-    "drizzle-kit": "^0.30.5",
-    "esbuild": "^0.25.1",
-    "typescript": "^5.8.2"
+    "@types/node": "^24.10.4",
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.31.8",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.9.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -4,6 +4,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 mod get {
     use crate::{
         models::organization::OrganizationKey,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -37,32 +38,25 @@ mod get {
         state: GetState,
         organization: GetOrganization,
         Path((_organization, key)): Path<(i32, i32)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let key = OrganizationKey::by_id(&state.database, key).await;
+    ) -> ApiResponseResult {
+        let key = OrganizationKey::by_id(&state.database, key).await?;
 
         if let Some(key) = key {
             if key.organization_id != organization.id {
-                return (
-                    StatusCode::NOT_FOUND,
-                    axum::Json(ApiError::new(&["key not found"]).to_value()),
-                );
+                return ApiResponse::error("key not found")
+                    .with_status(StatusCode::NOT_FOUND)
+                    .ok();
             }
 
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::to_value(&Response {
-                        success: true,
-                        api_key: key,
-                    })
-                    .unwrap(),
-                ),
-            )
+            ApiResponse::json(Response {
+                success: true,
+                api_key: key,
+            })
+            .ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["key not found"]).to_value()),
-            )
+            ApiResponse::error("key not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }
@@ -70,6 +64,7 @@ mod get {
 mod delete {
     use crate::{
         models::organization::OrganizationKey,
+        response::{ApiResponse, ApiResponseResult},
         routes::{ApiError, GetState, api::user::organizations::_organization_::GetOrganization},
     };
     use axum::{extract::Path, http::StatusCode};
@@ -100,28 +95,23 @@ mod delete {
         state: GetState,
         organization: GetOrganization,
         Path((_organization, key)): Path<(i32, i32)>,
-    ) -> (StatusCode, axum::Json<serde_json::Value>) {
-        let key = OrganizationKey::by_id(&state.database, key).await;
+    ) -> ApiResponseResult {
+        let key = OrganizationKey::by_id(&state.database, key).await?;
 
         if let Some(key) = key {
             if key.organization_id != organization.id {
-                return (
-                    StatusCode::NOT_FOUND,
-                    axum::Json(ApiError::new(&["key not found"]).to_value()),
-                );
+                return ApiResponse::error("key not found")
+                    .with_status(StatusCode::NOT_FOUND)
+                    .ok();
             }
 
-            OrganizationKey::delete_by_id(&state.database, key.id).await;
+            OrganizationKey::delete_by_id(&state.database, key.id).await?;
 
-            (
-                StatusCode::OK,
-                axum::Json(serde_json::to_value(&Response { success: true }).unwrap()),
-            )
+            ApiResponse::json(Response { success: true }).ok()
         } else {
-            (
-                StatusCode::NOT_FOUND,
-                axum::Json(ApiError::new(&["key not found"]).to_value()),
-            )
+            ApiResponse::error("key not found")
+                .with_status(StatusCode::NOT_FOUND)
+                .ok()
         }
     }
 }
