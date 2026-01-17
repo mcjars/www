@@ -47,7 +47,8 @@ export const types = [
 	'MAGMA',
 	'LEAF',
 	'VELOCITY_CTD',
-	'YOUER'
+	'YOUER',
+	'PLUTO'
 ] as const
 
 export const formats = [

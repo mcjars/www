@@ -75,6 +75,7 @@ mod get {
                         ServerType::Leaves,
                         ServerType::Aspaper,
                         ServerType::LegacyFabric,
+                        ServerType::Pluto,
                     ],
                 ),
                 limbos: ServerType::extract(

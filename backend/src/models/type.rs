@@ -86,6 +86,7 @@ pub enum ServerType {
     Leaf,
     VelocityCtd,
     Youer,
+    Pluto,
 }
 
 impl FromStr for ServerType {
@@ -129,6 +130,7 @@ impl FromStr for ServerType {
             "VELOCITY-CTD" => Ok(ServerType::VelocityCtd),
             "VELOCITY_CTD" => Ok(ServerType::VelocityCtd),
             "YOUER" => Ok(ServerType::Youer),
+            "PLUTO" => Ok(ServerType::Pluto),
             _ => Err(
                 crate::response::DisplayError::new(format!("Unknown server type: `{s}`"))
                     .with_status(axum::http::StatusCode::BAD_REQUEST),
@@ -209,6 +211,7 @@ impl ServerType {
             ServerType::Leaf => "LEAF",
             ServerType::VelocityCtd => "VELOCITY_CTD",
             ServerType::Youer => "YOUER",
+            ServerType::Pluto => "PLUTO",
         }
     }
 
@@ -315,7 +318,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "Paper is a Minecraft game server based on Spigot, designed to greatly improve performance and offer more advanced features and API.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -334,7 +337,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "A fork of Paper that aims to be even more performant.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -391,7 +394,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "Purpur is a drop-in replacement for Paper servers designed for configurability, new fun and exciting gameplay features.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into(), "purpur".into()],
+                compatibility: vec!["paper".into(), "purpur".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -543,7 +546,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "A variation of Forge/NeoForge that allows loading Spigot plugins next to mods.".into(),
                 categories: vec!["modded".into(), "plugins".into()],
-                compatibility: vec!["forge".into(), "spigot".into(), "paper".into()],
+                compatibility: vec!["forge".into(), "spigot".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -600,7 +603,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "Leaves is a Minecraft game server based on Paper, aimed at repairing broken vanilla properties.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -638,7 +641,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "Advanced Slime Paper is a fork of Paper implementing the Slime Region Format developed by Hypixel.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -714,7 +717,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "DivineMC is a multi-functional fork of Purpur, which focuses on the flexibility of your server and its optimization.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into(), "purpur".into()],
+                compatibility: vec!["paper".into(), "purpur".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -752,7 +755,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "A Paper fork aimed to find balance between performance, vanilla and stability.".into(),
                 categories: vec!["plugins".into()],
-                compatibility: vec!["spigot".into(), "paper".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,
@@ -790,7 +793,26 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 experimental: false,
                 description: "A variation of NeoForge that allows loading Spigot plugins next to mods.".into(),
                 categories: vec!["modded".into(), "plugins".into()],
-                compatibility: vec!["neoforge".into(), "spigot".into(), "paper".into()],
+                compatibility: vec!["neoforge".into(), "spigot".into()],
+                builds: 0,
+                versions: ServerTypeVersions {
+                    minecraft: 0,
+                    project: 0,
+                },
+            },
+        ),
+        (
+            ServerType::Pluto,
+            ServerTypeInfo {
+                name: "Pluto".into(),
+                icon: compact_str::format_compact!("{}/icons/pluto.png", env.s3_url),
+                color: "#D2642D".into(),
+                homepage: "https://github.com/Yive/Pluto".into(),
+                deprecated: false,
+                experimental: false,
+                description: "Fork of Pufferfish/Paper with some optimisation and feature patches.".into(),
+                categories: vec!["plugins".into()],
+                compatibility: vec!["paper".into()],
                 builds: 0,
                 versions: ServerTypeVersions {
                     minecraft: 0,

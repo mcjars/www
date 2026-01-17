@@ -267,6 +267,13 @@
       "when": 1767364490217,
       "tag": "0037_mushy_kingpin",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1768684518821,
+      "tag": "0038_abandoned_doctor_strange",
+      "breakpoints": true
     }
   ]
 }
