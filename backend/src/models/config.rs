@@ -110,6 +110,12 @@ impl Config {
                     } else if let Some(version) = version.as_i64() {
                         contains = Some(format!("version: {version}"));
                     }
+                } else if let Some(version) = parsed.get("config-version-do-not-modify") {
+                    if let Some(version) = version.as_str() {
+                        contains = Some(format!("config-version-do-not-modify: {version}"));
+                    } else if let Some(version) = version.as_i64() {
+                        contains = Some(format!("config-version-do-not-modify: {version}"));
+                    }
                 }
             }
 
@@ -461,6 +467,14 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
                 r#type: ServerType::Leaf,
                 format: Format::Yaml,
                 aliases: &["config/gale-world-defaults.yml", "gale-world-defaults.yml"],
+            },
+        ),
+        (
+            "pluto.yml",
+            Config {
+                r#type: ServerType::Pluto,
+                format: Format::Yaml,
+                aliases: &["pluto.yml"],
             },
         ),
     ])

@@ -185,6 +185,13 @@ export const configs: Record<string, {
 		type: 'LEAF',
 		format: 'YAML',
 		aliases: ['config/gale-world-defaults.yml', 'gale-world-defaults.yml']
+	},
+
+	// Pluto
+	'pluto.yml': {
+		type: 'PLUTO',
+		format: 'YAML',
+		aliases: ['pluto.yml']
 	}
 }
 
