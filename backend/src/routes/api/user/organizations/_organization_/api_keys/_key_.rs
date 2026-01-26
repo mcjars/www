@@ -48,7 +48,7 @@ mod get {
                     .ok();
             }
 
-            ApiResponse::json(Response {
+            ApiResponse::new_serialized(Response {
                 success: true,
                 api_key: key,
             })
@@ -107,7 +107,7 @@ mod delete {
 
             OrganizationKey::delete_by_id(&state.database, key.id).await?;
 
-            ApiResponse::json(Response { success: true }).ok()
+            ApiResponse::new_serialized(Response { success: true }).ok()
         } else {
             ApiResponse::error("key not found")
                 .with_status(StatusCode::NOT_FOUND)

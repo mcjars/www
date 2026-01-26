@@ -56,7 +56,7 @@ mod get {
             }
         }
 
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             organizations,
         })
@@ -93,9 +93,9 @@ mod post {
     pub async fn route(
         state: GetState,
         user: GetUser,
-        axum::Json(payload): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
-        if !(3..16).contains(&payload.name.len()) {
+        if !(3..16).contains(&data.name.len()) {
             return ApiResponse::error("name must be between 3 and 16 characters")
                 .with_status(StatusCode::BAD_REQUEST)
                 .ok();
@@ -108,9 +108,9 @@ mod post {
                 .ok();
         }
 
-        Organization::new(&state.database, user.id, &payload.name).await?;
+        Organization::new(&state.database, user.id, &data.name).await?;
 
-        ApiResponse::json(Response { success: true }).ok()
+        ApiResponse::new_serialized(Response { success: true }).ok()
     }
 }
 

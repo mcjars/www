@@ -88,7 +88,7 @@ impl Cache {
 
         match cached_value {
             Some(value) => {
-                let result: T = serde_json::from_slice(value.as_bytes())?;
+                let result: T = rmp_serde::from_slice(value.as_bytes())?;
                 self.cache_hits
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
@@ -102,7 +102,7 @@ impl Cache {
                 self.cache_misses
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                let serialized = serde_json::to_vec(&result)?;
+                let serialized = rmp_serde::to_vec(&result)?;
                 self.client
                     .set_with_options(
                         key,

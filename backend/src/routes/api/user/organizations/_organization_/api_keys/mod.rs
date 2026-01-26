@@ -30,7 +30,7 @@ mod get {
         ),
     ))]
     pub async fn route(state: GetState, organization: GetOrganization) -> ApiResponseResult {
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             api_keys: OrganizationKey::all_by_organization(&state.database, organization.id)
                 .await?,
@@ -74,9 +74,9 @@ mod post {
     pub async fn route(
         state: GetState,
         organization: GetOrganization,
-        axum::Json(payload): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
-        if !(1..32).contains(&payload.name.len()) {
+        if !(1..32).contains(&data.name.len()) {
             return ApiResponse::error("name must be between 1 and 32 characters")
                 .with_status(StatusCode::BAD_REQUEST)
                 .ok();
@@ -90,9 +90,9 @@ mod post {
         }
 
         let (inserted, key) =
-            OrganizationKey::new(&state.database, organization.id, &payload.name).await?;
+            OrganizationKey::new(&state.database, organization.id, &data.name).await?;
         if inserted {
-            ApiResponse::json(Response { success: true, key })
+            ApiResponse::new_serialized(Response { success: true, key })
                 .with_status(StatusCode::CREATED)
                 .ok()
         } else {

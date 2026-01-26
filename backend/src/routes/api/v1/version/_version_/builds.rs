@@ -53,7 +53,7 @@ mod get {
                 .with_status(StatusCode::NOT_FOUND)
                 .ok()
         } else {
-            ApiResponse::json(Response {
+            ApiResponse::new_serialized(Response {
                 success: true,
                 builds: data,
             })

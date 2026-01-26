@@ -91,7 +91,7 @@ mod post {
 
         state.cache.clear_organization(organization.id).await?;
 
-        ApiResponse::json(Response { success: true, url }).ok()
+        ApiResponse::new_serialized(Response { success: true, url }).ok()
     }
 }
 

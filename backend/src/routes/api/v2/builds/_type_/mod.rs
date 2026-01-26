@@ -57,7 +57,7 @@ mod get {
             .filter(|f| !f.is_empty())
             .collect::<Vec<_>>();
 
-        ApiResponse::json(json!({
+        ApiResponse::new_serialized(json!({
             "success": true,
             "builds": data
                 .into_iter()

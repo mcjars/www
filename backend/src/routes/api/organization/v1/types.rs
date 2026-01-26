@@ -24,7 +24,7 @@ mod get {
         let organization = organization.as_ref().unwrap();
         let data = ServerType::all(&state.database, &state.cache, &state.env).await?;
 
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             types: if organization.types.is_empty() {
                 data.iter().map(|(k, v)| (*k, v)).collect()
@@ -62,7 +62,7 @@ mod patch {
     pub async fn route(
         state: GetState,
         mut organization: GetOrganization,
-        axum::Json(data): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
         let organization = organization.as_mut().unwrap();
 
@@ -78,7 +78,7 @@ mod patch {
             state.cache.client.del(keys).await?;
         }
 
-        ApiResponse::json(Response { success: true }).ok()
+        ApiResponse::new_serialized(Response { success: true }).ok()
     }
 }
 

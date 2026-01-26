@@ -40,7 +40,7 @@ mod post {
     ), request_body = inline(Payload))]
     pub async fn route(
         state: GetState,
-        axum::Json(data): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
         let config = match Config::by_alias(&data.file) {
             Some(config) => config,
@@ -141,7 +141,7 @@ mod post {
             )
             .await?;
 
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             formatted,
             configs,

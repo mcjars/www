@@ -34,7 +34,7 @@ mod get {
             .await?;
 
         if let Some(data) = data {
-            ApiResponse::json(Response {
+            ApiResponse::new_serialized(Response {
                 success: true,
                 version: data,
             })

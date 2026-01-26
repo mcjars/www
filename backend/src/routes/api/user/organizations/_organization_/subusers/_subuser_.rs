@@ -44,7 +44,7 @@ mod get {
                 OrganizationSubuser::by_ids(&state.database, organization.id, user.id).await?;
 
             if let Some(subuser) = subuser {
-                ApiResponse::json(Response {
+                ApiResponse::new_serialized(Response {
                     success: true,
                     user: subuser,
                 })
@@ -121,7 +121,7 @@ mod delete {
                 OrganizationSubuser::delete_by_ids(&state.database, organization.id, user.id)
                     .await?;
 
-                ApiResponse::json(Response { success: true }).ok()
+                ApiResponse::new_serialized(Response { success: true }).ok()
             } else {
                 ApiResponse::error("user not found")
                     .with_status(StatusCode::NOT_FOUND)

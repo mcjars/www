@@ -47,7 +47,7 @@ mod post {
                 subuser.pending = false;
                 subuser.save(&state.database).await?;
 
-                ApiResponse::json(Response { success: true }).ok()
+                ApiResponse::new_serialized(Response { success: true }).ok()
             } else {
                 ApiResponse::error("organization not found")
                     .with_status(StatusCode::NOT_FOUND)

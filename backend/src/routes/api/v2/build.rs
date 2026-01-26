@@ -139,7 +139,7 @@ mod post {
         state: GetState,
         request_data: GetData,
         params: Query<Params>,
-        axum::Json(data): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
         let fields = params
             .fields
@@ -162,7 +162,7 @@ mod post {
                         }
                     });
 
-                    ApiResponse::json(json!({
+                    ApiResponse::new_serialized(json!({
                         "success": true,
                         "build": crate::utils::extract_fields(result.build, &fields),
                         "latest": crate::utils::extract_fields(result.latest, &fields),
@@ -204,7 +204,7 @@ mod post {
                     });
                 }
 
-                ApiResponse::json(json!({
+                ApiResponse::new_serialized(json!({
                     "success": true,
                     "builds": results.into_iter().map(|r| {
                         r.map(|result| {

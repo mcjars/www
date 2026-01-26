@@ -20,7 +20,7 @@ mod get {
         (status = OK, body = inline(Response)),
     ))]
     pub async fn route() -> ApiResponseResult {
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             configs: &CONFIGS,
         })

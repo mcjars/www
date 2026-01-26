@@ -101,7 +101,7 @@ mod get {
         ),
     ))]
     pub async fn route(organization: GetOrganization) -> ApiResponseResult {
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             organization: organization.0,
         })
@@ -151,7 +151,7 @@ mod patch {
         state: GetState,
         user: GetUser,
         mut organization: GetOrganization,
-        axum::Json(data): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
         let mut owner_id = organization.owner.id;
         if let Some(owner) = data.owner {
@@ -197,7 +197,7 @@ mod patch {
 
         state.cache.clear_organization(organization.id).await?;
 
-        ApiResponse::json(Response { success: true }).ok()
+        ApiResponse::new_serialized(Response { success: true }).ok()
     }
 }
 
@@ -251,7 +251,7 @@ mod delete {
 
         Organization::delete_by_id(&state.database, organization.id).await?;
 
-        ApiResponse::json(Response { success: true }).ok()
+        ApiResponse::new_serialized(Response { success: true }).ok()
     }
 }
 

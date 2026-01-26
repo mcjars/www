@@ -35,7 +35,7 @@ mod get {
     pub async fn route(state: GetState) -> ApiResponseResult {
         let data = ServerType::all(&state.database, &state.cache, &state.env).await?;
 
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             types: Types {
                 recommended: ServerType::extract(

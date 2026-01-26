@@ -37,7 +37,7 @@ mod post {
                 .build(),
         );
 
-        ApiResponse::json(Response { success: true }).ok()
+        ApiResponse::new_serialized(Response { success: true }).ok()
     }
 }
 

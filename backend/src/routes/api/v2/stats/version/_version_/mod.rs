@@ -95,7 +95,7 @@ mod get {
             })
             .await?;
 
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             stats,
         })

@@ -28,7 +28,7 @@ mod get {
         ),
     ))]
     pub async fn route(state: GetState, organization: GetOrganization) -> ApiResponseResult {
-        ApiResponse::json(Response {
+        ApiResponse::new_serialized(Response {
             success: true,
             users: OrganizationSubuser::all_by_organization(&state.database, organization.id)
                 .await?,
@@ -76,7 +76,7 @@ mod post {
         state: GetState,
         user: GetUser,
         organization: GetOrganization,
-        axum::Json(payload): axum::Json<Payload>,
+        crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
         if user.id != organization.owner.id {
             return ApiResponse::error("only the owner can add subusers")
@@ -84,7 +84,7 @@ mod post {
                 .ok();
         }
 
-        let user = User::by_login(&state.database, &state.cache, &payload.login).await?;
+        let user = User::by_login(&state.database, &state.cache, &data.login).await?;
 
         let count =
             OrganizationSubuser::count_by_organization(&state.database, organization.id).await;
@@ -105,7 +105,7 @@ mod post {
                 OrganizationSubuser::new(&state.database, organization.id, user.id).await?;
 
             if inserted {
-                ApiResponse::json(Response { success: true })
+                ApiResponse::new_serialized(Response { success: true })
                     .with_status(StatusCode::CREATED)
                     .ok()
             } else {

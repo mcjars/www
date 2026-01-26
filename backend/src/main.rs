@@ -30,12 +30,15 @@ mod database;
 mod env;
 mod files;
 mod models;
+mod payload;
 mod prelude;
 mod requests;
 mod response;
 mod routes;
 mod s3;
 mod utils;
+
+pub use payload::Payload;
 
 #[cfg(target_os = "linux")]
 #[global_allocator]
@@ -97,7 +100,11 @@ async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, Stat
         ip
     );
 
-    Ok(next.run(req).await)
+    Ok(crate::response::ACCEPT_HEADER
+        .scope(crate::response::accept_from_headers(req.headers()), async {
+            next.run(req).await
+        })
+        .await)
 }
 
 async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, StatusCode> {
