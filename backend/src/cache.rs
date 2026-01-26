@@ -86,13 +86,12 @@ impl Cache {
     {
         let cached_value: Option<BulkString> = self.client.get(key).await?;
 
-        match cached_value {
+        match cached_value.and_then(|v| rmp_serde::from_slice::<T>(&v).ok()) {
             Some(value) => {
-                let result: T = rmp_serde::from_slice(value.as_bytes())?;
                 self.cache_hits
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                Ok(result)
+                Ok(value)
             }
             None => {
                 let result = match fn_compute().await {
