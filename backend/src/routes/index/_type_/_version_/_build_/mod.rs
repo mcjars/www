@@ -6,6 +6,8 @@ use crate::models::{
 use axum::{extract::Path, routing::get};
 use utoipa_axum::router::OpenApiRouter;
 
+mod changelog;
+
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .route(
@@ -45,6 +47,19 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             }
                         }
 
+                        if !build.changes.is_empty() {
+                            files.push(IndexFile {
+                                name: "CHANGELOG.txt".into(),
+                                size: human_bytes::human_bytes(build.changes.iter().map(|line| line.len() + 3).sum::<usize>() as f64).into(),
+                                href: Some(compact_str::format_compact!(
+                                    "/{}/{}/{}/CHANGELOG.txt",
+                                    r#type.infos(&state.env).name,
+                                    version,
+                                    build.id
+                                )),
+                            });
+                        }
+
                         crate::routes::index::render(
                             &state,
                             &compact_str::format_compact!(
@@ -70,5 +85,6 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 },
             ),
         )
+        .nest("/CHANGELOG.txt", changelog::router(state))
         .with_state(state.clone())
 }

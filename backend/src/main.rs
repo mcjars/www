@@ -147,7 +147,7 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
 
         let mut hash = sha2::Sha256::new();
         hash.update(body_bytes.as_ref());
-        let hash = format!("{:x}", hash.finalize());
+        let hash = hex::encode(hash.finalize());
 
         parts.headers.insert("ETag", hash.parse().unwrap());
 

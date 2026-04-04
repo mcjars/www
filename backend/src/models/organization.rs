@@ -348,7 +348,7 @@ impl OrganizationKey {
         let mut hash = sha2::Sha256::new();
         hash.update(chrono::Utc::now().timestamp().to_be_bytes());
         hash.update(organization_id.to_be_bytes());
-        let hash = format!("{:x}", hash.finalize());
+        let hash = hex::encode(hash.finalize());
 
         Ok((
             sqlx::query(
