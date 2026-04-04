@@ -51,12 +51,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                             files.push(IndexFile {
                                 name: "CHANGELOG.txt".into(),
                                 size: human_bytes::human_bytes(build.changes.iter().map(|line| line.len() + 3).sum::<usize>() as f64).into(),
-                                href: Some(compact_str::format_compact!(
-                                    "/{}/{}/{}/CHANGELOG.txt",
-                                    r#type.infos(&state.env).name,
-                                    version,
-                                    build.id
-                                )),
+                                href: Some("CHANGELOG.txt".into()),
                             });
                         }
 
