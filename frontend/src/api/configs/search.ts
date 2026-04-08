@@ -2,7 +2,7 @@ import { BASE_URL } from "@/api"
 import axios from "axios"
 import { PartialMinecraftBuild } from "@/api/builds"
 
-export default async function apiGetConfig(file: File): Promise<{
+export default async function apiGetConfigSearch(file: File): Promise<{
 	formatted: string
 	configs: {
 		from: string
@@ -18,7 +18,7 @@ export default async function apiGetConfig(file: File): Promise<{
 			accuracy: number
 			build: PartialMinecraftBuild
 		}[]
-	}>(`${BASE_URL}/api/v2/config`, {
+	}>(`${BASE_URL}/api/v3/configs/search`, {
 		file: file.name.replace(/\(\d+\)/g, ''),
 		config: await file.text()
 	})

@@ -1,6 +1,6 @@
 import apiGetBuild from "@/api/build"
 import { PartialMinecraftBuild } from "@/api/builds"
-import apiGetConfig from "@/api/config"
+import apiGetConfigSearch from "@/api/configs/search"
 import apiGetTypes from "@/api/types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -17,7 +17,7 @@ export default function PageLookup() {
 	const [isDragging, setIsDragging] = useState(false)
 	const [isDropLoading, setIsDropLoading] = useState(false)
 	const [jarDropBuild, setJarDropBuild] = useState<PartialMinecraftBuild>()
-	const [configDropMatches, setConfigDropMatches] = useState<Awaited<ReturnType<typeof apiGetConfig>>>()
+	const [configDropMatches, setConfigDropMatches] = useState<Awaited<ReturnType<typeof apiGetConfigSearch>>>()
 	const [configDropMatchIndex, setConfigDropMatchIndex] = useState(0)
 	const [viewerWidth, setViewerWidth] = useState(1920)
 	const inputRef = useRef<HTMLInputElement>()
@@ -66,7 +66,7 @@ export default function PageLookup() {
 		) {
 			setIsDropLoading(true)
 
-			const config = await apiGetConfig(file)
+			const config = await apiGetConfigSearch(file)
 
 			setIsDropLoading(false)
 			setConfigDropMatches(config)
