@@ -53,7 +53,7 @@ export default async function apiGetVersions(type: string, options?: ApiGetVersi
 	params.set('per_page', String(perPage))
 	params.set('search', search)
 
-	const { data } = await axios.get(`${BASE_URL}/api/v3/builds/${type.toUpperCase()}?${params.toString()}`)
+	const { data } = await axios.get(`${BASE_URL}/api/v3/builds/types/${type.toUpperCase()}/versions?${params.toString()}`)
 	const versionsContainer = data?.versions && typeof data.versions === 'object' && !Array.isArray(data.versions)
 		? data.versions
 		: undefined

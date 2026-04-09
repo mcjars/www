@@ -64,7 +64,7 @@ export default async function apiGetBuilds(type: string, version: string, option
 	params.set('per_page', String(perPage))
 	params.set('search', search)
 
-	const { data } = await axios.get(`${BASE_URL}/api/v3/builds/${type.toUpperCase()}/${version}?${params.toString()}`)
+	const { data } = await axios.get(`${BASE_URL}/api/v3/builds/types/${type.toUpperCase()}/versions/${version}?${params.toString()}`)
 	const buildsContainer = data?.builds && typeof data.builds === 'object' && !Array.isArray(data.builds)
 		? data.builds
 		: undefined
