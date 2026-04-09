@@ -31,27 +31,14 @@ export default async function apiGetTypeVersions(type: string): Promise<TypeVers
 	const { data } = await axios.get(`${BASE_URL}/api/v3/builds/types/${type.toUpperCase()}/versions`)
 	const versions = getArray(data?.versions ?? data?.items ?? data?.data)
 
-	// pretty much gave up trying to guess whaat 0x's API returns as it sometimes doesn't follow its own schema.
 	return versions
 		.map((version: any) => ({
 			versionId:
-				version.version_id ??
-				version.versionId ??
-				version.latest?.version_id ??
-				version.latest?.versionId ??
-				version.project_version_id ??
-				version.projectVersionId ??
-				version.latest?.project_version_id ??
-				version.latest?.projectVersionId ??
-				"",
+				version.latest?.version_id,
 			projectVersionId:
-				version.project_version_id ??
-				version.projectVersionId ??
-				version.latest?.project_version_id ??
-				version.latest?.projectVersionId ??
-				null,
-			created: version.created ?? null,
-			builds: Number(version.builds ?? version.build_count ?? 0)
+				version.latest?.project_version_id,
+			created: version.latest?.created ?? null,
+			builds: Number(version.builds)
 		}))
 		.filter((version: TypeVersionSummary) => Boolean(version.versionId))
 }
