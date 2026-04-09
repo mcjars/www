@@ -96,7 +96,7 @@ const renderTreeNode = (
 								<AccordionTrigger className={"px-0 py-0 hover:no-underline"}>
 									<div className={"flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-accent/10"} style={{ paddingLeft: depth * 16 }}>
 										<div className={"flex min-w-0 items-center gap-3"}>
-											<div className={"flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-muted-foreground"}>
+											<div className={"flex h-8 w-8 ml-2 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-muted-foreground"}>
 												<FolderOpen size={14} className={"shrink-0"} />
 											</div>
 											<div className={"min-w-0"}>
@@ -144,7 +144,7 @@ const renderTreeNode = (
 						>
 							<div className={"flex items-center justify-between gap-3"}>
 								<div className={"min-w-0 flex items-center gap-3"}>
-									<div className={"flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-muted-foreground group-hover:bg-muted"}>
+									<div className={"flex h-8 w-8 ml-2 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-muted-foreground group-hover:bg-muted"}>
 										<FileText size={14} className={"shrink-0"} />
 									</div>
 									<div className={"min-w-0"}>

@@ -192,7 +192,7 @@ const renderTreeWithSelection = (
 								<AccordionTrigger className={"px-0 py-0 hover:no-underline"}>
 									<div className={"flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60"} style={{ paddingLeft: depth * 16 }}>
 										<div className={"flex min-w-0 items-center gap-3"}>
-											<div className={"flex h-8 w-8 items-center justify-center rounded-md border border-sidebar-border/80 bg-sidebar/60 text-sidebar-foreground/80"}>
+											<div className={"flex h-8 w-8 ml-2 items-center justify-center rounded-md border border-sidebar-border/80 bg-sidebar/60 text-sidebar-foreground/80"}>
 												<FolderOpen size={14} className={"shrink-0"} />
 											</div>
 											<div className={"min-w-0"}>
