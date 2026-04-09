@@ -1,1 +1,1 @@
-export const BASE_URL = 'https://8000.noncf.webhook.pet/'
+export const BASE_URL = localStorage.getItem('api_url') ?? ''
