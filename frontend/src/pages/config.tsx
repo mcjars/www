@@ -3,7 +3,8 @@ import apiGetTypes from "@/api/types"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+// Drawer component temporarily commented out, will be used later
+// import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, FolderOpen } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -177,7 +178,7 @@ export default function PageConfig() {
 		{ revalidateOnFocus: false, revalidateIfStale: false }
 	)
 
-	const [selected, setSelected] = useState<ConfigItem | null>(null)
+	const [, setSelected] = useState<ConfigItem | null>(null) // 'selected' unused for now; keep setter for future drawer
 
 	const orderedTypes = useMemo<KnownType[]>(
 		() => Object.entries(types ?? {}).flatMap(([, group]) => group as KnownType[]),
@@ -262,6 +263,7 @@ export default function PageConfig() {
 				</Accordion>
 			)}
 
+			{/*
 			<Drawer
 				open={Boolean(selected)}
 				onOpenChange={(isOpen) => {
@@ -286,6 +288,7 @@ export default function PageConfig() {
 					</div>
 				</DrawerContent>
 			</Drawer>
+			*/}
 		</div>
 	)
 }
