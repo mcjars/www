@@ -372,6 +372,10 @@ export default function PageTypeConfig() {
 		() => buildOptions.find((item) => item.uuid === selectedBuildUuid) ?? null,
 		[buildOptions, selectedBuildUuid]
 	)
+	const selectedConfigKey = useMemo(
+		() => selected?.valueUuid ?? selected?.configUuid ?? normalizeLocation(selected?.location),
+		[selected]
+	)
 
 	const selectedBuildLabel = useMemo(() => {
 		if (!selectedBuild) return "Select build"
@@ -446,6 +450,17 @@ export default function PageTypeConfig() {
 		window.addEventListener("pointerup", onUp)
 		event.preventDefault()
 	}
+
+	const clearComparison = () => {
+		setLocalCompare(null)
+		setCompareError(null)
+		setIsCompareDragOver(false)
+		compareDragDepthRef.current = 0
+	}
+
+	useEffect(() => {
+		clearComparison()
+	}, [normalizedType, selectedVersion, selectedBuildUuid, selectedConfigKey])
 
 	const handleCompareFile = async (file: File) => {
 		setCompareError(null)
@@ -639,8 +654,7 @@ export default function PageTypeConfig() {
 											</Button>
 											{localCompare && (
 												<Button variant={"ghost"} size={"sm"} onClick={() => {
-													setLocalCompare(null)
-													setCompareError(null)
+													clearComparison()
 												}}>
 													Clear Comparison
 												</Button>
