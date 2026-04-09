@@ -1,5 +1,4 @@
 use clickhouse::query::RowCursor;
-use colored::Colorize;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -27,14 +26,9 @@ impl Clickhouse {
             .unwrap();
 
         tracing::info!(
-            "{} connected {}",
-            "clickhouse".bright_red(),
-            format!(
-                "(clickhouse@{}, {}ms)",
-                version.bright_black(),
-                start.elapsed().as_millis()
-            )
-            .bright_black()
+            "clickhouse connected (clickhouse@{}, {}ms)",
+            version,
+            start.elapsed().as_millis()
         );
 
         if env.clickhouse_refresh {
@@ -163,8 +157,7 @@ impl Clickhouse {
                         flush_buffer(&row_buffer).await?;
 
                         tracing::info!(
-                            "{} global stats refreshed in {}ms",
-                            "clickhouse".bright_red(),
+                            "clickhouse global stats refreshed in {}ms",
                             start.elapsed().as_millis()
                         );
 
@@ -313,8 +306,7 @@ impl Clickhouse {
                         flush_buffer(&row_buffer).await?;
 
                         tracing::info!(
-                            "{} daily stats refreshed in {}ms",
-                            "clickhouse".bright_red(),
+                            "clickhouse daily stats refreshed in {}ms",
                             start.elapsed().as_millis()
                         );
 

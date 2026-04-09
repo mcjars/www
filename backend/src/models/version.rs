@@ -30,6 +30,19 @@ pub struct MinifiedVersion {
     pub created: NaiveDateTime,
 }
 
+impl MinifiedVersion {
+    pub fn into_api_v3(self) -> ApiMinifiedVersionV3 {
+        ApiMinifiedVersionV3 {
+            id: self.id,
+            r#type: self.r#type,
+            supported: self.supported,
+            java: self.java as u16,
+            builds: self.builds as u64,
+            created: self.created.and_utc(),
+        }
+    }
+}
+
 #[derive(ToSchema, Serialize, Deserialize)]
 pub struct MinifiedVersionStats {
     pub r#type: VersionType,
@@ -99,6 +112,20 @@ impl MinifiedVersionStats {
             })
             .await
     }
+
+    pub fn into_api_v3(self) -> ApiMinifiedVersionStatsV3 {
+        ApiMinifiedVersionStatsV3 {
+            r#type: self.r#type,
+            supported: self.supported,
+            java: self.java as u16,
+            created: self.created.and_utc(),
+            builds: self
+                .builds
+                .into_iter()
+                .map(|(k, v)| (k, v as u64))
+                .collect(),
+        }
+    }
 }
 
 #[derive(ToSchema, Serialize, Deserialize)]
@@ -114,18 +141,72 @@ pub struct Version {
 }
 
 impl Version {
-    #[inline]
-    pub async fn location(
+    /// Resolves a type + version to the field name and value that can be used to query builds for that version.
+    ///
+    /// e.g. ``resolve("VANILLA", "1.17.1") -> Some(("version_id", "1.17.1"))``
+    ///
+    /// e.g. ``resolve("PAPER", "latest") -> Some(("version_id", "26.1.1"))``
+    pub async fn resolve(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         r#type: ServerType,
         id: &str,
-    ) -> Result<Option<compact_str::CompactString>, anyhow::Error> {
+    ) -> Result<Option<(compact_str::CompactString, compact_str::CompactString)>, anyhow::Error>
+    {
         cache
             .cached(
                 &format!("version_location::{type}::{id}"),
                 86400,
                 || async {
+                    if id == "latest" || id == "latest-snapshot" {
+                        if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {
+                            let version_id = sqlx::query_scalar(
+                                r#"
+                                SELECT project_versions.id
+                                FROM project_versions
+                                INNER JOIN builds ON builds.project_version_id = project_versions.id
+                                WHERE builds.type = $1 AND project_versions.type = $1
+                                ORDER BY builds.created DESC
+                                LIMIT 1
+                                "#,
+                            )
+                            .bind(r#type)
+                            .fetch_optional(database.read())
+                            .await?;
+
+                            let Some(version_id) = version_id else {
+                                return Ok(None);
+                            };
+
+                            return Ok(Some(("project_version_id".into(), version_id)));
+                        } else {
+                            let version_id = sqlx::query_scalar(
+                                r#"
+                                SELECT minecraft_versions.id
+                                FROM minecraft_versions
+                                INNER JOIN builds ON builds.version_id = minecraft_versions.id
+                                WHERE builds.type = $1 AND minecraft_versions.type = ANY($2)
+                                ORDER BY minecraft_versions.created DESC
+                                LIMIT 1
+                                "#,
+                            )
+                            .bind(r#type)
+                            .bind(if id == "latest-snapshot" {
+                                &[VersionType::Snapshot, VersionType::Release][..]
+                            } else {
+                                &[VersionType::Release][..]
+                            })
+                            .fetch_optional(database.read())
+                            .await?;
+
+                            let Some(version_id) = version_id else {
+                                return Ok(None);
+                            };
+
+                            return Ok(Some(("version_id".into(), version_id)));
+                        }
+                    }
+
                     let (minecraft, project) = tokio::join!(
                         sqlx::query(
                             r#"
@@ -153,9 +234,9 @@ impl Version {
                     );
 
                     Ok::<_, anyhow::Error>(if project.map(|x| x.is_some()).unwrap_or_default() {
-                        Some("project_version_id".into())
+                        Some(("project_version_id".into(), id.into()))
                     } else if minecraft.map(|x| x.is_some()).unwrap_or_default() {
-                        Some("version_id".into())
+                        Some(("version_id".into(), id.into()))
                     } else {
                         None
                     })
@@ -270,4 +351,56 @@ impl Version {
             })
             .await
     }
+
+    pub fn into_api_version_v3(self, id: compact_str::CompactString) -> ApiVersionV3 {
+        ApiVersionV3 {
+            id,
+            r#type: self.r#type,
+            supported: self.supported,
+            java: self.java as u16,
+            builds: self.builds as u64,
+            created: self.created.and_utc(),
+            latest: self.latest.into_api_v3(),
+        }
+    }
+}
+
+#[derive(ToSchema, Serialize, Deserialize)]
+#[schema(title = "MinifiedVersionV3")]
+pub struct ApiMinifiedVersionV3 {
+    pub id: compact_str::CompactString,
+
+    pub r#type: VersionType,
+    pub supported: bool,
+    pub java: u16,
+
+    pub builds: u64,
+
+    pub created: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(ToSchema, Serialize, Deserialize)]
+#[schema(title = "MinifiedVersionStatsV3")]
+pub struct ApiMinifiedVersionStatsV3 {
+    pub r#type: VersionType,
+    pub supported: bool,
+    pub java: u16,
+
+    pub created: chrono::DateTime<chrono::Utc>,
+    pub builds: IndexMap<ServerType, u64>,
+}
+
+#[derive(ToSchema, Serialize, Deserialize)]
+#[schema(title = "VersionV3")]
+pub struct ApiVersionV3 {
+    pub id: compact_str::CompactString,
+
+    pub r#type: VersionType,
+    pub supported: bool,
+    pub java: u16,
+
+    pub builds: u64,
+
+    pub created: chrono::DateTime<chrono::Utc>,
+    pub latest: super::build::ApiBuildV3,
 }

@@ -1,5 +1,6 @@
 use super::BaseModel;
 use crate::prelude::IteratorExtension;
+use compact_str::ToCompactString;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
 use std::{collections::BTreeMap, path::Path};
@@ -111,7 +112,7 @@ impl File {
                 .bind(
                     path.components()
                         .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
-                        .map(|c| c.as_os_str().to_string_lossy())
+                        .map(|c| c.as_os_str().to_string_lossy().to_compact_string())
                         .collect::<Vec<_>>(),
                 )
                 .fetch_optional(database.read())
@@ -182,8 +183,8 @@ impl File {
                     root
                         .components()
                         .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))
-                        .map(|c| c.as_os_str().to_string_lossy().to_string())
-                        .collect::<Vec<String>>()
+                        .map(|c| c.as_os_str().to_string_lossy().to_compact_string())
+                        .collect::<Vec<_>>()
                 )
                 .fetch_all(database.read())
                 .await?

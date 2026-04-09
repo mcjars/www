@@ -1,7 +1,7 @@
 use super::r#type::ServerType;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::Type;
+use sqlx::{Row, prelude::Type};
 use std::{fmt::Display, sync::LazyLock};
 use utoipa::ToSchema;
 
@@ -34,6 +34,92 @@ impl Display for Format {
     }
 }
 
+#[derive(ToSchema, Serialize, Deserialize, Clone)]
+pub struct ConfigStats {
+    pub uuid: uuid::Uuid,
+
+    pub r#type: ServerType,
+    pub types: Vec<ServerType>,
+    pub format: Format,
+    pub location: compact_str::CompactString,
+
+    pub builds: i64,
+    pub values: i64,
+}
+
+impl ConfigStats {
+    pub async fn all(
+        database: &crate::database::Database,
+        cache: &crate::cache::Cache,
+    ) -> Result<Vec<ConfigStats>, anyhow::Error> {
+        cache
+            .cached("config_stats_v3", 3600, || async {
+                let rows = sqlx::query(
+                    r#"
+                    WITH build_data AS (
+                        SELECT 
+                            bc.config_id, 
+                            COUNT(DISTINCT bc.build_id) AS builds,
+                            ARRAY_AGG(DISTINCT b.type) AS build_types 
+                        FROM build_configs bc
+                        JOIN builds b ON bc.build_id = b.id 
+                        GROUP BY bc.config_id
+                    ), 
+                    value_counts AS (
+                        SELECT config_id, COUNT(DISTINCT id) AS values
+                        FROM config_values
+                        GROUP BY config_id
+                    )
+                    SELECT
+                        c.uuid,
+                        c.type,
+                        COALESCE(bd.build_types, ARRAY[]::server_type[]) AS types,
+                        c.format,
+                        c.location,
+                        COALESCE(bd.builds, 0) AS builds,
+                        COALESCE(cv.values, 0) AS values
+                    FROM configs c
+                    LEFT JOIN build_data bd ON bd.config_id = c.id
+                    LEFT JOIN value_counts cv ON cv.config_id = c.id
+                    "#,
+                )
+                .fetch_all(database.read())
+                .await?;
+
+                let mut stats = Vec::new();
+
+                for row in rows {
+                    stats.push(ConfigStats {
+                        uuid: row.try_get("uuid")?,
+                        r#type: row.try_get("type")?,
+                        types: row.try_get("types")?,
+                        format: row.try_get("format")?,
+                        location: row.try_get("location")?,
+                        builds: row.try_get("builds")?,
+                        values: row.try_get("values")?,
+                    });
+                }
+
+                stats.sort_by(|a, b| a.location.cmp(&b.location));
+
+                Ok::<_, anyhow::Error>(stats)
+            })
+            .await
+    }
+
+    pub fn into_api_stats_v3(self) -> ApiConfigStatsV3 {
+        ApiConfigStatsV3 {
+            uuid: self.uuid,
+            r#type: self.r#type,
+            types: self.types,
+            format: self.format,
+            location: self.location,
+            builds: self.builds as u64,
+            values: self.values as u64,
+        }
+    }
+}
+
 #[derive(ToSchema, Serialize, Clone)]
 pub struct Config {
     pub r#type: ServerType,
@@ -52,9 +138,9 @@ impl Config {
     pub fn format(
         file: &str,
         content: &str,
-    ) -> Result<(String, Option<String>), Box<dyn std::error::Error>> {
+    ) -> Result<(String, Option<(String, serde_yaml::Value)>), anyhow::Error> {
         let mut value = String::new();
-        let mut contains = None;
+        let mut key_value = None;
 
         for line in content.trim().lines() {
             if line.trim_start().starts_with('#') || line.trim().is_empty() {
@@ -68,6 +154,13 @@ impl Config {
         if file.ends_with(".properties") {
             let mut data = value.lines().collect::<Vec<&str>>();
             data.sort();
+
+            for line in data.iter_mut() {
+                if line.starts_with("management-server-secret=") {
+                    *line = "management-server-secret=xxx";
+                    break;
+                }
+            }
 
             value = data.join("\n");
         } else if file.ends_with(".yml") || file.ends_with(".yaml") {
@@ -97,25 +190,15 @@ impl Config {
                 _ => {}
             }
 
-            if file != "pufferfish.yml" && contains.is_none() {
+            if file != "pufferfish.yml" && key_value.is_none() {
                 if let Some(version) = parsed.get("config-version") {
-                    if let Some(version) = version.as_str() {
-                        contains = Some(format!("config-version: {version}"));
-                    } else if let Some(version) = version.as_i64() {
-                        contains = Some(format!("config-version: {version}"));
-                    }
+                    key_value = Some(("config-version".to_string(), version.clone()));
                 } else if let Some(version) = parsed.get("version") {
-                    if let Some(version) = version.as_str() {
-                        contains = Some(format!("version: {version}"));
-                    } else if let Some(version) = version.as_i64() {
-                        contains = Some(format!("version: {version}"));
-                    }
+                    key_value = Some(("version".to_string(), version.clone()));
+                } else if let Some(version) = parsed.get("_version") {
+                    key_value = Some(("_version".to_string(), version.clone()));
                 } else if let Some(version) = parsed.get("config-version-do-not-modify") {
-                    if let Some(version) = version.as_str() {
-                        contains = Some(format!("config-version-do-not-modify: {version}"));
-                    } else if let Some(version) = version.as_i64() {
-                        contains = Some(format!("config-version-do-not-modify: {version}"));
-                    }
+                    key_value = Some(("config-version-do-not-modify".to_string(), version.clone()));
                 }
             }
 
@@ -126,14 +209,21 @@ impl Config {
 
             Self::process_json_keys_recursively(&mut parsed, None);
             value = serde_json::to_string_pretty(&parsed).unwrap();
-        } else if file.ends_with(".toml") && contains.is_none() {
+        } else if file.ends_with(".toml") && key_value.is_none() {
             let parsed: toml::Value = toml::from_str(&value)?;
 
             if let Some(version) = parsed.get("config-version") {
-                if let Some(version) = version.as_str() {
-                    contains = Some(format!("config-version = \"{version}\""));
-                } else if let Some(version) = version.as_integer() {
-                    contains = Some(format!("config-version = {version}"));
+                let value = match version {
+                    toml::Value::String(s) => Some(serde_yaml::Value::String(s.clone())),
+                    toml::Value::Integer(i) => Some(serde_yaml::Value::Number((*i).into())),
+                    toml::Value::Float(f) => {
+                        Some(serde_yaml::Value::Number(serde_yaml::Number::from(*f)))
+                    }
+                    _ => None,
+                };
+
+                if let Some(value) = value {
+                    key_value = Some(("config-version".to_string(), value));
                 }
             }
         }
@@ -147,7 +237,7 @@ impl Config {
             }
         }
 
-        Ok((value, contains))
+        Ok((value, key_value))
     }
 
     pub fn process_yaml_keys_recursively(
@@ -479,3 +569,17 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
         ),
     ])
 });
+
+#[derive(ToSchema, Serialize)]
+#[schema(title = "ConfigStatsV3")]
+pub struct ApiConfigStatsV3 {
+    pub uuid: uuid::Uuid,
+
+    pub r#type: ServerType,
+    pub types: Vec<ServerType>,
+    pub format: Format,
+    pub location: compact_str::CompactString,
+
+    pub builds: u64,
+    pub values: u64,
+}

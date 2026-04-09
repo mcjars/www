@@ -70,9 +70,9 @@ mod get {
         state: GetState,
         Path((r#type, version)): Path<(ServerType, String)>,
     ) -> ApiResponseResult {
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
-
-        if let Some(location) = location {
+        if let Some((location, version)) =
+            Version::resolve(&state.database, &state.cache, r#type, &version).await?
+        {
             let stats = state
                 .cache
                 .cached(

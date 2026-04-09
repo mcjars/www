@@ -51,8 +51,8 @@ mod post {
             }
         };
 
-        let (formatted, contains) = match Config::format(&data.file, &data.config) {
-            Ok((formatted, contains)) => (formatted, contains),
+        let (formatted, key_value) = match Config::format(&data.file, &data.config) {
+            Ok((formatted, key_value)) => (formatted, key_value),
             Err(_) => {
                 return ApiResponse::error("unable to format config")
                     .with_status(StatusCode::BAD_REQUEST)
@@ -66,7 +66,7 @@ mod post {
                 &format!("config::{}", serde_json::to_string(&data).unwrap()),
                 10800,
                 || async {
-                    let data = if let Some(contains) = contains {
+                    let data = if let Some((key, value)) = key_value {
                         sqlx::query(&format!(
                             r#"
                             SELECT
@@ -82,7 +82,7 @@ mod post {
                                 configs.type = $1
                                 AND configs.format = $2
                                 AND configs.location = $3
-                                AND config_values.value LIKE '%' || $4 || '%'
+                                AND config_values.parsed->$4 = $5
                             GROUP BY config_values.id, builds.id
                             LIMIT 3
                             "#,
@@ -91,7 +91,8 @@ mod post {
                         .bind(config.r#type)
                         .bind(config.format)
                         .bind(config.aliases[0])
-                        .bind(contains)
+                        .bind(key)
+                        .bind(serde_json::to_value(value)?)
                         .fetch_all(state.database.read())
                         .await
                     } else {

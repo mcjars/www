@@ -94,9 +94,9 @@ mod get {
                 .ok();
         }
 
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
-
-        if let Some(location) = location {
+        if let Some((location, version)) =
+            Version::resolve(&state.database, &state.cache, r#type, &version).await?
+        {
             let start = chrono::NaiveDate::from_ymd_opt(year as i32, month as u32, 1).unwrap();
             let end = {
                 let next_month = if month == 12 {

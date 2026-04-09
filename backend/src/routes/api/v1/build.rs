@@ -35,7 +35,7 @@ mod get {
         request_data: GetData,
         Path(identifier): Path<String>,
     ) -> ApiResponseResult {
-        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await?;
+        let data = Build::by_identifier(&state.database, &state.cache, &identifier).await?;
 
         if let Some((build, latest, version)) = data {
             *request_data.lock().unwrap() = json!({

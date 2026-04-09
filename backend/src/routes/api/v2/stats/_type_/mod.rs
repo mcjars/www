@@ -113,7 +113,7 @@ mod get {
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get::route))
-        .nest("/history", history::router(state))
         .nest("/{version}", _version_::router(state))
+        .nest("/history", history::router(state))
         .with_state(state.clone())
 }

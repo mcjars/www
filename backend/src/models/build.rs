@@ -35,6 +35,7 @@ pub struct InstallationStepRemove {
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct Build {
     pub id: i32,
+    pub uuid: uuid::Uuid,
 
     #[serde(rename(serialize = "versionId"), alias = "versionId")]
     #[schema(rename = "versionId", example = "1.17.1")]
@@ -80,6 +81,10 @@ impl BaseModel for Build {
             (
                 compact_str::format_compact!("{table}.id"),
                 compact_str::format_compact!("{}id", prefix.unwrap_or_default()),
+            ),
+            (
+                compact_str::format_compact!("{table}.uuid"),
+                compact_str::format_compact!("{}uuid", prefix.unwrap_or_default()),
             ),
             (
                 compact_str::format_compact!("{table}.version_id"),
@@ -141,6 +146,7 @@ impl BaseModel for Build {
 
         Ok(Self {
             id: row.try_get(compact_str::format_compact!("{prefix}id").as_str())?,
+            uuid: row.try_get(compact_str::format_compact!("{prefix}uuid").as_str())?,
             version_id: row
                 .try_get(compact_str::format_compact!("{prefix}version_id").as_str())
                 .ok(),
@@ -181,7 +187,7 @@ impl Build {
             .sum()
     }
 
-    pub async fn by_v1_identifier(
+    pub async fn by_identifier(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
         identifier: &str,
@@ -201,6 +207,8 @@ impl Build {
                         } else {
                             None
                         }
+                    } else if identifier.parse::<uuid::Uuid>().is_ok() {
+                        None
                     } else {
                         return Ok(None);
                     }
@@ -269,6 +277,8 @@ impl Build {
                 Self::columns_sql(None, None),
                 if let Some(hash) = hash {
                     compact_str::format_compact!("build_hashes INNER JOIN builds ON builds.id = build_hashes.build_id WHERE {hash} = decode($1, 'hex')")
+                } else if identifier.parse::<uuid::Uuid>().is_ok() {
+                    compact_str::format_compact!("builds WHERE uuid = $1::uuid")
                 } else {
                     "builds WHERE builds.id = $1::int".into()
                 },
@@ -336,7 +346,7 @@ impl Build {
         data.map(|row| Self::map(None, &row)).transpose()
     }
 
-    pub async fn all_for_version(
+    pub async fn all_by_version(
         database: &crate::database::Database,
         r#type: ServerType,
         version_location: &str,
@@ -363,7 +373,51 @@ impl Build {
         .try_collect_vec()
     }
 
-    pub async fn all_for_minecraft_version(
+    pub async fn all_by_version_with_pagination(
+        database: &crate::database::Database,
+        r#type: ServerType,
+        version_location: &str,
+        version_id: &str,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+    ) -> Result<crate::models::Pagination<Self>, anyhow::Error> {
+        let rows = sqlx::query(&format!(
+            r#"
+            SELECT {}, COUNT(*) OVER() AS total_count
+            FROM builds
+            WHERE
+                {} = $1
+                AND type = $2
+                AND ($5 IS NULL OR name ILIKE '%' || $5 || '%')
+            ORDER BY id DESC
+            LIMIT $3 OFFSET $4
+            "#,
+            Self::columns_sql(None, None),
+            version_location
+        ))
+        .bind(version_id)
+        .bind(r#type)
+        .bind(per_page)
+        .bind((page - 1) * per_page)
+        .bind(search)
+        .fetch_all(database.read())
+        .await?;
+
+        Ok(super::Pagination {
+            total: rows
+                .first()
+                .map_or(Ok(0), |row| row.try_get("total_count"))?,
+            per_page,
+            page,
+            data: rows
+                .into_iter()
+                .map(|row| Self::map(None, &row))
+                .try_collect_vec()?,
+        })
+    }
+
+    pub async fn all_by_minecraft_version(
         database: &crate::database::Database,
         version_id: &str,
     ) -> Result<Vec<Self>, anyhow::Error> {
@@ -383,4 +437,36 @@ impl Build {
         .map(|row| Self::map(None, &row))
         .try_collect_vec()
     }
+
+    pub fn into_api_v3(self) -> ApiBuildV3 {
+        ApiBuildV3 {
+            uuid: self.uuid,
+            version_id: self.version_id,
+            project_version_id: self.project_version_id,
+            r#type: self.r#type,
+            experimental: self.experimental,
+            name: self.name,
+            installation: self.installation,
+            changes: self.changes,
+            created: self.created.map(|dt| dt.and_utc()),
+        }
+    }
+}
+
+#[derive(ToSchema, Serialize, Deserialize)]
+#[schema(title = "BuildV3")]
+pub struct ApiBuildV3 {
+    pub uuid: uuid::Uuid,
+    pub version_id: Option<compact_str::CompactString>,
+    pub project_version_id: Option<compact_str::CompactString>,
+
+    pub r#type: ServerType,
+    pub experimental: bool,
+
+    pub name: compact_str::CompactString,
+
+    pub installation: Vec<Vec<InstallationStep>>,
+    pub changes: Vec<compact_str::CompactString>,
+
+    pub created: Option<chrono::DateTime<chrono::Utc>>,
 }

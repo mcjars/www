@@ -1,4 +1,4 @@
-use crate::ApiError;
+use crate::routes::{ApiError, ApiErrorV3};
 use accept_header::Accept;
 use axum::response::IntoResponse;
 use std::{borrow::Cow, fmt::Display, str::FromStr};
@@ -7,6 +7,7 @@ pub type ApiResponseResult = Result<ApiResponse, ApiResponse>;
 
 tokio::task_local! {
     pub static ACCEPT_HEADER: Option<Accept>;
+    pub static IS_V3: bool;
 }
 
 pub fn accept_from_headers(headers: &axum::http::HeaderMap) -> Option<Accept> {
@@ -108,7 +109,13 @@ impl ApiResponse {
 
     #[inline]
     pub fn error(err: &str) -> Self {
-        Self::new_serialized(ApiError::new(&[err])).with_status(axum::http::StatusCode::BAD_REQUEST)
+        if IS_V3.try_get().unwrap_or(false) {
+            Self::new_serialized(ApiErrorV3::new(&[err]))
+                .with_status(axum::http::StatusCode::BAD_REQUEST)
+        } else {
+            Self::new_serialized(ApiError::new(&[err]))
+                .with_status(axum::http::StatusCode::BAD_REQUEST)
+        }
     }
 
     #[inline]

@@ -1,5 +1,4 @@
 use crate::env::RedisMode;
-use colored::Colorize;
 use rustis::{
     client::Client,
     commands::{
@@ -53,9 +52,9 @@ impl Cache {
             .to_string();
 
         tracing::info!(
-            "{} connected {}",
-            "cache".bright_yellow(),
-            format!("(redis@{}, {}ms)", version, start.elapsed().as_millis()).bright_black()
+            "cache connected (redis@{}, {}ms)",
+            version,
+            start.elapsed().as_millis()
         );
 
         instance

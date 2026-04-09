@@ -54,6 +54,7 @@ mod post {
     #[schema(rename_all = "camelCase")]
     pub struct BuildSearch {
         id: Option<u32>,
+        uuid: Option<uuid::Uuid>,
         r#type: Option<ServerType>,
         version_id: Option<String>,
         project_version_id: Option<String>,
@@ -73,6 +74,7 @@ mod post {
         #[inline]
         pub fn has_any(&self) -> bool {
             self.id.is_some()
+                || self.uuid.is_some()
                 || self.r#type.is_some()
                 || self.version_id.is_some()
                 || self.project_version_id.is_some()
@@ -94,7 +96,10 @@ mod post {
     }
 
     #[derive(ToSchema, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct ConfigValue {
+        uuid: uuid::Uuid,
+        config_uuid: uuid::Uuid,
         r#type: ServerType,
         format: Format,
         value: String,
@@ -239,6 +244,10 @@ mod post {
             if let Some(id) = search.id {
                 where_clause.push(format!("builds.id = ($1->>{})::int", data.len()));
                 data.push(serde_json::to_value(id).unwrap());
+            }
+            if let Some(uuid) = search.uuid {
+                where_clause.push(format!("builds.uuid = ($1->>{})::uuid", data.len()));
+                data.push(serde_json::to_value(uuid).unwrap());
             }
             if let Some(r#type) = search.r#type {
                 where_clause.push(format!("builds.type = ($1->>{})::server_type", data.len()));
@@ -394,6 +403,8 @@ mod post {
             for row in sqlx::query(
                 r#"
                 SELECT
+                    config_values.uuid AS uuid,
+                    configs.uuid AS config_uuid,
                     configs.type AS type,
                     configs.format AS format,
                     configs.location AS location,
@@ -409,13 +420,15 @@ mod post {
             .fetch_all(database.read())
             .await?
             {
+                let uuid = row.try_get("uuid")?;
+                let config_uuid = row.try_get("config_uuid")?;
                 let r#type = row.try_get("type")?;
                 let format = row.try_get("format")?;
                 let value = row.try_get("value")?;
 
                 configs.insert(
                     row.get("location"),
-                    ConfigValue { r#type, format, value },
+                    ConfigValue { uuid, config_uuid, r#type, format, value },
                 );
             }
 

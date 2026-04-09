@@ -35,18 +35,19 @@ mod get {
             example = "1.17.1",
         )
     ))]
+    #[deprecated]
     pub async fn route(
         state: GetState,
         request_data: GetData,
         Path((r#type, version)): Path<(ServerType, String)>,
     ) -> ApiResponseResult {
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
-
-        if let Some(location) = location {
+        if let Some((location, version)) =
+            Version::resolve(&state.database, &state.cache, r#type, &version).await?
+        {
             let data = state
                 .cache
                 .cached(&format!("builds::{type}::{version}"), 1800, || {
-                    Build::all_for_version(&state.database, r#type, &location, &version)
+                    Build::all_by_version(&state.database, r#type, &location, &version)
                 })
                 .await?;
 
@@ -71,6 +72,7 @@ mod get {
     }
 }
 
+#[allow(deprecated)]
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get::route))

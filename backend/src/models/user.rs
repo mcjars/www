@@ -153,11 +153,11 @@ impl User {
                     r#"
                     SELECT {}
                     FROM users
-                    WHERE users.login ILIKE $1
+                    WHERE lower(users.login) = lower($1)
                     "#,
                     Self::columns_sql(None, None)
                 ))
-                .bind(login.replace('%', "\\%").replace('_', "\\_"))
+                .bind(login)
                 .fetch_optional(database.read())
                 .await?;
 

@@ -33,7 +33,7 @@ mod get {
         let data = state
             .cache
             .cached(&format!("version::{version}::builds"), 1800, || async {
-                let data = Build::all_for_minecraft_version(&state.database, &version).await?;
+                let data = Build::all_by_minecraft_version(&state.database, &version).await?;
 
                 let mut builds = IndexMap::new();
                 for r#type in ServerType::variants(&state.env) {

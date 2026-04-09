@@ -3,6 +3,8 @@ import * as schema from "@/schema"
 import env from "@/globals/env"
 import yaml from "js-yaml"
 import json5 from "json5"
+import toml from "toml"
+import ahocon from "ahocon"
 import logger from "@/globals/logger"
 import { Pool } from "pg"
 
@@ -225,6 +227,7 @@ export default Object.assign(db, {
 		if (file.endsWith('.properties')) {
 			value = value.trim().split('\n')
 				.sort()
+				.map((line) => line.startsWith('management-server-secret=') ? 'management-server-secret=xxx' : line)
 				.join('\n')
 		} else if (file.endsWith('.yml') || file.endsWith('.yaml')) {			
 			const quotedDecimalRegex = /: '([-+]?[0-9]*\.[0-9]+)'/g
@@ -309,5 +312,75 @@ export default Object.assign(db, {
 			.replace(/seed-(.*): (.*)/g, 'seed-$1: xxx')
 
 		return value
+	},
+
+	parseConfig(file: string, value: string): object {
+		if (file.endsWith('.properties')) {
+			const obj: Record<string, string> = {}
+			for (const line of value.trim().split('\n')) {
+				if (line.trimStart()[0] === '#' || !line.trim().length) continue
+
+				const [key, ...rest] = line.split('=')
+				obj[key.trim()] = rest.join('=').trim()
+			}
+			return obj
+		} else if (file.endsWith('.yml') || file.endsWith('.yaml')) {
+			return yaml.load(value) as object
+		} else if (file.endsWith('.json') || file.endsWith('.json5')) {
+			return json5.parse(value)
+		} else if (file.endsWith('.toml')) {
+			return parseLenientToml(value)
+		} else if (file.endsWith('.conf')) {
+			return ahocon.parse(value)
+		}
+
+		throw new Error(`Unsupported config format for file: ${file}`)
 	}
 })
+
+function parseLenientToml(tomlString: string): object {
+  const lines = tomlString.split('\n')
+  const lastSeenLine = new Map()
+  let currentTable = 'root'
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim()
+
+    const tableMatch = trimmed.match(/^\[(.*)\]/);
+    if (tableMatch) {
+      currentTable = tableMatch[1].trim()
+      return
+    }
+
+    const kvMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=/)
+    if (kvMatch) {
+      const key = kvMatch[1].trim()
+      lastSeenLine.set(`${currentTable}::${key}`, index)
+    }
+  })
+
+  currentTable = 'root'
+  const cleanLines = lines.map((line, index) => {
+    const trimmed = line.trim()
+
+    const tableMatch = trimmed.match(/^\[(.*)\]/)
+    if (tableMatch) {
+      currentTable = tableMatch[1].trim()
+      return line
+    }
+
+    const kvMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=/)
+    if (kvMatch) {
+      const key = kvMatch[1].trim()
+      const activeLineIndex = lastSeenLine.get(`${currentTable}::${key}`)
+      
+      if (activeLineIndex !== index) {
+        return `# [OVERRIDDEN] ${line}`
+      }
+    }
+
+    return line
+  })
+
+  return toml.parse(cleanLines.join('\n'))
+}

@@ -1,5 +1,5 @@
 import { isNotNull, relations, sql } from "drizzle-orm"
-import { foreignKey, index, integer, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType, bigint, date } from "drizzle-orm/pg-core"
+import { foreignKey, index, integer, uuid, primaryKey, pgTable, varchar, uniqueIndex, pgEnum, serial, jsonb, char, boolean, smallint, timestamp, inet, text, customType, bigint, date } from "drizzle-orm/pg-core"
 
 export const bytea = customType<{ data: string; notNull: false; default: false }>({
   dataType() {
@@ -197,6 +197,7 @@ export const minecraftVersions = pgTable('minecraft_versions', {
 
 export const projectVersions = pgTable('project_versions', {
 	id: varchar('id', { length: 63 }).notNull(),
+
 	type: typesEnum('type').notNull()
 }, (projectVersions) => [
 	primaryKey({ name: 'projectVersions_pk', columns: [projectVersions.type, projectVersions.id] }),
@@ -237,6 +238,8 @@ export const files = pgTable('files', {
 
 export const builds = pgTable('builds', {
 	id: serial('id').primaryKey().notNull(),
+	uuid: uuid('uuid').notNull().default(sql`gen_random_uuid()`),
+
 	versionId: varchar('version_id', { length: 63 }).references(() => minecraftVersions.id, { onDelete: 'cascade' }),
 	projectVersionId: varchar('project_version_id', { length: 63 }),
 
@@ -257,6 +260,8 @@ export const builds = pgTable('builds', {
 	changes: jsonb('changes').$type<string[]>().notNull(),
 	created: timestamp('created')
 }, (builds) => [
+	uniqueIndex('builds_uuid_idx').on(builds.uuid),
+
 	index('builds_type_idx').on(builds.type),
 	index('builds_experimental_idx').on(builds.experimental),
 	index('builds_name_idx').on(builds.name),
@@ -325,17 +330,22 @@ export const buildHashesRelations = relations(buildHashes, ({ one }) => ({
 
 export const configs = pgTable('configs', {
 	id: serial('id').primaryKey().notNull(),
+	uuid: uuid('uuid').notNull().default(sql`gen_random_uuid()`),
 
 	location: varchar('location', { length: 51 }).notNull().unique(),
 	type: typesEnum('type').notNull(),
 	format: formatsEnum('format').notNull()
 }, (configs) => [
+	uniqueIndex('configs_uuid_idx').on(configs.uuid),
+
 	index('configs_type_idx').on(configs.type),
 	index('configs_format_idx').on(configs.format)
 ])
 
 export const configValues = pgTable('config_values', {
 	id: serial('id').primaryKey().notNull(),
+	uuid: uuid('uuid').notNull().default(sql`gen_random_uuid()`),
+
 	configId: integer('config_id').notNull().references(() => configs.id, { onDelete: 'cascade' }),
 
 	sha1: char('sha1', { length: 40 }).notNull(),
@@ -345,9 +355,11 @@ export const configValues = pgTable('config_values', {
 	sha512: char('sha512', { length: 128 }).notNull(),
 	md5: char('md5', { length: 32 }).notNull(),
 
-	value: text('value').notNull()
+	value: text('value').notNull(),
+	parsed: jsonb('parsed').default({}).notNull()
 }, (configValues) => [
 	index('configValues_config_idx').on(configValues.configId),
+	uniqueIndex('configValues_uuid_idx').on(configValues.uuid),
 	uniqueIndex('configValues_unique_config_sha512_idx').on(configValues.configId, configValues.sha512)
 ])
 

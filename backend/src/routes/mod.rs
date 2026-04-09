@@ -38,6 +38,27 @@ impl<'a> ApiError<'a> {
     }
 }
 
+#[derive(ToSchema, Serialize)]
+pub struct ApiErrorV3<'a> {
+    pub errors: &'a [&'a str],
+}
+
+impl<'a> ApiErrorV3<'a> {
+    pub fn new(errors: &'a [&'a str]) -> Self {
+        Self { errors }
+    }
+
+    pub fn new_strings_value(errors: Vec<String>) -> serde_json::Value {
+        serde_json::json!({
+            "errors": errors,
+        })
+    }
+
+    pub fn to_value(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap()
+    }
+}
+
 pub struct AppState {
     pub start_time: Instant,
     pub version: String,

@@ -1,4 +1,8 @@
-use crate::response::{ApiResponse, ApiResponseResult};
+use api::{
+    models::r#type::ServerType,
+    response::{ApiResponse, ApiResponseResult},
+    routes::{ApiError, ApiErrorV3, GetState},
+};
 use axum::{
     ServiceExt,
     body::Body,
@@ -8,11 +12,8 @@ use axum::{
     response::Response,
     routing::get,
 };
-use colored::Colorize;
 use compact_str::ToCompactString;
 use include_dir::{Dir, include_dir};
-use models::r#type::ServerType;
-use routes::{ApiError, GetState};
 use sentry_tower::SentryHttpLayer;
 use sha2::Digest;
 use std::{collections::HashMap, sync::Arc, time::Instant};
@@ -23,22 +24,6 @@ use tower_http::{
 };
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa_axum::router::OpenApiRouter;
-
-mod cache;
-mod clickhouse;
-mod database;
-mod env;
-mod files;
-mod models;
-mod payload;
-mod prelude;
-mod requests;
-mod response;
-mod routes;
-mod s3;
-mod utils;
-
-pub use payload::Payload;
 
 #[cfg(target_os = "linux")]
 #[global_allocator]
@@ -83,31 +68,31 @@ fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body>
 }
 
 async fn handle_request(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
-    let ip = utils::extract_ip(req.headers())
+    let ip = api::utils::extract_ip(req.headers())
         .map(|ip| ip.to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
     tracing::info!(
-        "http {} {}{} (from {})",
+        ip,
+        path = req.uri().path(),
+        query = req.uri().query().unwrap_or_default(),
+        "http {}",
         req.method().to_string().to_lowercase(),
-        req.uri().path().cyan(),
-        if let Some(query) = req.uri().query() {
-            format!("?{query}")
-        } else {
-            "".to_string()
-        }
-        .bright_cyan(),
-        ip
     );
 
-    Ok(crate::response::ACCEPT_HEADER
-        .scope(crate::response::accept_from_headers(req.headers()), async {
-            next.run(req).await
+    Ok(api::response::IS_V3
+        .scope(req.uri().path().starts_with("/api/v3/"), async {
+            api::response::ACCEPT_HEADER
+                .scope(api::response::accept_from_headers(req.headers()), async {
+                    next.run(req).await
+                })
+                .await
         })
         .await)
 }
 
 async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, StatusCode> {
+    let is_v3 = req.uri().path().starts_with("/api/v3/");
     let if_none_match = req.headers().get("If-None-Match").cloned();
     let mut response = next.run(req).await;
 
@@ -135,10 +120,17 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
             .headers
             .insert("Content-Type", "application/json".parse().unwrap());
 
-        response = Response::from_parts(
-            parts,
-            Body::from(ApiError::new(&[&text_body]).to_value().to_string()),
-        );
+        if is_v3 {
+            response = Response::from_parts(
+                parts,
+                Body::from(ApiErrorV3::new(&[&text_body]).to_value().to_string()),
+            );
+        } else {
+            response = Response::from_parts(
+                parts,
+                Body::from(ApiError::new(&[&text_body]).to_value().to_string()),
+            );
+        }
     }
 
     if !response.headers().contains_key("ETag") {
@@ -172,10 +164,10 @@ async fn handle_postprocessing(req: Request, next: Next) -> Result<Response, Sta
 
 #[tokio::main]
 async fn main() {
-    let (env, _tracing_guard) = match env::Env::parse() {
+    let (env, _tracing_guard) = match api::env::Env::parse() {
         Ok((env, tracing_guard)) => (env, tracing_guard),
         Err(err) => {
-            eprintln!("{}: {err:#?}", "failed to parse environment".red());
+            eprintln!("failed to parse environment: {err:#?}");
             std::process::exit(1);
         }
     };
@@ -190,20 +182,25 @@ async fn main() {
         },
     ));
 
-    let s3 = Arc::new(s3::S3::new(env.clone()).await);
-    let database = Arc::new(database::Database::new(env.clone()).await);
-    let clickhouse = Arc::new(clickhouse::Clickhouse::new(env.clone(), database.clone()).await);
-    let cache = Arc::new(cache::Cache::new(env.clone()).await);
+    let s3 = Arc::new(api::s3::S3::new(env.clone()).await);
+    let database = Arc::new(api::database::Database::new(env.clone()).await);
+    let clickhouse =
+        Arc::new(api::clickhouse::Clickhouse::new(env.clone(), database.clone()).await);
+    let cache = Arc::new(api::cache::Cache::new(env.clone()).await);
 
-    let state = Arc::new(routes::AppState {
+    let state = Arc::new(api::routes::AppState {
         start_time: Instant::now(),
         version: format!("{VERSION}:{GIT_COMMIT}"),
 
         database: database.clone(),
         clickhouse: clickhouse.clone(),
         cache: cache.clone(),
-        requests: requests::RequestLogger::new(database.clone(), clickhouse.clone(), cache.clone()),
-        files: files::FileCache::new(database.clone(), env.clone()).await,
+        requests: api::requests::RequestLogger::new(
+            database.clone(),
+            clickhouse.clone(),
+            cache.clone(),
+        ),
+        files: api::files::FileCache::new(database.clone(), env.clone()).await,
         env,
         s3,
     });
@@ -240,7 +237,7 @@ async fn main() {
 
     let app =
         OpenApiRouter::new()
-            .merge(routes::router(&state))
+            .merge(api::routes::router(&state))
             .route(
                 "/icons/{type}",
                 get(|state: GetState, Path::<ServerType>(r#type)| async move {
@@ -481,14 +478,10 @@ async fn main() {
         .unwrap();
 
     tracing::info!(
-        "{} listening on {} {}",
-        "http server".bright_red(),
-        state.env.bind.cyan(),
-        format!(
-            "(app@{VERSION}, {}ms)",
-            state.start_time.elapsed().as_millis()
-        )
-        .bright_black()
+        "http server listening on {} (app@{}, {}ms)",
+        state.env.bind,
+        VERSION,
+        state.start_time.elapsed().as_millis()
     );
 
     let (router, mut openapi) = app.split_for_parts();

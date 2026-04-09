@@ -1,4 +1,3 @@
-use colored::Colorize;
 use sqlx::{Row, postgres::PgPoolOptions};
 use std::sync::Arc;
 
@@ -70,14 +69,9 @@ impl Database {
             .unwrap();
 
         tracing::info!(
-            "{} connected {}",
-            "database".bright_cyan(),
-            format!(
-                "(postgres@{}, {}ms)",
-                version.0.bright_black(),
-                start.elapsed().as_millis()
-            )
-            .bright_black()
+            "database connected (postgres@{}, {}ms)",
+            version.0,
+            start.elapsed().as_millis()
         );
 
         if env.database_migrate {
@@ -90,11 +84,7 @@ impl Database {
                     .await
                     .unwrap();
 
-                tracing::info!(
-                    "{} migrated {}",
-                    "database".bright_cyan(),
-                    format!("({}ms)", start.elapsed().as_millis()).bright_black()
-                );
+                tracing::info!("database migrated ({}ms)", start.elapsed().as_millis());
             });
         }
 
@@ -130,14 +120,9 @@ impl Database {
                     }
 
                     tracing::info!(
-                        "{} counts updated {}",
-                        "database".bright_cyan(),
-                        format!(
-                            "(builds: {}, hashes: {})",
-                            builds_count.to_string().bright_black(),
-                            build_hashes_count.to_string().bright_black()
-                        )
-                        .bright_black()
+                        "database counts updated (builds: {}, hashes: {})",
+                        builds_count,
+                        build_hashes_count
                     );
                 }
             });

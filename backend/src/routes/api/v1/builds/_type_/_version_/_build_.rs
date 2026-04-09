@@ -38,6 +38,7 @@ mod get {
             example = "latest",
         )
     ))]
+    #[deprecated]
     pub async fn route(
         state: GetState,
         Path((r#type, version, build)): Path<(ServerType, String, String)>,
@@ -63,9 +64,9 @@ mod get {
             }
         };
 
-        let location = Version::location(&state.database, &state.cache, r#type, &version).await?;
-
-        if let Some(location) = location {
+        if let Some((location, version)) =
+            Version::resolve(&state.database, &state.cache, r#type, &version).await?
+        {
             let data = state
                 .cache
                 .cached(
@@ -99,6 +100,7 @@ mod get {
     }
 }
 
+#[allow(deprecated)]
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get::route))

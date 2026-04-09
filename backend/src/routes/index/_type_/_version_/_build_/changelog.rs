@@ -13,7 +13,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
             "/",
             get(
                 |state: GetState, Path((_, _, identifier)): Path<(ServerType, String, String)>| async move {
-                    let build = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await?;
+                    let build = Build::by_identifier(&state.database, &state.cache, &identifier).await?;
 
                     if let Some((build, _, _)) = build {
                         if build.changes.is_empty() {

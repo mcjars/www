@@ -42,7 +42,7 @@ mod get {
         Path(identifier): Path<String>,
         Query(query): Query<Params>,
     ) -> ApiResponseResult {
-        let data = Build::by_v1_identifier(&state.database, &state.cache, &identifier).await?;
+        let data = Build::by_identifier(&state.database, &state.cache, &identifier).await?;
 
         if let Some((build, _, version)) = data {
             let mut script = format!(

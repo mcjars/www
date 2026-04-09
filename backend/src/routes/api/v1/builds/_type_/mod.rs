@@ -30,6 +30,7 @@ mod get {
             example = "VANILLA",
         ),
     ))]
+    #[deprecated]
     pub async fn route(
         state: GetState,
         request_data: GetData,
@@ -52,6 +53,7 @@ mod get {
     }
 }
 
+#[allow(deprecated)]
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get::route))
