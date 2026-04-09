@@ -3,13 +3,9 @@ import axios from "axios"
 import { PartialMinecraftBuild } from "@/api/builds"
 
 export default async function apiGetBuild(build: string): Promise<PartialMinecraftBuild> {
-	const { data } = await axios.post<{
+	const { data } = await axios.get<{
 		build: PartialMinecraftBuild
-	}>(`${BASE_URL}/api/v2/build`, {
-		hash: {
-			sha256: build
-		}
-	})
+	}>(`${BASE_URL}/api/v3/builds/${build}/versions`)
 
 	return data.build
 }

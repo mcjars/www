@@ -31,11 +31,13 @@ export default function PageIndex() {
     { revalidateOnFocus: false, revalidateIfStale: false }
   )
 
-	const { data: versions } = useSWR(
+	const { data: versionsResponse } = useSWR(
 		['versions', 'VANILLA'],
-		() => apiGetVersions('VANILLA'),
+		() => apiGetVersions('VANILLA', { page: 1, perPage: 200, search: '' }),
 		{ revalidateOnFocus: false, revalidateIfStale: false }
 	)
+
+	const versions = versionsResponse?.items
 
 	const [ typeLookupsType, setTypeLookupsType ] = useQueryParam('typeLookupsType', StringParam)
 	const { data: typeLookupsRaw } = useSWR(

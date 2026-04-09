@@ -104,6 +104,14 @@ export function AppSidebar() {
 											</SidebarMenuButton>
 										</SidebarMenuItem>
 										<SidebarMenuItem>
+											<SidebarMenuButton asChild isActive={location.pathname === '/configs'}>
+												<AutoCloseLink to={'/configs'}>
+													<FileIcon className={'mr-2'} />
+													Configs
+												</AutoCloseLink>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
 											<SidebarMenuButton asChild isActive={location.pathname === '/job-status'}>
 												<AutoCloseLink to={'/job-status'}>
 													<HammerIcon className={'mr-2'} />
@@ -208,6 +216,9 @@ export function AppSidebar() {
 																		<SidebarMenuSubItem>
 																			<SidebarMenuSubButton asChild isActive={location.pathname === `/${type.identifier}/versions`}>
 																				<AutoCloseLink to={`/${type.identifier}/versions`}>Versions</AutoCloseLink>
+																			</SidebarMenuSubButton>
+																			<SidebarMenuSubButton asChild isActive={location.pathname === `/${type.identifier}/config`}>
+																				<AutoCloseLink to={`/${type.identifier}/config`}>Configs</AutoCloseLink>
 																			</SidebarMenuSubButton>
 																			<SidebarMenuSubButton asChild isActive={location.pathname === `/${type.identifier}/statistics`}>
 																				<AutoCloseLink to={`/${type.identifier}/statistics`}>Statistics</AutoCloseLink>
