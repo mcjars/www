@@ -17,7 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import bytes from "bytes"
 import { ChevronDown, DownloadIcon, ExternalLinkIcon, ListIcon, RefreshCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import useSWR from "swr"
 import { NumberParam, StringParam, useQueryParam } from "use-query-params"
 import { useLocalStorage } from "usehooks-ts"
@@ -25,6 +25,7 @@ import { useLocalStorage } from "usehooks-ts"
 export default function PageTypeVersions() {
 	const { type } = useParams<{ type: string }>()
 	if (!type) return null
+	const navigate = useNavigate()
 
 	const mobile = useIsMobile(1280)
 
@@ -617,6 +618,20 @@ export default function PageTypeVersions() {
 															</PopoverContent>
 														</Popover>
 													)}
+
+													<Button
+														variant={'outline'}
+														className={'mr-2'}
+														onClick={() => {
+															const params = new URLSearchParams()
+															const selectedVersion = browse ?? build.versionId ?? build.projectVersionId
+															if (selectedVersion) params.set('version', selectedVersion)
+															if (build.uuid) params.set('build', build.uuid)
+															navigate(`/${type}/config${params.toString() ? `?${params.toString()}` : ''}`)
+														}}
+													>
+														Browse Configs
+													</Button>
 
 													<CollapsibleTrigger>
 														<Button>

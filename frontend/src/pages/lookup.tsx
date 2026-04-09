@@ -1,6 +1,6 @@
-import apiGetBuild from "@/api/build"
+import apiGetBuild from "@/api/builds/by-hash"
 import { PartialMinecraftBuild } from "@/api/builds"
-import apiGetConfigSearch from "@/api/configs/search"
+import apiGetConfigSearch from "@/api/configs/identify"
 import apiGetTypes from "@/api/types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
