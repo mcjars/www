@@ -182,10 +182,10 @@ export function AppSidebar() {
 																		{type.experimental && (
 																			<ResponsiveTooltip>
 																				<Tooltip>
-																					<TooltipTrigger>
+																					<TooltipTrigger asChild>
 																						<TriangleAlertIcon size={16} className={'text-yellow-500'} />
 																					</TooltipTrigger>
-																					<TooltipContent>
+																					<TooltipContent className={'pointer-events-none'}>
 																						Experimental
 																					</TooltipContent>
 																				</Tooltip>
@@ -194,10 +194,10 @@ export function AppSidebar() {
 																		{type.deprecated && (
 																			<ResponsiveTooltip>
 																				<Tooltip>
-																					<TooltipTrigger>
+																					<TooltipTrigger asChild>
 																						<SkullIcon size={16} className={'text-red-500'} />
 																					</TooltipTrigger>
-																					<TooltipContent>
+																					<TooltipContent className={'pointer-events-none'}>
 																						Deprecated
 																					</TooltipContent>
 																				</Tooltip>
