@@ -19,7 +19,7 @@ export default function UserTooltip({ user, children, className }: { user: User,
 						</p>
 					</div>
 				</TooltipContent>
-				<TooltipTrigger className={className}>
+				<TooltipTrigger asChild className={className}>
 					{children}
 				</TooltipTrigger>
 			</Tooltip>
