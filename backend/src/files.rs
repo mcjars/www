@@ -148,7 +148,26 @@ impl FileCache {
 
         tokio::spawn(async move {
             let mut run = async || -> std::io::Result<()> {
-                let mut file = tokio::fs::File::open(&path).await?;
+                let mut file = loop {
+                    let current_progress = *progress.borrow_and_update();
+
+                    match current_progress.status {
+                        FillStatus::Failed => {
+                            return Err(std::io::Error::other("cache fill failed"));
+                        }
+                        _ if current_progress.written > 0
+                            || current_progress.status == FillStatus::Done =>
+                        {
+                            break tokio::fs::File::open(&path).await?;
+                        }
+                        _ => {
+                            if progress.changed().await.is_err() {
+                                return Ok(());
+                            }
+                        }
+                    }
+                };
+
                 let mut buffer = vec![0; BUFFER_SIZE];
                 let mut sent = 0;
 
