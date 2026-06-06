@@ -153,7 +153,7 @@ impl Organization {
         database: &crate::database::Database,
         user_id: i32,
     ) -> Result<Vec<Self>, anyhow::Error> {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT DISTINCT {}, organization_subusers.pending
             FROM organizations
@@ -165,7 +165,7 @@ impl Organization {
             ORDER BY organizations.id DESC
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(user_id)
         .fetch_all(database.read())
         .await?
@@ -185,7 +185,7 @@ impl Organization {
 
         cache
             .cached(&format!("organization::{id}"), 300, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -193,7 +193,7 @@ impl Organization {
                     WHERE organizations.id = $1
                     "#,
                     Self::columns_sql(None, None)
-                ))
+                )))
                 .bind(id)
                 .fetch_optional(database.read())
                 .await?;
@@ -210,7 +210,7 @@ impl Organization {
     ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("organization::key::{key}"), 300, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -219,7 +219,7 @@ impl Organization {
                     WHERE organization_keys.key = $1
                     "#,
                     Self::columns_sql(None, None)
-                ))
+                )))
                 .bind(key)
                 .fetch_optional(database.read())
                 .await?;
@@ -238,7 +238,7 @@ impl Organization {
     ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("organization::{organization_id}::user::{user_id}"), 60, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT {}
                     FROM organizations
@@ -254,7 +254,7 @@ impl Organization {
                     LIMIT 1
                     "#,
                     Self::columns_sql(None, None)
-                ))
+                )))
                 .bind(user_id)
                 .bind(user_admin)
                 .bind(organization_id)
@@ -390,14 +390,14 @@ impl OrganizationKey {
         database: &crate::database::Database,
         organization_id: i32,
     ) -> Result<Vec<Self>, anyhow::Error> {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {} FROM organization_keys
             WHERE organization_keys.organization_id = $1
             ORDER BY organization_keys.id DESC
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(organization_id)
         .fetch_all(database.read())
         .await?
@@ -414,10 +414,10 @@ impl OrganizationKey {
             return Ok(None);
         }
 
-        let data = sqlx::query(&format!(
+        let data = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT {} FROM organization_keys WHERE organization_keys.id = $1",
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(id)
         .fetch_optional(database.read())
         .await?;
@@ -559,7 +559,7 @@ impl OrganizationSubuser {
         database: &crate::database::Database,
         organization_id: i32,
     ) -> Result<Vec<Self>, anyhow::Error> {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}
             FROM organization_subusers
@@ -568,7 +568,7 @@ impl OrganizationSubuser {
             ORDER BY organization_subusers.created DESC
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(organization_id)
         .fetch_all(database.read())
         .await?
@@ -582,7 +582,7 @@ impl OrganizationSubuser {
         organization_id: i32,
         user_id: i32,
     ) -> Result<Option<Self>, anyhow::Error> {
-        let data = sqlx::query(&format!(
+        let data = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}
             FROM organization_subusers
@@ -592,7 +592,7 @@ impl OrganizationSubuser {
                 AND organization_subusers.user_id = $2
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(organization_id)
         .bind(user_id)
         .fetch_optional(database.read())

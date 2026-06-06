@@ -67,7 +67,7 @@ mod post {
                 10800,
                 || async {
                     let data = if let Some((key, value)) = key_value {
-                        sqlx::query(&format!(
+                        sqlx::query(sqlx::AssertSqlSafe(format!(
                             r#"
                             SELECT
                                 {},
@@ -87,7 +87,7 @@ mod post {
                             LIMIT 3
                             "#,
                             Build::columns_sql(None, None)
-                        ))
+                        )))
                         .bind(config.r#type)
                         .bind(config.format)
                         .bind(config.aliases[0])
@@ -96,7 +96,7 @@ mod post {
                         .fetch_all(state.database.read())
                         .await
                     } else {
-                        sqlx::query(&format!(
+                        sqlx::query(sqlx::AssertSqlSafe(format!(
                             r#"
                             SELECT
                                 {},
@@ -116,7 +116,7 @@ mod post {
                             LIMIT 3
                             "#,
                             Build::columns_sql(None, None)
-                        ))
+                        )))
                         .bind(config.r#type)
                         .bind(config.format)
                         .bind(config.aliases[0])

@@ -15,6 +15,7 @@ mod api_keys;
 mod icon;
 mod stats;
 mod subusers;
+mod update_build_data;
 
 pub type GetOrganization = axum::extract::Extension<Organization>;
 
@@ -263,6 +264,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
         .nest("/stats", stats::router(state))
         .nest("/icon", icon::router(state))
         .nest("/api-keys", api_keys::router(state))
+        .nest("/update-build-data", update_build_data::router(state))
         .nest("/subusers", subusers::router(state))
         .route_layer(axum::middleware::from_fn_with_state(state.clone(), auth))
         .with_state(state.clone())

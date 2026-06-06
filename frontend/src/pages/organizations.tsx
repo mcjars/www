@@ -11,8 +11,10 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { ArchiveIcon, CheckIcon, ChevronDown, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, SettingsIcon, TrashIcon, UsersIcon, WebhookIcon, XIcon } from "lucide-react"
+import { ArchiveIcon, CheckIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, CodeIcon, FlagIcon, Globe2Icon, GlobeIcon, LinkIcon, LoaderCircle, PlusIcon, RefreshCwIcon, SettingsIcon, TrashIcon, UsersIcon, WebhookIcon, XIcon } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import React, { useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import useSWR from "swr"
 import apiGetUserOrganizationApiKeys from "@/api/user/organization/api-keys/apiKeys"
 import apiAddUserOrganizationApiKey from "@/api/user/organization/api-keys/addApiKey"
@@ -30,6 +32,7 @@ import apiGetTypes from "@/api/types"
 import apiPatchUserOrganization from "@/api/user/organization/patch"
 import apiDeleteUserOrganization from "@/api/user/organization/delete"
 import apiCreateUserOrganization from "@/api/user/organization/create"
+import apiPostUserOrganizationUpdateBuildData from "@/api/user/organization/updateBuildData"
 
 type OrganizationRowProps = {
 	organization: Organization
@@ -49,6 +52,7 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 	const [name, setName] = useState('')
 	const [key, setKey] = useState('')
 	const [me] = useAuth()
+	const navigate = useNavigate()
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	const [organizationEditData, setOrganizationEditData] = useState<{
@@ -134,8 +138,73 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 							<Input id={`${organization.id}.owner`} disabled={loading || me?.id !== organization.owner.id} className={'mt-2'} placeholder={'Organization Owner (@user}'} value={organizationEditData.owner} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, owner: e.target.value })} />
 						</span>
 						<span className={'flex flex-col col-span-full'}>
-							<Label htmlFor={`${organization.id}.types`}>Organization Types</Label>
-							<Input id={`${organization.id}.types`} disabled={loading} className={'mt-2'} placeholder={'Organization Types'} value={organizationEditData.types.join(', ')} autoComplete={'off'} onChange={(e) => setOrganizationEditData({ ...organizationEditData, types: e.target.value.toUpperCase().split(',').map((t) => t.trim()).filter((t, i, arr) => i !== arr.length - 1 ? types.includes(t) : true) })} />
+							<Label>Organization Types</Label>
+							<div className={'mt-2 flex flex-row flex-wrap items-center gap-2 rounded-md border border-input p-2 min-h-10'}>
+								{organizationEditData.types.map((type, index) => (
+									<Badge key={type} variant={'secondary'} className={'flex flex-row items-center gap-1 pl-1 pr-1'}>
+										<button
+											type={'button'}
+											disabled={loading || index === 0}
+											className={'disabled:opacity-30 hover:text-white'}
+											onClick={() => setOrganizationEditData({
+												...organizationEditData,
+												types: organizationEditData.types.map((t, i) => i === index - 1 ? organizationEditData.types[index] : i === index ? organizationEditData.types[index - 1] : t)
+											})}
+										>
+											<ChevronLeftIcon className={'w-4 h-4'} />
+										</button>
+
+										<span className={'font-mono'}>{type}</span>
+
+										<button
+											type={'button'}
+											disabled={loading || index === organizationEditData.types.length - 1}
+											className={'disabled:opacity-30 hover:text-white'}
+											onClick={() => setOrganizationEditData({
+												...organizationEditData,
+												types: organizationEditData.types.map((t, i) => i === index + 1 ? organizationEditData.types[index] : i === index ? organizationEditData.types[index + 1] : t)
+											})}
+										>
+											<ChevronRightIcon className={'w-4 h-4'} />
+										</button>
+
+										<button
+											type={'button'}
+											disabled={loading}
+											className={'ml-0.5 hover:text-red-400'}
+											onClick={() => setOrganizationEditData({
+												...organizationEditData,
+												types: organizationEditData.types.filter((_, i) => i !== index)
+											})}
+										>
+											<XIcon className={'w-4 h-4'} />
+										</button>
+									</Badge>
+								))}
+
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button type={'button'} variant={'outline'} size={'sm'} className={'h-7'} disabled={loading || types.every((t) => organizationEditData.types.includes(t))}>
+											<PlusIcon className={'w-4 h-4 mr-1'} />
+											Add Type
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align={'start'} className={'max-h-64 overflow-y-auto'}>
+										{types.filter((t) => !organizationEditData.types.includes(t)).map((type) => (
+											<DropdownMenuItem key={type} className={'font-mono'} onSelect={() => setOrganizationEditData({
+												...organizationEditData,
+												types: [...organizationEditData.types, type]
+											})}>
+												{type}
+											</DropdownMenuItem>
+										))}
+									</DropdownMenuContent>
+								</DropdownMenu>
+
+								{!organizationEditData.types.length && (
+									<span className={'text-sm text-gray-500'}>No types selected.</span>
+								)}
+							</div>
 						</span>
 						<span className={'flex flex-col'}>
 							<Label htmlFor={`${organization.id}.public`}>Public Organization</Label>
@@ -188,6 +257,47 @@ function OrganizationRow({ organization, currentOrganization, setCurrentOrganiza
 						}}>
 							Save
 						</Button>
+
+						{organization.verified && (
+							<div className={'col-span-full flex flex-col md:flex-row md:items-center justify-between gap-2 mt-2 pt-4 border-t'}>
+								<div className={'flex flex-col'}>
+									<Label>Update Build Data</Label>
+									<p className={'text-sm text-gray-500 mt-1'}>
+										Trigger an immediate refresh of the mcjars build data. This can be done up to 2 times per 24 hours.
+									</p>
+								</div>
+
+								<Button variant={'outline'} disabled={loading} className={'shrink-0'} onClick={() => {
+									setLoading(true)
+
+									const t = toast({
+										title: 'Requesting Build Data Update...',
+										description: `Requesting a build data update.`
+									})
+
+									apiPostUserOrganizationUpdateBuildData(organization.id)
+										.then(() => {
+											t.update(toast({
+												title: 'Build Data Update Requested',
+												description: `A build data update has been requested.`
+											}))
+
+											navigate('/job-status')
+										})
+										.catch((error) => {
+											t.update(toastError({
+												title: 'Failed to Request Build Data Update',
+												variant: 'destructive',
+												error
+											}))
+										})
+										.finally(() => setLoading(false))
+								}}>
+									<RefreshCwIcon className={'w-6 h-6 mr-2'} />
+									Update Build Data
+								</Button>
+							</div>
+						)}
 					</div>
 				</DialogContent>
 			</Dialog>

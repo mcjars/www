@@ -49,7 +49,7 @@ mod get {
                     "version"
                 };
 
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT
                         build_{column}_id AS version,
@@ -63,7 +63,7 @@ mod get {
                     GROUP BY build_{column}_id
                     ORDER BY total DESC
                     "#
-                ))
+                )))
                 .bind(r#type.to_string())
                 .fetch_all(state.database.read())
                 .await?;

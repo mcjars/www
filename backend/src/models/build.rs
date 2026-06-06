@@ -215,7 +215,7 @@ impl Build {
                 }
             };
 
-            let query = sqlx::query(&format!(
+            let query = sqlx::query(sqlx::AssertSqlSafe(format!(
                 r#"
                 WITH spec_build AS (
                     SELECT {}
@@ -284,7 +284,7 @@ impl Build {
                 },
                 Self::columns_sql(None, Some("b")),
                 Self::columns_sql(None, Some("b"))
-            ))
+            )))
             .bind(identifier)
             .fetch_all(database.read())
             .await?;
@@ -319,7 +319,7 @@ impl Build {
         version_id: &str,
         build_number: Option<i32>,
     ) -> Result<Option<Self>, anyhow::Error> {
-        let data = sqlx::query(&format!(
+        let data = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}
             FROM builds
@@ -336,7 +336,7 @@ impl Build {
             } else {
                 ""
             }
-        ))
+        )))
         .bind(version_id)
         .bind(r#type)
         .bind(build_number)
@@ -352,7 +352,7 @@ impl Build {
         version_location: &str,
         version_id: &str,
     ) -> Result<Vec<Self>, anyhow::Error> {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}
             FROM builds
@@ -363,7 +363,7 @@ impl Build {
             "#,
             Self::columns_sql(None, None),
             version_location
-        ))
+        )))
         .bind(version_id)
         .bind(r#type)
         .fetch_all(database.read())
@@ -382,7 +382,7 @@ impl Build {
         per_page: i64,
         search: Option<&str>,
     ) -> Result<crate::models::Pagination<Self>, anyhow::Error> {
-        let rows = sqlx::query(&format!(
+        let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}, COUNT(*) OVER() AS total_count
             FROM builds
@@ -395,7 +395,7 @@ impl Build {
             "#,
             Self::columns_sql(None, None),
             version_location
-        ))
+        )))
         .bind(version_id)
         .bind(r#type)
         .bind(per_page)
@@ -421,7 +421,7 @@ impl Build {
         database: &crate::database::Database,
         version_id: &str,
     ) -> Result<Vec<Self>, anyhow::Error> {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}
             FROM builds
@@ -429,7 +429,7 @@ impl Build {
             ORDER BY id DESC
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(version_id)
         .fetch_all(database.read())
         .await?

@@ -90,7 +90,7 @@ impl User {
         email: String,
         login: String,
     ) -> Result<Self, anyhow::Error> {
-        let row = sqlx::query(&format!(
+        let row = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             INSERT INTO users (github_id, name, email, login, last_login, created)
             VALUES ($1, $2, $3, $4, NOW(), NOW())
@@ -102,7 +102,7 @@ impl User {
             RETURNING {}
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(github_id)
         .bind(&name)
         .bind(&email)
@@ -118,7 +118,7 @@ impl User {
         database: &crate::database::Database,
         session: &str,
     ) -> Result<Option<(Self, UserSession)>, anyhow::Error> {
-        let row = sqlx::query(&format!(
+        let row = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             SELECT {}, {}
             FROM users
@@ -127,7 +127,7 @@ impl User {
             "#,
             Self::columns_sql(None, None),
             UserSession::columns_sql(Some("session_"), None)
-        ))
+        )))
         .bind(session)
         .fetch_optional(database.read())
         .await?;
@@ -149,14 +149,14 @@ impl User {
     ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("user::{login}"), 3600, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT {}
                     FROM users
                     WHERE lower(users.login) = lower($1)
                     "#,
                     Self::columns_sql(None, None)
-                ))
+                )))
                 .bind(login)
                 .fetch_optional(database.read())
                 .await?;
@@ -273,14 +273,14 @@ impl UserSession {
         hash.update(user_id.to_be_bytes());
         let hash = hex::encode(hash.finalize());
 
-        let row = sqlx::query(&format!(
+        let row = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             INSERT INTO user_sessions (user_id, session, ip, user_agent, last_used, created)
             VALUES ($1, $2, $3, $4, NOW(), NOW())
             RETURNING {}
             "#,
             Self::columns_sql(None, None)
-        ))
+        )))
         .bind(user_id)
         .bind(&hash)
         .bind(ip)

@@ -79,7 +79,7 @@ mod get {
                     &format!("stats::types::{type}::{version}"),
                     10800,
                     || async {
-                        let data = sqlx::query(&format!(
+                        let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                             r#"
                             SELECT
                                 COUNT(*) AS builds,
@@ -98,7 +98,7 @@ mod get {
                                 "DISTINCT"
                             },
                             location
-                        ))
+                        )))
                         .bind(r#type)
                         .bind(version)
                         .fetch_one(state.database.read())

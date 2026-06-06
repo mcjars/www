@@ -105,7 +105,7 @@ mod get {
                 &format!("stats::types::{type}::all::history::{start}::{end}"),
                 10800,
                 || async {
-                    let data = sqlx::query(&format!(
+                    let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                         r#"
                         SELECT
                             COUNT(*) AS builds,
@@ -127,7 +127,7 @@ mod get {
                         } else {
                             "DISTINCT"
                         }
-                    ))
+                    )))
                     .bind(r#type)
                     .bind(start)
                     .bind(end)

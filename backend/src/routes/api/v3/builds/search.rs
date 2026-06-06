@@ -234,7 +234,7 @@ mod post {
                 }
             }
 
-            let query = sqlx::query(&format!(
+            let query = sqlx::query(sqlx::AssertSqlSafe(format!(
                 r#"
                 WITH spec_build AS (
                     SELECT {}
@@ -304,7 +304,7 @@ mod post {
                 where_clause.join(" AND "),
                 Build::columns_sql(None, Some("b")),
                 Build::columns_sql(None, Some("b"))
-            ))
+            )))
             .bind(serde_json::to_value(data).unwrap())
             .fetch_all(database.read())
             .await?;

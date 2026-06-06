@@ -1,4 +1,4 @@
-use crate::env::RedisMode;
+use crate::{env::RedisMode, response::ApiResponse};
 use rustis::{
     client::Client,
     commands::{
@@ -114,6 +114,57 @@ impl Cache {
                 Ok(result)
             }
         }
+    }
+
+    pub async fn ratelimit(
+        &self,
+        limit_identifier: impl AsRef<str>,
+        limit: u64,
+        limit_window: u64,
+        client: impl AsRef<str>,
+    ) -> Result<(), ApiResponse> {
+        let key = compact_str::format_compact!(
+            "ratelimit::{}::{}",
+            limit_identifier.as_ref(),
+            client.as_ref()
+        );
+
+        let now = chrono::Utc::now().timestamp();
+
+        let expiry = self.client.expiretime(&*key).await.unwrap_or_default();
+        let expire_unix: u64 = if expiry > now + 2 {
+            expiry as u64
+        } else {
+            now as u64 + limit_window
+        };
+
+        let limit_used = self.client.get::<u64>(&*key).await.unwrap_or_default() + 1;
+        self.client
+            .set_with_options(
+                &*key,
+                limit_used,
+                SetCondition::None,
+                SetExpiration::Exat(expire_unix),
+                false,
+            )
+            .await?;
+
+        if limit_used >= limit {
+            return Err(ApiResponse::error(&format!(
+                "you are ratelimited, retry in {}s",
+                expiry - now
+            ))
+            .with_status(axum::http::StatusCode::TOO_MANY_REQUESTS)
+            .with_header("X-RateLimit-Limit", &limit.to_string())
+            .with_header(
+                "X-RateLimit-Remaining",
+                &limit.saturating_sub(limit_used).to_string(),
+            )
+            .with_header("X-RateLimit-Reset", &expire_unix.to_string())
+            .with_header("Retry-After", &(expiry - now).to_string()));
+        }
+
+        Ok(())
     }
 
     pub async fn clear_organization(&self, organization: i32) -> Result<(), anyhow::Error> {

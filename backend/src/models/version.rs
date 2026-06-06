@@ -256,7 +256,7 @@ impl Version {
                 let mut versions = IndexMap::new();
 
                 if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&r#type) {
-                    let data = sqlx::query(&format!(
+                    let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                         r#"
                         SELECT
                             {},
@@ -278,7 +278,7 @@ impl Version {
                         ORDER BY x.created_oldest ASC
                         "#,
                         Build::columns_sql(None, None)
-                    ))
+                    )))
                     .bind(r#type)
                     .fetch_all(database.read())
                     .await?;
@@ -299,7 +299,7 @@ impl Version {
                         versions.insert(id, version);
                     }
                 } else {
-                    let data = sqlx::query(&format!(
+                    let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                         r#"
                         SELECT
                             {},
@@ -328,7 +328,7 @@ impl Version {
                         ORDER BY x.minecraft_version_created ASC
                         "#,
                         Build::columns_sql(None, None),
-                    ))
+                    )))
                     .bind(r#type)
                     .fetch_all(database.read())
                     .await?;

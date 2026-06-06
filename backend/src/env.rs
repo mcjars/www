@@ -24,6 +24,9 @@ pub struct Env {
     pub github_client_id: String,
     pub github_client_secret: String,
 
+    pub backend_url: Option<String>,
+    pub backend_refresh_token: Option<String>,
+
     pub s3_url: String,
     pub s3_path_style: bool,
     pub s3_endpoint: String,
@@ -123,6 +126,13 @@ impl Env {
                 .unwrap_or("".to_string())
                 .trim_matches('"')
                 .to_string(),
+
+            backend_url: std::env::var("BACKEND_URL")
+                .ok()
+                .map(|s| s.trim_matches('"').to_string()),
+            backend_refresh_token: std::env::var("BACKEND_REFRESH_TOKEN")
+                .ok()
+                .map(|s| s.trim_matches('"').to_string()),
 
             s3_url: std::env::var("S3_URL")
                 .expect("S3_URL is required")

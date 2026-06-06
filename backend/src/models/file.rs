@@ -101,14 +101,14 @@ impl File {
     ) -> Result<Option<Self>, anyhow::Error> {
         cache
             .cached(&format!("file::{}", path.display()), 3600, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT {}
                     FROM files
                     WHERE files.path = $1::varchar[]
                     "#,
                     Self::columns_sql(None, None)
-                ))
+                )))
                 .bind(
                     path.components()
                         .filter(|c| c.as_os_str().to_str().is_some_and(|s| !s.is_empty()))

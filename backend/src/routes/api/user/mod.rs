@@ -52,7 +52,9 @@ async fn auth(
         Err(err) => return Ok(ApiResponse::from(err).into_response()),
     };
 
-    session.ip = crate::utils::extract_ip(req.headers()).unwrap().into();
+    if let Some(ip) = crate::utils::extract_ip(req.headers()) {
+        session.ip = ip.into();
+    }
     session.user_agent = req
         .headers()
         .get("User-Agent")

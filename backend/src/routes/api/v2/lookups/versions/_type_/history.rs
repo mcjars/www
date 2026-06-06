@@ -90,7 +90,7 @@ mod get {
                         "version"
                     };
 
-                    let data = sqlx::query(&format!(
+                    let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                         r#"
                         SELECT
                             build_{column}_id AS version,
@@ -107,7 +107,7 @@ mod get {
                         GROUP BY day, build_{column}_id
                         ORDER BY day, SUM(total_requests) DESC
                         "#
-                    ))
+                    )))
                     .bind(r#type.to_string())
                     .bind(start)
                     .bind(end)

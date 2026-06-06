@@ -65,7 +65,7 @@ mod get {
         let stats = state
             .cache
             .cached(&format!("stats::types::{type}::all"), 10800, || async {
-                let data = sqlx::query(&format!(
+                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
                     r#"
                     SELECT
                         COUNT(*) AS builds,
@@ -81,7 +81,7 @@ mod get {
                     } else {
                         "DISTINCT"
                     }
-                ))
+                )))
                 .bind(r#type)
                 .fetch_one(state.database.read())
                 .await?;
