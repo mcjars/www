@@ -1,0 +1,250 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "src/**",
+      "extensions/*/src/**",
+      "*.ts",
+      "*.mts",
+      "public/translations/**",
+      "extensions/*/public/translations/**",
+      "!!**/dist"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "expand": "auto",
+    "useEditorconfig": true,
+    "includes": ["src/**", "extensions/*/src/**", "*.ts", "*.mts", "public/translations/*.json", "!**/node_modules"]
+  },
+  "linter": {
+    "enabled": false
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "single",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    },
+    "globals": []
+  },
+  "html": {
+    "formatter": {
+      "indentScriptAndStyle": false,
+      "selfCloseVoidElements": "always"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.md"],
+      "javascript": { "formatter": { "quoteStyle": "single" } },
+      "css": {
+        "parser": { "tailwindDirectives": true },
+        "formatter": null,
+        "linter": null,
+        "assist": null
+      },
+      "formatter": { "indentStyle": "space", "indentWidth": 2 }
+    },
+    {
+      "includes": ["**/*.css"],
+      "css": {
+        "parser": { "tailwindDirectives": true }
+      }
+    },
+    {
+      "includes": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "linter": {
+        "rules": {
+          "complexity": { "noArguments": "error" },
+          "correctness": {
+            "noConstAssign": "off",
+            "noGlobalObjectCalls": "off",
+            "noInvalidBuiltinInstantiation": "off",
+            "noInvalidConstructorSuper": "off",
+            "noSetterReturn": "off",
+            "noUndeclaredVariables": "off",
+            "noUnreachable": "off",
+            "noUnreachableSuper": "off"
+          },
+          "style": { "useConst": "error" },
+          "suspicious": {
+            "noClassAssign": "off",
+            "noDuplicateClassMembers": "off",
+            "noDuplicateObjectKeys": "off",
+            "noDuplicateParameters": "off",
+            "noFunctionAssign": "off",
+            "noImportAssign": "off",
+            "noRedeclare": "off",
+            "noUnsafeNegation": "off",
+            "noVar": "error",
+            "noWith": "off",
+            "useGetterReturn": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.{js,jsx,ts,tsx}"],
+      "javascript": {
+        "globals": [
+          "onanimationend",
+          "exports",
+          "ongamepadconnected",
+          "onlostpointercapture",
+          "onanimationiteration",
+          "onkeyup",
+          "onmousedown",
+          "onanimationstart",
+          "onslotchange",
+          "onprogress",
+          "ontransitionstart",
+          "onpause",
+          "onended",
+          "onpointerover",
+          "onscrollend",
+          "onformdata",
+          "ontransitionrun",
+          "onanimationcancel",
+          "ondrag",
+          "onchange",
+          "onbeforeinstallprompt",
+          "onbeforexrselect",
+          "onmessage",
+          "ontransitioncancel",
+          "onpointerdown",
+          "onabort",
+          "onpointerout",
+          "oncuechange",
+          "ongotpointercapture",
+          "onscrollsnapchanging",
+          "onsearch",
+          "onsubmit",
+          "onstalled",
+          "onsuspend",
+          "onreset",
+          "onerror",
+          "onmouseenter",
+          "ongamepaddisconnected",
+          "onresize",
+          "ondragover",
+          "onbeforetoggle",
+          "onmouseover",
+          "onpagehide",
+          "onmousemove",
+          "onratechange",
+          "oncommand",
+          "onmessageerror",
+          "onwheel",
+          "ondevicemotion",
+          "onauxclick",
+          "ontransitionend",
+          "onpaste",
+          "onpageswap",
+          "ononline",
+          "ondeviceorientationabsolute",
+          "onkeydown",
+          "onclose",
+          "onselect",
+          "onpageshow",
+          "onpointercancel",
+          "onbeforematch",
+          "onpointerrawupdate",
+          "ondragleave",
+          "onscrollsnapchange",
+          "onseeked",
+          "onwaiting",
+          "onbeforeunload",
+          "onplaying",
+          "onvolumechange",
+          "ondragend",
+          "onstorage",
+          "onloadeddata",
+          "onfocus",
+          "onoffline",
+          "onplay",
+          "onafterprint",
+          "onclick",
+          "oncut",
+          "onmouseout",
+          "ondblclick",
+          "oncanplay",
+          "onloadstart",
+          "onappinstalled",
+          "onpointermove",
+          "ontoggle",
+          "oncontextmenu",
+          "onblur",
+          "oncancel",
+          "onbeforeprint",
+          "oncontextrestored",
+          "onloadedmetadata",
+          "onpointerup",
+          "onlanguagechange",
+          "oncopy",
+          "onselectstart",
+          "onscroll",
+          "onload",
+          "ondragstart",
+          "onbeforeinput",
+          "oncanplaythrough",
+          "oninput",
+          "oninvalid",
+          "ontimeupdate",
+          "ondurationchange",
+          "onselectionchange",
+          "onmouseup",
+          "location",
+          "onkeypress",
+          "onpointerleave",
+          "oncontextlost",
+          "ondrop",
+          "onsecuritypolicyviolation",
+          "oncontentvisibilityautostatechange",
+          "ondeviceorientation",
+          "onseeking",
+          "onrejectionhandled",
+          "onunload",
+          "onmouseleave",
+          "onhashchange",
+          "onpointerenter",
+          "onmousewheel",
+          "onunhandledrejection",
+          "ondragenter",
+          "onpopstate",
+          "onpagereveal",
+          "onemptied"
+        ]
+      },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "warn",
+            "useHookAtTopLevel": "error",
+            "useJsxKeyInIterable": "warn"
+          },
+          "suspicious": { "noExplicitAny": "warn" }
+        }
+      }
+    }
+  ],
+  "assist": {
+    "enabled": true,
+    "actions": { "source": { "organizeImports": "on" } }
+  }
+}

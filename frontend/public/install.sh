@@ -7,11 +7,6 @@ if [ -z "$BUILD" ]; then
 	exit 1
 fi
 
-if ! [ "$BUILD" -eq "$BUILD" ] 2> /dev/null; then
-	echo "Build must be numeric"
-	exit 1
-fi
-
 DATA=$(curl -s -H "Accept: application/json" https://mcjars.app/api/v1/build/$BUILD)
 
 if echo $DATA | grep -q '"success":false'; then

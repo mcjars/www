@@ -11,7 +11,9 @@
     "dev": "vite --port 9000 --host",
     "build": "tsc && vite build",
     "lint": "tsc",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "biome:validate": "biome format --css-parse-tailwind-directives=true && biome lint --css-parse-tailwind-directives=true && biome check",
+    "biome:fix": "biome format --write --css-parse-tailwind-directives=true && biome check --write"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -46,6 +48,7 @@
     "vaul": "^0.9.9"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/bytes": "^3.1.5",
     "@types/node": "^24.13.0",
     "@types/react": "^18.3.30",

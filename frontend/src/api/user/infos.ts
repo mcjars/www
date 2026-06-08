@@ -1,21 +1,23 @@
-import { BASE_URL } from "@/api"
-import axios from "axios"
+import axios from 'axios';
+import { BASE_URL } from '@/api/index.ts';
 
 export type User = {
-	id: number
-	name: string | null
-	email: string
-	admin: boolean
-	login: string
-	avatar: string
-}
+  id: number;
+  name: string | null;
+  email: string;
+  admin: boolean;
+  login: string;
+  avatar: string;
+};
 
 export default async function apiGetUserInfos(): Promise<User | null> {
-	const { data } = await axios.get<{
-		user: User
-	}>(`${BASE_URL}/api/user`, {
-		withCredentials: true
-	}).catch(() => ({ data: { user: null } }))
+  const { data } = await axios
+    .get<{
+      user: User;
+    }>(`${BASE_URL}/api/user`, {
+      withCredentials: true,
+    })
+    .catch(() => ({ data: { user: null } }));
 
-	return data.user
+  return data.user;
 }

@@ -1,24 +1,26 @@
-import { BASE_URL } from "@/api"
-import axios from "axios"
-import { User } from "@/api/user/infos"
+import axios from 'axios';
+import { BASE_URL } from '@/api/index.ts';
+import { User } from '@/api/user/infos.ts';
 
 export type Organization = {
-	id: number
-	name: string
-	icon: string | null
-	types: string[]
-	public: boolean
-	verified: boolean
-	created: string
-	owner: User
-}
+  id: number;
+  name: string;
+  icon: string | null;
+  types: string[];
+  public: boolean;
+  verified: boolean;
+  created: string;
+  owner: User;
+};
 
-export default async function apiGetUserOrganizations(): Promise<Record<'owned' | 'member' | 'invites', Organization[]>> {
-	const { data } = await axios.get<{
-		organizations: Record<'owned' | 'member' | 'invites', Organization[]>
-	}>(`${BASE_URL}/api/user/organizations`, {
-		withCredentials: true
-	})
+export default async function apiGetUserOrganizations(): Promise<
+  Record<'owned' | 'member' | 'invites', Organization[]>
+> {
+  const { data } = await axios.get<{
+    organizations: Record<'owned' | 'member' | 'invites', Organization[]>;
+  }>(`${BASE_URL}/api/user/organizations`, {
+    withCredentials: true,
+  });
 
-	return data.organizations
+  return data.organizations;
 }
