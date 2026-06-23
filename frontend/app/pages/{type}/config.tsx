@@ -2,28 +2,29 @@ import { FileText, FolderOpen, LoaderCircle } from 'lucide-react';
 import {
   DragEvent as ReactDragEvent,
   PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer';
-import { useParams } from 'react-router-dom';
-import useSWR from 'swr';
-import { StringParam, useQueryParam } from 'use-query-params';
+import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
+import { useParams, useSearchParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useLocalStorage } from 'usehooks-ts';
-import apiGetBuildConfigs, { BuildConfigItem } from '@/api/builds/configs.ts';
-import { apiGetTypeVersionBuilds } from '@/api/builds/type-versions.ts';
-import apiPostConfigFormat from '@/api/configs/format.ts';
-import apiGetTypes from '@/api/types.ts';
-import apiGetVersions from '@/api/versions.ts';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion.tsx';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { cn } from '@/lib/utils.ts';
+import apiGetBuildConfigs, { BuildConfigItem } from '~/api/builds/configs.ts';
+import { apiGetTypeVersionBuilds } from '~/api/builds/type-versions.ts';
+import apiPostConfigFormat from '~/api/configs/format.ts';
+import apiGetTypes from '~/api/types.ts';
+import apiGetVersions from '~/api/versions.ts';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion.tsx';
+import { Badge } from '~/components/ui/badge.tsx';
+import { Button } from '~/components/ui/button.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '~/components/ui/select.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { VersionCombobox } from '~/components/version-combobox.tsx';
+import { cn } from '~/lib/utils.ts';
 
 type TreeNode = {
   folders: Record<string, TreeNode>;
@@ -161,28 +162,6 @@ const renderHighlightedLine = (line: string, formatKey: string) => {
   return <span className={'text-sidebar-foreground'}>{line || ' '}</span>;
 };
 
-const getAllVersionIdsForType = async (type: string): Promise<string[]> => {
-  const perPage = 200;
-  const maxPages = 20;
-  const collected: string[] = [];
-  const seen = new Set<string>();
-
-  for (let page = 1; page <= maxPages; page++) {
-    const response = await apiGetVersions(type, { page, perPage, search: '' });
-    for (const item of response.items ?? []) {
-      const versionId = item?.latest?.versionId ?? item?.latest?.projectVersionId;
-      if (versionId && !seen.has(versionId)) {
-        seen.add(versionId);
-        collected.push(versionId);
-      }
-    }
-
-    if (!response.hasNextPage) break;
-  }
-
-  return collected;
-};
-
 const renderTreeWithSelection = (
   node: TreeNode,
   depth: number,
@@ -299,9 +278,27 @@ export default function PageTypeConfig() {
   if (!type) return null;
   const normalizedType = normalizeTypeId(type);
 
-  const [browse] = useQueryParam('browse', StringParam);
-  const [versionParam, setVersionParam] = useQueryParam('version', StringParam);
-  const [buildParam, setBuildParam] = useQueryParam('build', StringParam);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setParam = useCallback(
+    (name: string, value: string | null | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (value === null || value === undefined || value === '') params.delete(name);
+          else params.set(name, value);
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const browse = searchParams.get('browse') ?? undefined;
+  const versionParam = searchParams.get('version') ?? undefined;
+  const setVersionParam = (value?: string | null) => setParam('version', value);
+  const buildParam = searchParams.get('build') ?? undefined;
+  const setBuildParam = (value?: string | null) => setParam('build', value);
   const [selected, setSelected] = useState<BuildConfigItem | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mobilePane, setMobilePane] = useState<'files' | 'editor'>('files');
@@ -322,35 +319,31 @@ export default function PageTypeConfig() {
     return () => media.removeEventListener('change', apply);
   }, []);
 
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
-  const { data: versionOptions } = useSWR(
-    ['versions-all', normalizedType],
-    () => getAllVersionIdsForType(normalizedType),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
-  const resolvedVersionOptions = versionOptions ?? [];
+  const { data: defaultVersionData } = useQuery({
+    queryKey: ['default-version', normalizedType],
+    queryFn: () => apiGetVersions(normalizedType, { page: 1, perPage: 1, search: '' }),
+  });
+  const defaultVersion = defaultVersionData?.items[0]?.latest.versionId ?? null;
 
   const selectedVersion = useMemo(() => {
-    if (versionParam && resolvedVersionOptions.includes(versionParam)) return versionParam;
-    if (browse && !isUuid(browse) && resolvedVersionOptions.includes(browse)) return browse;
-    return resolvedVersionOptions[0] ?? null;
-  }, [versionParam, browse, resolvedVersionOptions]);
+    if (versionParam) return versionParam;
+    if (browse && !isUuid(browse)) return browse;
+    return defaultVersion;
+  }, [versionParam, browse, defaultVersion]);
 
   useEffect(() => {
     if (!versionParam && selectedVersion) {
-      setVersionParam(selectedVersion);
+      setParam('version', selectedVersion);
     }
-  }, [selectedVersion, versionParam, setVersionParam]);
+  }, [selectedVersion, versionParam, setParam]);
 
-  const { data: buildItems } = useSWR(
-    selectedVersion ? ['type-version-builds', normalizedType, selectedVersion] : null,
-    () => apiGetTypeVersionBuilds(normalizedType, selectedVersion as string),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const { data: buildItems } = useQuery({
+    queryKey: ['type-version-builds', normalizedType, selectedVersion],
+    queryFn: () => apiGetTypeVersionBuilds(normalizedType, selectedVersion as string),
+    enabled: Boolean(selectedVersion),
+  });
 
   const buildOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -369,15 +362,15 @@ export default function PageTypeConfig() {
 
   useEffect(() => {
     if (!buildParam && selectedBuildUuid) {
-      setBuildParam(selectedBuildUuid);
+      setParam('build', selectedBuildUuid);
     }
-  }, [selectedBuildUuid, buildParam, setBuildParam]);
+  }, [selectedBuildUuid, buildParam, setParam]);
 
-  const { data: configs } = useSWR(
-    selectedBuildUuid ? ['build-configs', selectedBuildUuid] : null,
-    () => apiGetBuildConfigs(selectedBuildUuid as string),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const { data: configs } = useQuery({
+    queryKey: ['build-configs', selectedBuildUuid],
+    queryFn: () => apiGetBuildConfigs(selectedBuildUuid as string),
+    enabled: Boolean(selectedBuildUuid),
+  });
 
   useEffect(() => {
     if (!selected && configs && configs.length > 0) {
@@ -578,27 +571,16 @@ export default function PageTypeConfig() {
         </div>
 
         <div className={'grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2'}>
-          <Select
-            value={selectedVersion ?? undefined}
-            onValueChange={(value) => {
+          <VersionCombobox
+            type={normalizedType}
+            value={selectedVersion ?? ''}
+            onChange={(value) => {
               setVersionParam(value);
               setBuildParam(undefined);
             }}
-          >
-            <SelectTrigger className={'w-full'}>
-              <div className={'flex min-w-0 items-center gap-2 text-left'}>
-                <span className={'text-xs text-muted-foreground'}>Version</span>
-                <span className={'truncate'}>{selectedVersion ?? 'Select version'}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {resolvedVersionOptions.map((versionId) => (
-                <SelectItem key={versionId} value={versionId}>
-                  {versionId}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder={'Select version'}
+            triggerClassName={'w-full'}
+          />
 
           <Select value={selectedBuildUuid ?? undefined} onValueChange={setBuildParam}>
             <SelectTrigger className={'w-full'}>
@@ -620,7 +602,7 @@ export default function PageTypeConfig() {
         </div>
       </div>
 
-      {!types || !versionOptions || !buildItems || !configs ? (
+      {!types || !defaultVersionData || !buildItems || !configs ? (
         <div className={'w-full'}>
           <Skeleton className={'mb-2 h-16 w-full rounded-xl'} />
           <Skeleton className={'mb-2 h-16 w-full rounded-xl'} />

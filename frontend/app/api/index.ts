@@ -1,1 +1,1 @@
-export const BASE_URL = localStorage.getItem('api_url') ?? '';
+export const BASE_URL = typeof window === 'undefined' ? '' : (localStorage.getItem('api_url') ?? '');

@@ -2,9 +2,9 @@
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import * as React from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
-import { useIsMobile } from '@/hooks/use-mobile.tsx';
-import { cn } from '@/lib/utils.ts';
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover.tsx';
+import { useIsMobile } from '~/hooks/use-mobile.tsx';
+import { cn } from '~/lib/utils.ts';
 
 const TooltipProvider = TooltipPrimitive.Provider;
 
@@ -48,16 +48,16 @@ const ResponsiveTooltip: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ chi
           'displayName' in (child.type as any) &&
           (child.type as any).displayName === 'Tooltip')
       ) {
-        React.Children.forEach(child.props.children, (tooltipChild) => {
+        React.Children.forEach((child as React.ReactElement<{ children?: React.ReactNode }>).props.children, (tooltipChild) => {
           if (!React.isValidElement(tooltipChild)) return;
           const childType =
             typeof tooltipChild.type === 'object' && tooltipChild.type !== null && 'displayName' in tooltipChild.type
               ? (tooltipChild.type as any).displayName
               : tooltipChild.type;
           if (childType === 'TooltipTrigger') {
-            triggerChildren = (tooltipChild as React.ReactElement).props.children;
+            triggerChildren = (tooltipChild as React.ReactElement<{ children?: React.ReactNode }>).props.children;
           } else if (childType === 'TooltipContent') {
-            contentChildren = (tooltipChild as React.ReactElement).props.children;
+            contentChildren = (tooltipChild as React.ReactElement<{ children?: React.ReactNode }>).props.children;
           }
         });
       }

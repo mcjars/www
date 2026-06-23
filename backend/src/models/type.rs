@@ -619,7 +619,7 @@ fn default_type_infos(env: &crate::env::Env) -> IndexMap<ServerType, ServerTypeI
                 color: "#3D11AE".into(),
                 homepage: "https://github.com/CraftCanvasMC/Canvas".into(),
                 deprecated: false,
-                experimental: true,
+                experimental: false,
                 description: "A fork of Folia that aims to be more performant and have better APIs.".into(),
                 categories: vec!["plugins".into()],
                 compatibility: vec!["folia".into()],

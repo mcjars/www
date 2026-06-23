@@ -20,43 +20,65 @@ import {
   XIcon,
 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import useSWR from 'swr';
-import apiGetTypes from '@/api/types.ts';
-import apiPostUserIniteAccept from '@/api/user/invite/accept.ts';
-import apiPostUserIniteDecline from '@/api/user/invite/decline.ts';
-import apiAddUserOrganizationApiKey from '@/api/user/organization/api-keys/addApiKey.ts';
-import apiGetUserOrganizationApiKeys from '@/api/user/organization/api-keys/apiKeys.ts';
-import apiDeleteUserOrganizationApiKey from '@/api/user/organization/api-keys/deleteApiKey.ts';
-import apiCreateUserOrganization from '@/api/user/organization/create.ts';
-import apiDeleteUserOrganization from '@/api/user/organization/delete.ts';
-import apiPostUserOrganizationIcon from '@/api/user/organization/icon.ts';
-import apiPatchUserOrganization from '@/api/user/organization/patch.ts';
-import apiGetUserOrganizationStats from '@/api/user/organization/stats.ts';
-import apiAddUserOrganizationSubuser from '@/api/user/organization/subusers/addSubuser.ts';
-import apiDeleteUserOrganizationSubuser from '@/api/user/organization/subusers/deleteSubuser.ts';
-import apiGetUserOrganizationSubusers from '@/api/user/organization/subusers/subusers.ts';
-import apiPostUserOrganizationUpdateBuildData from '@/api/user/organization/updateBuildData.ts';
-import apiGetUserOrganizations, { Organization } from '@/api/user/organizations.ts';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.tsx';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.tsx';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer.tsx';
+import { useNavigate } from 'react-router';
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiGetTypes from '~/api/types.ts';
+import apiPostUserIniteAccept from '~/api/user/invite/accept.ts';
+import apiPostUserIniteDecline from '~/api/user/invite/decline.ts';
+import apiAddUserOrganizationApiKey from '~/api/user/organization/api-keys/addApiKey.ts';
+import apiGetUserOrganizationApiKeys from '~/api/user/organization/api-keys/apiKeys.ts';
+import apiDeleteUserOrganizationApiKey from '~/api/user/organization/api-keys/deleteApiKey.ts';
+import apiCreateUserOrganization from '~/api/user/organization/create.ts';
+import apiDeleteUserOrganization from '~/api/user/organization/delete.ts';
+import apiPostUserOrganizationIcon from '~/api/user/organization/icon.ts';
+import apiPatchUserOrganization from '~/api/user/organization/patch.ts';
+import apiGetUserOrganizationStats from '~/api/user/organization/stats.ts';
+import apiAddUserOrganizationSubuser from '~/api/user/organization/subusers/addSubuser.ts';
+import apiDeleteUserOrganizationSubuser from '~/api/user/organization/subusers/deleteSubuser.ts';
+import apiGetUserOrganizationSubusers from '~/api/user/organization/subusers/subusers.ts';
+import apiPostUserOrganizationUpdateBuildData from '~/api/user/organization/updateBuildData.ts';
+import apiGetUserOrganizations, { Organization } from '~/api/user/organizations.ts';
+import { Badge } from '~/components/ui/badge.tsx';
+import { Button } from '~/components/ui/button.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible.tsx';
+import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog.tsx';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '~/components/ui/drawer.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx';
-import { Input } from '@/components/ui/input.tsx';
-import { Label } from '@/components/ui/label.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { Switch } from '@/components/ui/switch.tsx';
-import UserTooltip from '@/components/user-tooltip.tsx';
-import { useAuth } from '@/hooks/use-auth.tsx';
-import { useToast } from '@/hooks/use-toast.ts';
+} from '~/components/ui/dropdown-menu.tsx';
+import { Input } from '~/components/ui/input.tsx';
+import { Label } from '~/components/ui/label.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { Switch } from '~/components/ui/switch.tsx';
+import UserTooltip from '~/components/user-tooltip.tsx';
+import { useAuth } from '~/hooks/use-auth.tsx';
+import { useToast } from '~/hooks/use-toast.ts';
+
+// swr-style optimistic mutator backed directly by the react-query cache:
+// pass a value/updater to write the cache, omit it to just revalidate.
+type Mutator<T> = (
+  data?: T | null | ((current: T | undefined) => T | null | undefined),
+  revalidate?: boolean,
+) => void;
+
+function createMutator<T>(queryClient: QueryClient, queryKey: unknown[]): Mutator<T> {
+  return (data, revalidate = true) => {
+    if (data !== undefined) {
+      queryClient.setQueryData<T>(
+        queryKey,
+        (current) =>
+          (typeof data === 'function'
+            ? (data as (c: T | undefined) => T | null | undefined)(current)
+            : data) as T | undefined,
+      );
+    }
+    if (revalidate) void queryClient.invalidateQueries({ queryKey });
+  };
+}
 
 type OrganizationRowProps = {
   organization: Organization;
@@ -101,23 +123,29 @@ function OrganizationRow({
 
   const { toast, toastError } = useToast();
 
-  const { data: stats } = useSWR(
-    ['organization', organization.id, 'stats', currentOrganization?.id],
-    () => (currentOrganization?.id === organization.id ? apiGetUserOrganizationStats(organization.id) : null),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const queryClient = useQueryClient();
 
-  const { data: subUsers, mutate: mutateSubusers } = useSWR(
-    ['organization', organization.id, 'users', currentOrganization?.id],
-    () => (currentOrganization?.id === organization.id ? apiGetUserOrganizationSubusers(organization.id) : null),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const statsKey = ['organization', organization.id, 'stats', currentOrganization?.id];
+  const { data: stats } = useQuery({
+    queryKey: statsKey,
+    queryFn: () => (currentOrganization?.id === organization.id ? apiGetUserOrganizationStats(organization.id) : null),
+  });
 
-  const { data: apiKeys, mutate: mutateApiKeys } = useSWR(
-    ['organization', organization.id, 'apiKeys', currentOrganization?.id],
-    () => (currentOrganization?.id === organization.id ? apiGetUserOrganizationApiKeys(organization.id) : null),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const subUsersKey = ['organization', organization.id, 'users', currentOrganization?.id];
+  const { data: subUsers } = useQuery({
+    queryKey: subUsersKey,
+    queryFn: () =>
+      currentOrganization?.id === organization.id ? apiGetUserOrganizationSubusers(organization.id) : null,
+  });
+  const mutateSubusers = createMutator<NonNullable<typeof subUsers>>(queryClient, subUsersKey);
+
+  const apiKeysKey = ['organization', organization.id, 'apiKeys', currentOrganization?.id];
+  const { data: apiKeys } = useQuery({
+    queryKey: apiKeysKey,
+    queryFn: () =>
+      currentOrganization?.id === organization.id ? apiGetUserOrganizationApiKeys(organization.id) : null,
+  });
+  const mutateApiKeys = createMutator<NonNullable<typeof apiKeys>>(queryClient, apiKeysKey);
 
   return (
     <>
@@ -979,15 +1007,11 @@ export default function PageOrganizations() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { data: organizations, mutate } = useSWR(['organizations'], () => apiGetUserOrganizations(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const queryClient = useQueryClient();
+  const { data: organizations } = useQuery({ queryKey: ['organizations'], queryFn: () => apiGetUserOrganizations() });
+  const mutate = createMutator<NonNullable<typeof organizations>>(queryClient, ['organizations']);
 
-  const { data: rawTypes } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: rawTypes } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
   const updateOrg = (organization: number) => {
     return (data: Partial<Organization>) => {

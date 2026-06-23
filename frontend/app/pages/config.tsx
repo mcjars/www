@@ -1,14 +1,12 @@
 import { FileText, FolderOpen } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import useSWR from 'swr';
-import apiGetConfigs, { ConfigItem } from '@/api/configs/index.ts';
-import apiGetTypes from '@/api/types.ts';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion.tsx';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Card } from '@/components/ui/card.tsx';
-// Drawer component temporarily commented out, will be used later
-// import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { Skeleton } from '@/components/ui/skeleton.tsx';
+import { useQuery } from '@tanstack/react-query';
+import apiGetConfigs, { ConfigItem } from '~/api/configs/index.ts';
+import apiGetTypes from '~/api/types.ts';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion.tsx';
+import { Badge } from '~/components/ui/badge.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
 
 type KnownType = {
   identifier: string;
@@ -176,15 +174,9 @@ const renderTreeNode = (node: TreeNode, depth: number, path: string, setSelected
 };
 
 export default function PageConfig() {
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
-  const { data: configs } = useSWR(['configs'], () => apiGetConfigs(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: configs } = useQuery({ queryKey: ['configs'], queryFn: () => apiGetConfigs() });
 
   const [, setSelected] = useState<ConfigItem | null>(null); // 'selected' unused for now; keep setter for future drawer
 

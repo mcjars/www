@@ -8,48 +8,60 @@ import {
   GlobeIcon,
   LoaderCircle,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
-import useSWR from 'swr';
-import { NumberParam, StringParam, useQueryParam } from 'use-query-params';
-import apiGetTypeLookups from '@/api/lookups/types.ts';
-import apiGetVersionLookups from '@/api/lookups/versions.ts';
-import apiGetVersionRequestsAllTime from '@/api/requests/version/all-time.ts';
-import apiGetVersionRequestsMonth from '@/api/requests/version/month.ts';
-import apiGetStats from '@/api/stats.ts';
-import apiGetTypes from '@/api/types.ts';
-import apiGetVersions from '@/api/versions.ts';
-import { Alert, AlertDescription } from '@/components/ui/alert.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { mergeLessThanPercent } from '@/lib/utils.ts';
+import apiGetTypeLookups from '~/api/lookups/types.ts';
+import apiGetVersionLookups from '~/api/lookups/versions.ts';
+import apiGetVersionRequestsAllTime from '~/api/requests/version/all-time.ts';
+import apiGetVersionRequestsMonth from '~/api/requests/version/month.ts';
+import apiGetStats from '~/api/stats.ts';
+import apiGetTypes from '~/api/types.ts';
+import apiGetVersions from '~/api/versions.ts';
+import { Alert, AlertDescription } from '~/components/ui/alert.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '~/components/ui/chart.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { VersionCombobox } from '~/components/version-combobox.tsx';
+import { mergeLessThanPercent } from '~/lib/utils.ts';
 
 export default function PageIndex() {
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
-
-  const { data: stats } = useSWR(['stats'], () => apiGetStats(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
-
-  const { data: versionsResponse } = useSWR(
-    ['versions', 'VANILLA'],
-    () => apiGetVersions('VANILLA', { page: 1, perPage: 200, search: '' }),
-    { revalidateOnFocus: false, revalidateIfStale: false },
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setParam = useCallback(
+    (name: string, value: string | number | null | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (value === null || value === undefined || value === '') params.delete(name);
+          else params.set(name, String(value));
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
   );
+  const getNumberParam = (name: string) => {
+    const raw = searchParams.get(name);
+    return raw === null || raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw);
+  };
 
-  const versions = versionsResponse?.items;
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
-  const [typeLookupsType, setTypeLookupsType] = useQueryParam('typeLookupsType', StringParam);
-  const { data: typeLookupsRaw } = useSWR(['typeLookups'], () => apiGetTypeLookups(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
+  const { data: stats } = useQuery({ queryKey: ['stats'], queryFn: () => apiGetStats() });
+
+  const { data: defaultVersionResponse } = useQuery({
+    queryKey: ['default-version', 'VANILLA'],
+    queryFn: () => apiGetVersions('VANILLA', { page: 1, perPage: 50, search: '' }),
   });
+
+  const defaultReleaseVersion = defaultVersionResponse?.items.find((v) => v.type === 'RELEASE')?.latest.versionId ?? '';
+
+  const typeLookupsType = searchParams.get('typeLookupsType') ?? undefined;
+  const setTypeLookupsType = (value?: string | null) => setParam('typeLookupsType', value);
+  const { data: typeLookupsRaw } = useQuery({ queryKey: ['typeLookups'], queryFn: () => apiGetTypeLookups() });
 
   const typeLookups = useMemo(
     () =>
@@ -62,10 +74,11 @@ export default function PageIndex() {
     [typeLookupsRaw, typeLookupsType],
   );
 
-  const [versionLookupsType, setVersionLookupsType] = useQueryParam('versionLookupsType', StringParam);
-  const { data: versionLookupsRaw } = useSWR(['versionLookups'], () => apiGetVersionLookups(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
+  const versionLookupsType = searchParams.get('versionLookupsType') ?? undefined;
+  const setVersionLookupsType = (value?: string | null) => setParam('versionLookupsType', value);
+  const { data: versionLookupsRaw } = useQuery({
+    queryKey: ['versionLookups'],
+    queryFn: () => apiGetVersionLookups(),
   });
 
   const versionLookups = useMemo(
@@ -79,41 +92,31 @@ export default function PageIndex() {
     [versionLookupsRaw, versionLookupsType],
   );
 
-  const [requestVersionStatsMonthVersion, setRequestVersionStatsMonthVersion] = useQueryParam(
-    'requestVersionStatsVersion',
-    StringParam,
-  );
-  const [requestVersionStatsMonthType, setRequestVersionStatsMonthType] = useQueryParam(
-    'requestVersionStatsMonthType',
-    StringParam,
-  );
-  const [requestVersionStatsMonthDisplay, setRequestVersionStatsMonthDisplay] = useQueryParam(
-    'requestVersionStatsMonthDisplay',
-    StringParam,
-  );
-  const [requestVersionStatsMonthYear, setRequestVersionStatsMonthYear] = useQueryParam(
-    'requestVersionStatsMonthYear',
-    NumberParam,
-  );
-  const [requestVersionStatsMonthMonth, setRequestVersionStatsMonthMonth] = useQueryParam(
-    'requestVersionStatsMonthMonth',
-    NumberParam,
-  );
-  const { data: requestVersionStatsMonthRaw } = useSWR(
-    [
+  const requestVersionStatsMonthVersion = searchParams.get('requestVersionStatsVersion') ?? undefined;
+  const setRequestVersionStatsMonthVersion = (value?: string | null) => setParam('requestVersionStatsVersion', value);
+  const requestVersionStatsMonthType = searchParams.get('requestVersionStatsMonthType') ?? undefined;
+  const setRequestVersionStatsMonthType = (value?: string | null) => setParam('requestVersionStatsMonthType', value);
+  const requestVersionStatsMonthDisplay = searchParams.get('requestVersionStatsMonthDisplay') ?? undefined;
+  const setRequestVersionStatsMonthDisplay = (value?: string | null) =>
+    setParam('requestVersionStatsMonthDisplay', value);
+  const requestVersionStatsMonthYear = getNumberParam('requestVersionStatsMonthYear');
+  const setRequestVersionStatsMonthYear = (value?: number | null) => setParam('requestVersionStatsMonthYear', value);
+  const requestVersionStatsMonthMonth = getNumberParam('requestVersionStatsMonthMonth');
+  const setRequestVersionStatsMonthMonth = (value?: number | null) => setParam('requestVersionStatsMonthMonth', value);
+  const { data: requestVersionStatsMonthRaw } = useQuery({
+    queryKey: [
       'requestVersionStatsMonth',
-      requestVersionStatsMonthVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? '',
+      requestVersionStatsMonthVersion ?? defaultReleaseVersion ?? '',
       requestVersionStatsMonthYear,
       requestVersionStatsMonthMonth,
     ],
-    () =>
+    queryFn: () =>
       apiGetVersionRequestsMonth(
-        requestVersionStatsMonthVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? '',
+        requestVersionStatsMonthVersion ?? defaultReleaseVersion ?? '',
         requestVersionStatsMonthYear ?? new Date().getFullYear(),
         requestVersionStatsMonthMonth ?? new Date().getMonth() + 1,
       ),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  });
 
   const requestVersionStatsMonth = useMemo(
     () =>
@@ -149,25 +152,15 @@ export default function PageIndex() {
     [requestVersionStatsMonthRaw, requestVersionStatsMonthType],
   );
 
-  const [requestVersionStatsAllTimeVersion, setRequestVersionStatsAllTimeVersion] = useQueryParam(
-    'requestVersionStatsAllTimeVersion',
-    StringParam,
-  );
-  const [requestVersionStatsAllTimeType, setRequestVersionStatsAllTimeType] = useQueryParam(
-    'requestVersionStatsAllTimeType',
-    StringParam,
-  );
-  const { data: requestVersionStatsAllTimeRaw } = useSWR(
-    [
-      'requestVersionStatsAllTime',
-      requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? '',
-    ],
-    () =>
-      apiGetVersionRequestsAllTime(
-        requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? '',
-      ),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const requestVersionStatsAllTimeVersion = searchParams.get('requestVersionStatsAllTimeVersion') ?? undefined;
+  const setRequestVersionStatsAllTimeVersion = (value?: string | null) =>
+    setParam('requestVersionStatsAllTimeVersion', value);
+  const requestVersionStatsAllTimeType = searchParams.get('requestVersionStatsAllTimeType') ?? undefined;
+  const setRequestVersionStatsAllTimeType = (value?: string | null) => setParam('requestVersionStatsAllTimeType', value);
+  const { data: requestVersionStatsAllTimeRaw } = useQuery({
+    queryKey: ['requestVersionStatsAllTime', requestVersionStatsAllTimeVersion ?? defaultReleaseVersion ?? ''],
+    queryFn: () => apiGetVersionRequestsAllTime(requestVersionStatsAllTimeVersion ?? defaultReleaseVersion ?? ''),
+  });
 
   const requestVersionStatsAllTime = useMemo(
     () =>
@@ -343,27 +336,16 @@ export default function PageIndex() {
           <div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
             <h1 className={'text-xl font-semibold ml-2'}>
               Monthly Request Statistics for{' '}
-              {requestVersionStatsMonthVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''}
+              {requestVersionStatsMonthVersion ?? defaultReleaseVersion ?? ''}
             </h1>
 
             <div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
-              <Select
-                value={
-                  requestVersionStatsMonthVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''
-                }
-                onValueChange={(value) => setRequestVersionStatsMonthVersion(value)}
-              >
-                <SelectTrigger className={'w-[8em] mb-1'}>
-                  <SelectValue placeholder={'Version'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {versions?.map(({ latest }) => (
-                    <SelectItem key={latest.versionId} value={latest.versionId!}>
-                      {latest.versionId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <VersionCombobox
+                type={'VANILLA'}
+                value={requestVersionStatsMonthVersion ?? defaultReleaseVersion ?? ''}
+                onChange={(value) => setRequestVersionStatsMonthVersion(value)}
+                triggerClassName={'w-[8em] mb-1'}
+              />
 
               <Select
                 value={requestVersionStatsMonthType ?? 'total'}
@@ -499,29 +481,16 @@ export default function PageIndex() {
           <div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
             <h1 className={'text-xl font-semibold ml-2'}>
               All Time Request Statistics for{' '}
-              {requestVersionStatsAllTimeVersion ?? versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ?? ''}
+              {requestVersionStatsAllTimeVersion ?? defaultReleaseVersion ?? ''}
             </h1>
 
             <div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
-              <Select
-                value={
-                  requestVersionStatsAllTimeVersion ??
-                  versions?.find((v) => v.type === 'RELEASE')?.latest.versionId ??
-                  ''
-                }
-                onValueChange={(value) => setRequestVersionStatsAllTimeVersion(value)}
-              >
-                <SelectTrigger className={'w-[8em] mb-1'}>
-                  <SelectValue placeholder={'Version'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {versions?.map(({ latest }) => (
-                    <SelectItem key={latest.versionId} value={latest.versionId!}>
-                      {latest.versionId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <VersionCombobox
+                type={'VANILLA'}
+                value={requestVersionStatsAllTimeVersion ?? defaultReleaseVersion ?? ''}
+                onChange={(value) => setRequestVersionStatsAllTimeVersion(value)}
+                triggerClassName={'w-[8em] mb-1'}
+              />
 
               <Select
                 value={requestVersionStatsAllTimeType ?? 'total'}

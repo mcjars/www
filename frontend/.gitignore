@@ -1,5 +1,6 @@
 node_modules
 /lib
 /lib-ssr
+/.react-router
 .DS_Store
 .wrangler

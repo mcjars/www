@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_URL } from '@/api/index.ts';
+import { BASE_URL } from '~/api/index.ts';
 
 export default async function apiPostConfigFormat(file: File, rawConfig?: string): Promise<string> {
   const { data } = await axios.post<{ formatted?: string }>(`${BASE_URL}/api/v3/configs/format`, {

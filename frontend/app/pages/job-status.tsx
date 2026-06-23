@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import useWebSocket from 'react-use-websocket';
-import useSWR from 'swr';
-import apiGetTypes from '@/api/types.ts';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
+import { useWebSocketData } from '~/hooks/use-websocket.ts';
+import { useQuery } from '@tanstack/react-query';
+import apiGetTypes from '~/api/types.ts';
+import { Badge } from '~/components/ui/badge.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
 
 type WebSocketEvent = {
   jobs: Record<
@@ -20,15 +20,9 @@ type WebSocketEvent = {
 };
 
 export default function PageJobStatus() {
-  const { lastJsonMessage } = useWebSocket<WebSocketEvent>(`wss://backend.mcjars.app/api/jobs/ws`, {
-    retryOnError: true,
-    shouldReconnect: () => true,
-  });
+  const { data: lastJsonMessage } = useWebSocketData<WebSocketEvent>(`wss://backend.mcjars.app/api/jobs/ws`);
 
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
   const knownTypes = useMemo(() => Object.values(types ?? {}).flat(), [types]);
   const normalizeType = (value: string) => value.trim().toUpperCase();

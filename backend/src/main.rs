@@ -31,28 +31,54 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_COMMIT: &str = env!("CARGO_GIT_COMMIT");
-const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib");
 
-fn render_index(meta: HashMap<&str, String>, state: GetState) -> ApiResponseResult {
-    let index = FRONTEND_ASSETS
-        .get_file("index.html")
-        .unwrap()
-        .contents_utf8()
-        .unwrap()
-        .to_string();
-    let mut metadata = String::new();
+const FRONTEND_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../frontend/lib/client");
+const SPA_FALLBACK: &str = "__spa-fallback.html";
+
+fn content_type_for(extension: Option<&std::ffi::OsStr>) -> &'static str {
+    match extension {
+        Some(ext) if ext == "js" => "application/javascript",
+        Some(ext) if ext == "css" => "text/css",
+        Some(ext) if ext == "html" => "text/html",
+        Some(ext) if ext == "json" => "application/json",
+        Some(ext) if ext == "svg" => "image/svg+xml",
+        Some(ext) if ext == "png" => "image/png",
+        Some(ext) if ext == "ico" => "image/x-icon",
+        Some(ext) if ext == "xml" => "application/xml",
+        Some(ext) if ext == "txt" => "text/plain",
+        Some(ext) if ext == "sh" => "text/x-shellscript",
+        _ => "application/octet-stream",
+    }
+}
+
+fn inject_head(html: &str, meta: HashMap<&str, String>, version: &str) -> String {
+    let mut head = String::new();
 
     for (key, value) in meta {
-        metadata.push_str(&format!("<meta name=\"{key}\" content=\"{value}\">"));
+        head.push_str(&format!("<meta name=\"{key}\" content=\"{value}\">"));
     }
 
-    ApiResponse::new(Body::from(
-        index
-            .replace("<!-- META -->", &metadata)
-            .replace("{{VERSION}}", &state.version),
-    ))
-    .with_header("Content-Type", "text/html")
-    .ok()
+    head.push_str(&format!(
+        "<script>window.mcjars_version = \"{version}\"</script>"
+    ));
+
+    html.replacen("</head>", &format!("{head}</head>"), 1)
+}
+fn render_page(
+    file_path: &str,
+    meta: HashMap<&str, String>,
+    state: &GetState,
+) -> ApiResponseResult {
+    let file = FRONTEND_ASSETS
+        .get_file(file_path)
+        .or_else(|| FRONTEND_ASSETS.get_file(SPA_FALLBACK))
+        .unwrap();
+
+    let content = inject_head(file.contents_utf8().unwrap(), meta, &state.version);
+
+    ApiResponse::new(Body::from(content))
+        .with_header("Content-Type", "text/html")
+        .ok()
 }
 
 fn handle_panic(_err: Box<dyn std::any::Any + Send + 'static>) -> Response<Body> {
@@ -333,7 +359,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(meta, state)
+                render_page("index.html", meta, &state)
             }))
             .route("/lookup", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -344,7 +370,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(meta, state)
+                render_page("lookup/index.html", meta, &state)
             }))
             .route("/job-status", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -355,7 +381,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(meta, state)
+                render_page(SPA_FALLBACK, meta, &state)
             }))
             .route("/organizations", get(|state: GetState, req: Request<Body>| async move {
                 let meta = HashMap::from([
@@ -366,7 +392,7 @@ async fn main() {
                     ("og:url", req.uri().to_string()),
                 ]);
 
-                render_index(meta, state)
+                render_page(SPA_FALLBACK, meta, &state)
             }))
             .route("/{type}/versions", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let types = ServerType::all(&state.database, &state.cache, &state.env).await?;
@@ -390,7 +416,7 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{type}/versions")),
                 ]);
 
-                render_index(meta, state)
+                render_page(&format!("{type}/versions/index.html"), meta, &state)
             }))
             .route("/{type}/statistics", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let data = r#type.infos(&state.env);
@@ -403,13 +429,14 @@ async fn main() {
                     ("og:url", format!("https://mcjars.app/{type}/versions")),
                 ]);
 
-                render_index(meta, state)
+                render_page(&format!("{type}/statistics/index.html"), meta, &state)
             }))
             .route("/sitemap.xml", get(|state: GetState| async move {
                 let mut sitemap = "
                 <?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">
                 <url><loc>https://mcjars.app</loc></url>
                 <url><loc>https://mcjars.app/lookup</loc></url>
+                <url><loc>https://mcjars.app/configs</loc></url>
                 ".trim().to_string();
 
                 let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
@@ -421,6 +448,9 @@ async fn main() {
                     sitemap.push_str(&format!(
                         "<url><loc>https://mcjars.app/{type}/statistics</loc><lastmod>{now}</lastmod></url>"
                     ));
+                    sitemap.push_str(&format!(
+                        "<url><loc>https://mcjars.app/{type}/config</loc><lastmod>{now}</lastmod></url>"
+                    ));
                 }
 
                 sitemap.push_str("</urlset>");
@@ -428,41 +458,54 @@ async fn main() {
                 ApiResponse::new(Body::from(sitemap)).with_header("Content-Type", "application/xml").ok()
             }))
             .fallback(|state: GetState, req: Request<Body>| async move {
-                if !req.uri().path().starts_with("/api") {
-                    let path = &req.uri().path()[1..];
-
-                    let file = if path.starts_with("assets") {
-                        FRONTEND_ASSETS.get_dir("assets").unwrap().get_file(path).unwrap_or_else(|| {
-                            FRONTEND_ASSETS
-                                .get_file("index.html").unwrap()
-                        })
-                    } else {
-                        FRONTEND_ASSETS.get_file(path).unwrap_or_else(|| {
-                            FRONTEND_ASSETS
-                                .get_file("index.html").unwrap()
-                        })
-                    };
-
-                    let mut content = file.contents_utf8().unwrap().to_string();
-                    if file.path().extension() == Some("html".as_ref()) {
-                        content = content.replace("{{VERSION}}", &state.version);
-                    }
-
-                    return ApiResponse::new(Body::from(content))
-                        .with_header(
-                            "Content-Type",
-                            match file.path().extension() {
-                                Some(ext) if ext == "js" => "application/javascript",
-                                Some(ext) if ext == "css" => "text/css",
-                                Some(ext) if ext == "html" => "text/html",
-                                _ => "text/plain",
-                            },
-                        )
+                if req.uri().path().starts_with("/api") {
+                    return ApiResponse::error("route not found")
+                        .with_status(StatusCode::NOT_FOUND)
                         .ok();
                 }
 
-                ApiResponse::error("route not found")
-                    .with_status(StatusCode::NOT_FOUND)
+                let path = &req.uri().path()[1..];
+
+                if !path.is_empty()
+                    && let Some(file) = FRONTEND_ASSETS.get_file(path)
+                {
+                    let extension = file.path().extension();
+
+                    if extension == Some("html".as_ref()) && let Some(contents_utf8) = file.contents_utf8() {
+                        let content =
+                            inject_head(contents_utf8, HashMap::new(), &state.version);
+
+                        return ApiResponse::new(Body::from(content))
+                            .with_header("Content-Type", "text/html")
+                            .ok();
+                    }
+
+                    return ApiResponse::new(Body::from(file.contents()))
+                        .with_header("Content-Type", content_type_for(extension))
+                        .ok();
+                }
+
+                let route_index = if path.is_empty() {
+                    "index.html".to_string()
+                } else {
+                    format!("{path}/index.html")
+                };
+
+                let file = FRONTEND_ASSETS
+                    .get_file(&route_index)
+                    .or_else(|| FRONTEND_ASSETS.get_file(SPA_FALLBACK))
+                    .unwrap();
+
+                if let Some(contents_utf8) = file.contents_utf8() {
+                    let content = inject_head(contents_utf8, HashMap::new(), &state.version);
+
+                    return ApiResponse::new(Body::from(content))
+                        .with_header("Content-Type", "text/html")
+                        .ok();
+                }
+
+                ApiResponse::new(Body::from(file.contents()))
+                    .with_header("Content-Type", content_type_for(file.path().extension()))
                     .ok()
             })
             .layer(CatchPanicLayer::custom(handle_panic))

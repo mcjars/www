@@ -11,20 +11,21 @@ import {
   SkullIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { Link, LinkProps, useLocation } from 'react-router-dom';
-import useSWR from 'swr';
-import { BASE_URL } from '@/api/index.ts';
-import apiGetTypes from '@/api/types.ts';
-import apiPostUserLogout from '@/api/user/logout.ts';
-import { Button } from '@/components/ui/button.tsx';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.tsx';
+import { useEffect, useState } from 'react';
+import { Link, LinkProps, useLocation } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { BASE_URL } from '~/api/index.ts';
+import apiGetTypes from '~/api/types.ts';
+import apiPostUserLogout from '~/api/user/logout.ts';
+import { Button } from '~/components/ui/button.tsx';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx';
+} from '~/components/ui/dropdown-menu.tsx';
 import {
   Sidebar,
   SidebarContent,
@@ -40,11 +41,11 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from '@/components/ui/sidebar.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx';
-import { useAuth } from '@/hooks/use-auth.tsx';
-import { useToast } from '@/hooks/use-toast.ts';
+} from '~/components/ui/sidebar.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip.tsx';
+import { useAuth } from '~/hooks/use-auth.tsx';
+import { useToast } from '~/hooks/use-toast.ts';
 
 const AutoCloseLink = ({ to, children, ...props }: LinkProps) => {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -68,10 +69,12 @@ export function AppSidebar() {
   const location = useLocation(),
     [user, mutateUser, isUserLoading] = useAuth();
 
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
+
+  const [version, setVersion] = useState('');
+  useEffect(() => {
+    setVersion((window as unknown as { mcjars_version?: string }).mcjars_version ?? '');
+  }, []);
 
   return (
     <>
@@ -82,7 +85,7 @@ export function AppSidebar() {
 
             <div className={'flex flex-col ml-2'}>
               <h1 className={'text-xl font-semibold'}>MCJars</h1>
-              <p className={'text-sm text-muted-foreground'}>{(window as any).mcjars_version}</p>
+              <p className={'text-sm text-muted-foreground'}>{version}</p>
             </div>
           </AutoCloseLink>
         </SidebarHeader>

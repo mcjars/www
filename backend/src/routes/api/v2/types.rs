@@ -61,11 +61,12 @@ mod get {
                         ServerType::Waterfall,
                     ],
                 ),
-                experimental: ServerType::extract(&data, &[ServerType::Quilt, ServerType::Canvas]),
+                experimental: ServerType::extract(&data, &[ServerType::Quilt]),
                 miscellaneous: ServerType::extract(
                     &data,
                     &[
                         ServerType::VelocityCtd,
+                        ServerType::Canvas,
                         ServerType::Arclight,
                         ServerType::Mohist,
                         ServerType::Youer,

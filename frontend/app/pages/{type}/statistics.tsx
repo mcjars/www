@@ -1,36 +1,53 @@
 import bytes from 'bytes';
 import { ArchiveIcon, ArchiveRestoreIcon, LoaderCircle } from 'lucide-react';
-import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useCallback, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
-import useSWR from 'swr';
-import { NumberParam, StringParam, useQueryParam } from 'use-query-params';
-import apiGetTypeVersionLookupsAllTime from '@/api/lookups/version/all-time.ts';
-import apiGetTypeVersionLookupsMonth from '@/api/lookups/version/month.ts';
-import apiGetTypeRequestsAllTime from '@/api/requests/type/all-time.ts';
-import apiGetTypeRequestsMonth from '@/api/requests/type/month.ts';
-import apiGetTypeStats from '@/api/requests/type/stats.ts';
-import { Card } from '@/components/ui/card.tsx';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { mergeLessThanPercent } from '@/lib/utils.ts';
+import { useQuery } from '@tanstack/react-query';
+import apiGetTypeVersionLookupsAllTime from '~/api/lookups/version/all-time.ts';
+import apiGetTypeVersionLookupsMonth from '~/api/lookups/version/month.ts';
+import apiGetTypeRequestsAllTime from '~/api/requests/type/all-time.ts';
+import apiGetTypeRequestsMonth from '~/api/requests/type/month.ts';
+import apiGetTypeStats from '~/api/requests/type/stats.ts';
+import { Card } from '~/components/ui/card.tsx';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '~/components/ui/chart.tsx';
+import { SearchableSelect } from '~/components/searchable-select.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { mergeLessThanPercent } from '~/lib/utils.ts';
 
 export default function PageTypeRequestStatistics() {
-  const { type } = useParams<{ type: string }>();
-  if (!type) return null;
+  const { type = '' } = useParams<{ type: string }>();
 
-  const { data: stats } = useSWR(['stats', type], () => apiGetTypeStats(type), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setParam = useCallback(
+    (name: string, value: string | number | null | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (value === null || value === undefined || value === '') params.delete(name);
+          else params.set(name, String(value));
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const getNumberParam = (name: string) => {
+    const raw = searchParams.get(name);
+    return raw === null || raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw);
+  };
+
+  const { data: stats } = useQuery({ queryKey: ['stats', type], queryFn: () => apiGetTypeStats(type) });
+
+  const { data: requestStatsAllTimeRaw } = useQuery({
+    queryKey: ['requestStats', type],
+    queryFn: () => apiGetTypeRequestsAllTime(type),
   });
 
-  const { data: requestStatsAllTimeRaw } = useSWR(['requestStats', type], () => apiGetTypeRequestsAllTime(type), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
-
-  const [requestStatsAllTimeType, setRequestStatsAllTimeType] = useQueryParam('requestStatsAllTimeType', StringParam);
+  const requestStatsAllTimeType = searchParams.get('requestStatsAllTimeType') ?? undefined;
+  const setRequestStatsAllTimeType = (value?: string | null) => setParam('requestStatsAllTimeType', value);
   const requestStatsAllTime = useMemo(
     () =>
       mergeLessThanPercent(
@@ -42,16 +59,14 @@ export default function PageTypeRequestStatistics() {
     [requestStatsAllTimeRaw, requestStatsAllTimeType],
   );
 
-  const { data: lookupVersionStatsAllTimeRaw } = useSWR(
-    ['lookupVersionStats', type],
-    () => apiGetTypeVersionLookupsAllTime(type),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const { data: lookupVersionStatsAllTimeRaw } = useQuery({
+    queryKey: ['lookupVersionStats', type],
+    queryFn: () => apiGetTypeVersionLookupsAllTime(type),
+  });
 
-  const [lookupVersionStatsAllTimeType, setLookupVersionStatsAllTimeType] = useQueryParam(
-    'lookupVersionStatsAllTimeType',
-    StringParam,
-  );
+  const lookupVersionStatsAllTimeType = searchParams.get('lookupVersionStatsAllTimeType') ?? undefined;
+  const setLookupVersionStatsAllTimeType = (value?: string | null) =>
+    setParam('lookupVersionStatsAllTimeType', value);
   const lookupVersionStatsAllTime = useMemo(
     () =>
       mergeLessThanPercent(
@@ -63,23 +78,23 @@ export default function PageTypeRequestStatistics() {
     [lookupVersionStatsAllTimeRaw, lookupVersionStatsAllTimeType],
   );
 
-  const [requestStatsMonthType, setRequestStatsMonthType] = useQueryParam('requestStatsMonthType', StringParam);
-  const [requestStatsMonthDisplay, setRequestStatsMonthDisplay] = useQueryParam(
-    'requestStatsMonthDisplay',
-    StringParam,
-  );
-  const [requestStatsMonthYear, setRequestStatsMonthYear] = useQueryParam('requestStatsMonthYear', NumberParam);
-  const [requestStatsMonthMonth, setRequestStatsMonthMonth] = useQueryParam('requestStatsMonthMonth', NumberParam);
-  const { data: requestStatsMonthRaw } = useSWR(
-    ['requestStatsMonth', type, requestStatsMonthYear, requestStatsMonthMonth],
-    () =>
+  const requestStatsMonthType = searchParams.get('requestStatsMonthType') ?? undefined;
+  const setRequestStatsMonthType = (value?: string | null) => setParam('requestStatsMonthType', value);
+  const requestStatsMonthDisplay = searchParams.get('requestStatsMonthDisplay') ?? undefined;
+  const setRequestStatsMonthDisplay = (value?: string | null) => setParam('requestStatsMonthDisplay', value);
+  const requestStatsMonthYear = getNumberParam('requestStatsMonthYear');
+  const setRequestStatsMonthYear = (value?: number | null) => setParam('requestStatsMonthYear', value);
+  const requestStatsMonthMonth = getNumberParam('requestStatsMonthMonth');
+  const setRequestStatsMonthMonth = (value?: number | null) => setParam('requestStatsMonthMonth', value);
+  const { data: requestStatsMonthRaw } = useQuery({
+    queryKey: ['requestStatsMonth', type, requestStatsMonthYear, requestStatsMonthMonth],
+    queryFn: () =>
       apiGetTypeRequestsMonth(
         type,
         requestStatsMonthYear ?? new Date().getFullYear(),
         requestStatsMonthMonth ?? new Date().getMonth() + 1,
       ),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  });
 
   const requestStatsMonth = useMemo(
     () =>
@@ -126,32 +141,24 @@ export default function PageTypeRequestStatistics() {
     [requestStatsMonth],
   );
 
-  const [lookupVersionStatsMonthType, setLookupVersionStatsMonthType] = useQueryParam(
-    'lookupVersionStatsMonthType',
-    StringParam,
-  );
-  const [lookupVersionStatsMonthDisplay, setLookupVersionStatsMonthDisplay] = useQueryParam(
-    'lookupVersionStatsMonthDisplay',
-    StringParam,
-  );
-  const [lookupVersionStatsMonthYear, setLookupVersionStatsMonthYear] = useQueryParam(
-    'lookupVersionStatsMonthYear',
-    NumberParam,
-  );
-  const [lookupVersionStatsMonthMonth, setLookupVersionStatsMonthMonth] = useQueryParam(
-    'lookupVersionStatsMonthMonth',
-    NumberParam,
-  );
-  const { data: lookupVersionStatsMonthRaw } = useSWR(
-    ['lookupVersionStatsMonth', type, lookupVersionStatsMonthYear, lookupVersionStatsMonthMonth],
-    () =>
+  const lookupVersionStatsMonthType = searchParams.get('lookupVersionStatsMonthType') ?? undefined;
+  const setLookupVersionStatsMonthType = (value?: string | null) => setParam('lookupVersionStatsMonthType', value);
+  const lookupVersionStatsMonthDisplay = searchParams.get('lookupVersionStatsMonthDisplay') ?? undefined;
+  const setLookupVersionStatsMonthDisplay = (value?: string | null) =>
+    setParam('lookupVersionStatsMonthDisplay', value);
+  const lookupVersionStatsMonthYear = getNumberParam('lookupVersionStatsMonthYear');
+  const setLookupVersionStatsMonthYear = (value?: number | null) => setParam('lookupVersionStatsMonthYear', value);
+  const lookupVersionStatsMonthMonth = getNumberParam('lookupVersionStatsMonthMonth');
+  const setLookupVersionStatsMonthMonth = (value?: number | null) => setParam('lookupVersionStatsMonthMonth', value);
+  const { data: lookupVersionStatsMonthRaw } = useQuery({
+    queryKey: ['lookupVersionStatsMonth', type, lookupVersionStatsMonthYear, lookupVersionStatsMonthMonth],
+    queryFn: () =>
       apiGetTypeVersionLookupsMonth(
         type,
         lookupVersionStatsMonthYear ?? new Date().getFullYear(),
         lookupVersionStatsMonthMonth ?? new Date().getMonth() + 1,
       ),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  });
 
   const lookupVersionStatsMonth = useMemo(
     () =>
@@ -311,27 +318,20 @@ export default function PageTypeRequestStatistics() {
             </h1>
 
             <div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
-              <Select
+              <SearchableSelect
                 value={requestStatsMonthDisplay ?? 'all'}
-                onValueChange={(value) => setRequestStatsMonthDisplay(value)}
-              >
-                <SelectTrigger className={'w-[8em] mb-1'}>
-                  <SelectValue placeholder={'All'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={'all'}>All</SelectItem>
-                  <SelectItem value={'root'}>Root</SelectItem>
-                  {requestStatsMonth
+                onChange={(value) => setRequestStatsMonthDisplay(value)}
+                triggerClassName={'w-[8em] mb-1'}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'root', label: 'Root' },
+                  ...(requestStatsMonth
                     ?.flatMap(({ versions }) => Object.entries(versions))
                     .filter(([value], index, self) => self.findIndex(([v]) => v === value) === index)
                     .sort(([_, a], [__, b]) => b - a)
-                    .map(([label]) => (
-                      <SelectItem key={label} value={label}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                    .map(([label]) => ({ value: label, label })) ?? []),
+                ]}
+              />
 
               <Select
                 value={requestStatsMonthType ?? 'total'}
@@ -453,22 +453,15 @@ export default function PageTypeRequestStatistics() {
             </h1>
 
             <div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
-              <Select
+              <SearchableSelect
                 value={lookupVersionStatsMonthDisplay ?? 'all'}
-                onValueChange={(value) => setLookupVersionStatsMonthDisplay(value)}
-              >
-                <SelectTrigger className={'w-[8em] mb-1'}>
-                  <SelectValue placeholder={'All'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={'all'}>All</SelectItem>
-                  {lookupVersionStatsMonth.map(({ label }) => (
-                    <SelectItem key={label} value={label}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(value) => setLookupVersionStatsMonthDisplay(value)}
+                triggerClassName={'w-[8em] mb-1'}
+                options={[
+                  { value: 'all', label: 'All' },
+                  ...lookupVersionStatsMonth.map(({ label }) => ({ value: label, label })),
+                ]}
+              />
 
               <Select
                 value={lookupVersionStatsMonthType ?? 'total'}

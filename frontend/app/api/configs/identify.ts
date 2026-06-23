@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { PartialMinecraftBuild } from '@/api/builds/index.ts';
-import apiPostConfigFormat from '@/api/configs/format.ts';
-import { BASE_URL } from '@/api/index.ts';
+import { PartialMinecraftBuild } from '~/api/builds/index.ts';
+import apiPostConfigFormat from '~/api/configs/format.ts';
+import { BASE_URL } from '~/api/index.ts';
 
 const normalizeBuild = (build: any): PartialMinecraftBuild | null => {
   if (!build || typeof build !== 'object') return null;

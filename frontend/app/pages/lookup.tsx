@@ -1,17 +1,17 @@
 import bytes from 'bytes';
 import { LoaderCircle } from 'lucide-react';
 import { LegacyRef, useEffect, useMemo, useRef, useState } from 'react';
-import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer';
-import useSWR from 'swr';
-import apiGetBuild from '@/api/builds/by-hash.ts';
-import { PartialMinecraftBuild } from '@/api/builds/index.ts';
-import apiGetConfigSearch from '@/api/configs/identify.ts';
-import apiGetTypes from '@/api/types.ts';
-import { Button } from '@/components/ui/button.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { Drawer, DrawerContent } from '@/components/ui/drawer.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
+import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
+import { useQuery } from '@tanstack/react-query';
+import apiGetBuild from '~/api/builds/by-hash.ts';
+import { PartialMinecraftBuild } from '~/api/builds/index.ts';
+import apiGetConfigSearch from '~/api/configs/identify.ts';
+import apiGetTypes from '~/api/types.ts';
+import { Button } from '~/components/ui/button.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Drawer, DrawerContent } from '~/components/ui/drawer.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '~/components/ui/select.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
 
 export default function PageLookup() {
   const [isDragging, setIsDragging] = useState(false);
@@ -20,13 +20,10 @@ export default function PageLookup() {
   const [configDropMatches, setConfigDropMatches] = useState<Awaited<ReturnType<typeof apiGetConfigSearch>>>();
   const [configDropMatchIndex, setConfigDropMatchIndex] = useState(0);
   const [viewerWidth, setViewerWidth] = useState(1920);
-  const inputRef = useRef<HTMLInputElement>();
+  const inputRef = useRef<HTMLInputElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
   const handleFile = async (file: File) => {
     if (file.name.endsWith('.jar')) {

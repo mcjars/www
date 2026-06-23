@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { PartialMinecraftBuild } from '@/api/builds/index.ts';
-import { BASE_URL } from '@/api/index.ts';
+import { PartialMinecraftBuild } from '~/api/builds/index.ts';
+import { BASE_URL } from '~/api/index.ts';
 
 export type TypeVersionSummary = {
   versionId: string;

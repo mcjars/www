@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { PartialMinecraftBuild } from '@/api/builds/index.ts';
-import { BASE_URL } from '@/api/index.ts';
+import { PartialMinecraftBuild } from '~/api/builds/index.ts';
+import { BASE_URL } from '~/api/index.ts';
 
 export default async function apiGetBuild(build: string): Promise<PartialMinecraftBuild> {
   const { data } = await axios.get<{

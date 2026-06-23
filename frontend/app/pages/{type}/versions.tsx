@@ -8,21 +8,20 @@ import {
   SearchIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import useSWR from 'swr';
-import { NumberParam, StringParam, useQueryParam } from 'use-query-params';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useLocalStorage } from 'usehooks-ts';
-import apiGetBuilds from '@/api/builds/index.ts';
-import apiGetTypes from '@/api/types.ts';
-import apiGetVersions from '@/api/versions.ts';
-import { Alert, AlertDescription } from '@/components/ui/alert.tsx';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { Card } from '@/components/ui/card.tsx';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.tsx';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer.tsx';
-import { Input } from '@/components/ui/input.tsx';
+import apiGetBuilds from '~/api/builds/index.ts';
+import apiGetTypes from '~/api/types.ts';
+import apiGetVersions from '~/api/versions.ts';
+import { Alert, AlertDescription } from '~/components/ui/alert.tsx';
+import { Badge } from '~/components/ui/badge.tsx';
+import { Button } from '~/components/ui/button.tsx';
+import { Card } from '~/components/ui/card.tsx';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible.tsx';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '~/components/ui/drawer.tsx';
+import { Input } from '~/components/ui/input.tsx';
 import {
   Pagination,
   PaginationContent,
@@ -31,27 +30,53 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination.tsx';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
-import { Skeleton } from '@/components/ui/skeleton.tsx';
-import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx';
-import { useIsMobile } from '@/hooks/use-mobile.tsx';
+} from '~/components/ui/pagination.tsx';
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
+import { Skeleton } from '~/components/ui/skeleton.tsx';
+import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip.tsx';
+import { useIsMobile } from '~/hooks/use-mobile.tsx';
 
 export default function PageTypeVersions() {
-  const { type } = useParams<{ type: string }>();
-  if (!type) return null;
+  const { type = '' } = useParams<{ type: string }>();
   const navigate = useNavigate();
 
   const mobile = useIsMobile(1280);
 
-  const [versionType, setVersionType] = useQueryParam('type', StringParam);
-  const [search, setSearch] = useQueryParam('search', StringParam);
-  const [browse, setBrowse] = useQueryParam('browse', StringParam);
-  const [versionPage, setVersionPage] = useQueryParam('page', NumberParam);
-  const [buildSearch, setBuildSearch] = useQueryParam('buildSearch', StringParam);
-  const [buildPage, setBuildPage] = useQueryParam('buildPage', NumberParam);
-  const [displayMode, setDisplayMode] = useQueryParam('display', StringParam);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setParam = useCallback(
+    (name: string, value: string | number | null | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (value === null || value === undefined || value === '') params.delete(name);
+          else params.set(name, String(value));
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const getNumberParam = (name: string) => {
+    const raw = searchParams.get(name);
+    return raw === null || raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw);
+  };
+
+  const versionType = searchParams.get('type') ?? undefined;
+  const setVersionType = (value?: string | null) => setParam('type', value);
+  const search = searchParams.get('search') ?? undefined;
+  const setSearch = (value?: string | null) => setParam('search', value);
+  const browse = searchParams.get('browse') ?? undefined;
+  const setBrowse = (value?: string | null) => setParam('browse', value);
+  const versionPage = getNumberParam('page');
+  const setVersionPage = (value?: number | null) => setParam('page', value);
+  const buildSearch = searchParams.get('buildSearch') ?? undefined;
+  const setBuildSearch = (value?: string | null) => setParam('buildSearch', value);
+  const buildPage = getNumberParam('buildPage');
+  const setBuildPage = (value?: number | null) => setParam('buildPage', value);
+  const displayMode = searchParams.get('display') ?? undefined;
+  const setDisplayMode = (value?: string | null) => setParam('display', value);
   const [installScript, setInstallScript] = useLocalStorage<'bash' | 'mcvcli'>('install-script', 'bash');
   const [versionsPerPage, setVersionsPerPage] = useLocalStorage<number>('versions-per-page', 24);
   const [hasCustomVersionsPerPage, setHasCustomVersionsPerPage] = useLocalStorage<boolean>(
@@ -66,34 +91,28 @@ export default function PageTypeVersions() {
   const currentBuildPage = Math.max(buildPage ?? 1, 1);
   const effectiveDisplayMode = displayMode ?? (mobile ? 'list' : 'compact');
 
-  const { data: types } = useSWR(['types'], () => apiGetTypes(), {
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-  });
+  const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
 
-  const { data: versionsResponse } = useSWR(
-    ['versions', type, currentVersionPage, search ?? '', versionsPerPage],
-    () =>
+  const { data: versionsResponse } = useQuery({
+    queryKey: ['versions', type, currentVersionPage, search ?? '', versionsPerPage],
+    queryFn: () =>
       apiGetVersions(type, {
         page: currentVersionPage,
         perPage: versionsPerPage,
         search: search ?? '',
       }),
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  });
 
-  const { data: buildsResponse } = useSWR(
-    ['builds', type, browse, currentBuildPage, buildSearch ?? '', buildsPerPage],
-    () =>
-      browse
-        ? apiGetBuilds(type, browse, {
-            page: currentBuildPage,
-            perPage: buildsPerPage,
-            search: buildSearch ?? '',
-          })
-        : undefined,
-    { revalidateOnFocus: false, revalidateIfStale: false },
-  );
+  const { data: buildsResponse } = useQuery({
+    queryKey: ['builds', type, browse, currentBuildPage, buildSearch ?? '', buildsPerPage],
+    queryFn: () =>
+      apiGetBuilds(type, browse as string, {
+        page: currentBuildPage,
+        perPage: buildsPerPage,
+        search: buildSearch ?? '',
+      }),
+    enabled: Boolean(browse),
+  });
 
   const versions = versionsResponse?.items;
   const builds = buildsResponse?.items;
@@ -114,9 +133,9 @@ export default function PageTypeVersions() {
   );
 
   useEffect(() => {
-    setBuildPage(1);
-    setBuildSearch('');
-  }, [browse]);
+    setParam('buildPage', 1);
+    setParam('buildSearch', '');
+  }, [browse, setParam]);
 
   useEffect(() => {
     const updateColumns = () => {
@@ -159,12 +178,12 @@ export default function PageTypeVersions() {
   }, [hasCustomVersionsPerPage, recommendedVersionsPerPage, versionsPerPage, setVersionsPerPage]);
 
   useEffect(() => {
-    setVersionPage(1);
-  }, [versionsPerPage]);
+    setParam('page', 1);
+  }, [versionsPerPage, setParam]);
 
   useEffect(() => {
-    setBuildPage(1);
-  }, [buildsPerPage]);
+    setParam('buildPage', 1);
+  }, [buildsPerPage, setParam]);
 
   const typeData = useMemo(
     () =>
@@ -266,167 +285,199 @@ export default function PageTypeVersions() {
       if (browse) {
         event.preventDefault();
         if (isPrevKey(event)) {
-          setBuildPage(event.shiftKey ? 1 : Math.max(1, currentBuildPage - 1));
+          setParam('buildPage', event.shiftKey ? 1 : Math.max(1, currentBuildPage - 1));
           return;
         }
 
-        setBuildPage(event.shiftKey ? totalBuildPages : currentBuildPage + 1);
+        setParam('buildPage', event.shiftKey ? totalBuildPages : currentBuildPage + 1);
         return;
       }
 
       event.preventDefault();
       if (isPrevKey(event)) {
-        setVersionPage(event.shiftKey ? 1 : Math.max(1, currentVersionPage - 1));
+        setParam('page', event.shiftKey ? 1 : Math.max(1, currentVersionPage - 1));
         return;
       }
 
-      setVersionPage(event.shiftKey ? totalVersionPages : currentVersionPage + 1);
+      setParam('page', event.shiftKey ? totalVersionPages : currentVersionPage + 1);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [browse, currentBuildPage, currentVersionPage, totalBuildPages, totalVersionPages, setBuildPage, setVersionPage]);
+  }, [browse, currentBuildPage, currentVersionPage, totalBuildPages, totalVersionPages, setParam]);
 
-  const versionPaginationControls = (
-    <div className={'flex flex-row items-center justify-end gap-2'}>
-      <Select
-        value={hasCustomVersionsPerPage ? String(versionsPerPage) : 'auto'}
-        onValueChange={(value) => {
-          if (value === 'auto') {
-            setHasCustomVersionsPerPage(false);
-            setVersionsPerPage(recommendedVersionsPerPage);
-            return;
-          }
+  const versionCount = versionsResponse?.total ?? null;
 
-          setHasCustomVersionsPerPage(true);
-          setVersionsPerPage(Number(value));
-        }}
-      >
-        <SelectTrigger className={'w-44'}>
-          <SelectValue placeholder={'Page Size'} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={'auto'}>Auto ({recommendedVersionsPerPage} / page)</SelectItem>
-          {versionPageSizeOptions.map((size) => (
-            <SelectItem key={size} value={String(size)}>
-              {size} / page
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  const renderVersionPagination = (position: 'top' | 'bottom') => {
+    const hasMultiplePages = totalVersionPages > 1;
 
-      <Pagination className={'mx-0 w-fit justify-end'}>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              href='#'
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentVersionPage > 1) setVersionPage(currentVersionPage - 1);
-              }}
-              className={currentVersionPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
+    if (position === 'top' && !hasMultiplePages) return null;
 
-          {getVersionPageNumbers.map((pageNum, i) =>
-            typeof pageNum === 'string' ? (
-              <PaginationItem key={`ellipsis-${i}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={pageNum}>
-                <PaginationLink
+    return (
+      <div className={'flex flex-row flex-wrap items-center justify-end gap-2'}>
+        {versionCount !== null && (
+          <span className={'mr-auto text-sm text-muted-foreground'}>
+            {versionCount.toLocaleString()} version{versionCount === 1 ? '' : 's'}
+          </span>
+        )}
+
+        <Select
+          value={hasCustomVersionsPerPage ? String(versionsPerPage) : 'auto'}
+          onValueChange={(value) => {
+            if (value === 'auto') {
+              setHasCustomVersionsPerPage(false);
+              setVersionsPerPage(recommendedVersionsPerPage);
+              return;
+            }
+
+            setHasCustomVersionsPerPage(true);
+            setVersionsPerPage(Number(value));
+          }}
+        >
+          <SelectTrigger className={'w-44'}>
+            <SelectValue placeholder={'Page Size'} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={'auto'}>Auto ({recommendedVersionsPerPage} / page)</SelectItem>
+            {versionPageSizeOptions.map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {size} / page
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasMultiplePages && (
+          <Pagination className={'mx-0 w-fit justify-end'}>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
                   href='#'
-                  isActive={pageNum === currentVersionPage}
                   onClick={(e) => {
                     e.preventDefault();
-                    setVersionPage(pageNum as number);
+                    if (currentVersionPage > 1) setVersionPage(currentVersionPage - 1);
                   }}
-                >
-                  {pageNum}
-                </PaginationLink>
+                  className={currentVersionPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
               </PaginationItem>
-            ),
-          )}
 
-          <PaginationItem>
-            <PaginationNext
-              href='#'
-              onClick={(e) => {
-                e.preventDefault();
-                if (versionsResponse?.hasNextPage) setVersionPage(currentVersionPage + 1);
-              }}
-              className={!versionsResponse?.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
-    </div>
-  );
+              {getVersionPageNumbers.map((pageNum, i) =>
+                typeof pageNum === 'string' ? (
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      href='#'
+                      isActive={pageNum === currentVersionPage}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setVersionPage(pageNum as number);
+                      }}
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                ),
+              )}
 
-  const buildPaginationControls = (
-    <div className={'flex flex-row items-center justify-end gap-2'}>
-      <Select value={String(buildsPerPage)} onValueChange={(value) => setBuildsPerPage(Number(value))}>
-        <SelectTrigger className={'w-36'}>
-          <SelectValue placeholder={'Page Size'} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={'10'}>10 / page</SelectItem>
-          <SelectItem value={'20'}>20 / page</SelectItem>
-          <SelectItem value={'50'}>50 / page</SelectItem>
-          <SelectItem value={'100'}>100 / page</SelectItem>
-          <SelectItem value={'200'}>200 / page</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Pagination className={'mx-0 w-fit justify-end'}>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              href='#'
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentBuildPage > 1) setBuildPage(currentBuildPage - 1);
-              }}
-              className={currentBuildPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
-
-          {getBuildPageNumbers.map((pageNum, i) =>
-            typeof pageNum === 'string' ? (
-              <PaginationItem key={`ellipsis-${i}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={pageNum}>
-                <PaginationLink
+              <PaginationItem>
+                <PaginationNext
                   href='#'
-                  isActive={pageNum === currentBuildPage}
                   onClick={(e) => {
                     e.preventDefault();
-                    setBuildPage(pageNum as number);
+                    if (versionsResponse?.hasNextPage) setVersionPage(currentVersionPage + 1);
                   }}
-                >
-                  {pageNum}
-                </PaginationLink>
+                  className={!versionsResponse?.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
               </PaginationItem>
-            ),
-          )}
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
+    );
+  };
 
-          <PaginationItem>
-            <PaginationNext
-              href='#'
-              onClick={(e) => {
-                e.preventDefault();
-                if (buildsResponse?.hasNextPage) setBuildPage(currentBuildPage + 1);
-              }}
-              className={!buildsResponse?.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
-    </div>
-  );
+  const buildCount = buildsResponse?.total ?? null;
+
+  const renderBuildPagination = (position: 'top' | 'bottom') => {
+    const hasMultiplePages = totalBuildPages > 1;
+
+    if (position === 'top' && !hasMultiplePages) return null;
+
+    return (
+      <div className={'flex flex-row flex-wrap items-center justify-end gap-2'}>
+        {buildCount !== null && (
+          <span className={'mr-auto text-sm text-muted-foreground'}>
+            {buildCount.toLocaleString()} build{buildCount === 1 ? '' : 's'}
+          </span>
+        )}
+
+        <Select value={String(buildsPerPage)} onValueChange={(value) => setBuildsPerPage(Number(value))}>
+          <SelectTrigger className={'w-36'}>
+            <SelectValue placeholder={'Page Size'} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={'10'}>10 / page</SelectItem>
+            <SelectItem value={'20'}>20 / page</SelectItem>
+            <SelectItem value={'50'}>50 / page</SelectItem>
+            <SelectItem value={'100'}>100 / page</SelectItem>
+            <SelectItem value={'200'}>200 / page</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasMultiplePages && (
+          <Pagination className={'mx-0 w-fit justify-end'}>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentBuildPage > 1) setBuildPage(currentBuildPage - 1);
+                  }}
+                  className={currentBuildPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+
+              {getBuildPageNumbers.map((pageNum, i) =>
+                typeof pageNum === 'string' ? (
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      href='#'
+                      isActive={pageNum === currentBuildPage}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBuildPage(pageNum as number);
+                      }}
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                ),
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (buildsResponse?.hasNextPage) setBuildPage(currentBuildPage + 1);
+                  }}
+                  className={!buildsResponse?.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -501,7 +552,7 @@ export default function PageTypeVersions() {
         />
       </div>
 
-      <div className={'mb-3'}>{versionPaginationControls}</div>
+      {totalVersionPages > 1 && <div className={'mb-3'}>{renderVersionPagination('top')}</div>}
 
       <div
         ref={versionsContainerRef}
@@ -587,7 +638,7 @@ export default function PageTypeVersions() {
         )}
       </div>
 
-      <div className={'pb-2'}>{versionPaginationControls}</div>
+      <div className={'pb-2'}>{renderVersionPagination('bottom')}</div>
 
       <Drawer open={Boolean(browse)} onClose={() => setBrowse(undefined)} setBackgroundColorOnScale={false}>
         <DrawerContent className={'w-full max-w-5xl mx-auto'} onPointerDownOutside={() => setBrowse(undefined)}>
@@ -606,7 +657,7 @@ export default function PageTypeVersions() {
               />
             </div>
 
-            <div className={'mb-3'}>{buildPaginationControls}</div>
+            {totalBuildPages > 1 && <div className={'mb-3'}>{renderBuildPagination('top')}</div>}
             {!browse ? (
               <div className={'h-32'} />
             ) : !builds ? (
@@ -755,7 +806,7 @@ export default function PageTypeVersions() {
                     </Collapsible>
                   </Card>
                 ))}
-                {buildPaginationControls}
+                {renderBuildPagination('bottom')}
               </>
             )}
           </div>

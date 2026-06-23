@@ -118,7 +118,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 let (_, key) = UserSession::new(
                     &state.database,
                     user.id,
-                    crate::utils::extract_ip(&headers).unwrap().into(),
+                    crate::utils::extract_ip(&headers).unwrap_or([127, 0, 0, 1].into()).into(),
                     headers
                         .get("User-Agent")
                         .map(|ua| crate::utils::slice_up_to(ua.to_str().unwrap_or("unknown"), 255))

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { BASE_URL } from '@/api/index.ts';
-import { User } from '@/api/user/infos.ts';
+import { BASE_URL } from '~/api/index.ts';
+import { User } from '~/api/user/infos.ts';
 
 export default async function apiGetUserOrganizationSubusers(organization: number): Promise<
   {

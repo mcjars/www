@@ -1,6 +1,6 @@
 import { ExternalLinkIcon, ShieldPlusIcon } from 'lucide-react';
-import { User } from '@/api/user/infos.ts';
-import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.tsx';
+import { User } from '~/api/user/infos.ts';
+import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip.tsx';
 
 export default function UserTooltip({
   user,

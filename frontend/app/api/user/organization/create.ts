@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_URL } from '@/api/index.ts';
+import { BASE_URL } from '~/api/index.ts';
 
 export type CreateOrganizationData = {
   name: string;

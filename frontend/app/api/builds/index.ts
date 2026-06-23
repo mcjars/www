@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { BASE_URL } from '@/api/index.ts';
-import { PaginatedResponse } from '@/api/versions.ts';
+import { BASE_URL } from '~/api/index.ts';
+import { PaginatedResponse } from '~/api/versions.ts';
 
 export type InstallStep =
   | {
