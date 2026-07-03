@@ -11,10 +11,8 @@ mod get {
         response::{ApiResponse, ApiResponseResult},
         routes::{ApiErrorV3, GetData, GetState},
     };
-    use axum::{
-        extract::{Path, Query},
-        http::StatusCode,
-    };
+    use axum::{extract::Path, http::StatusCode};
+    use axum_extra::extract::Query;
     use serde::Serialize;
     use serde_json::json;
     use utoipa::ToSchema;
