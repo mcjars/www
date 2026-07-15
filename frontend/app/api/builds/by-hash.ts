@@ -5,7 +5,7 @@ import { BASE_URL } from '~/api/index.ts';
 export default async function apiGetBuild(build: string): Promise<PartialMinecraftBuild> {
   const { data } = await axios.get<{
     build: PartialMinecraftBuild;
-  }>(`${BASE_URL}/api/v3/builds/${build}/versions`);
+  }>(`${BASE_URL}/api/v3/builds/${build}`);
 
   return data.build;
 }
