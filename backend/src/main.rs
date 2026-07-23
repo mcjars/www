@@ -516,7 +516,7 @@ async fn main() {
             .route_layer(SentryHttpLayer::new().enable_transaction())
             .with_state(state.clone());
 
-    let listener = tokio::net::TcpListener::bind(format!("{}:{}", &state.env.bind, state.env.port))
+    let listener = tokio::net::TcpListener::bind(format!("{}:{}", state.env.bind, state.env.port))
         .await
         .unwrap();
 

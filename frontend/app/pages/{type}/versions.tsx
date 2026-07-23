@@ -8,7 +8,7 @@ import {
   SearchIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useLocalStorage } from 'usehooks-ts';
@@ -44,20 +44,19 @@ export default function PageTypeVersions() {
   const mobile = useIsMobile(1280);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const setParam = useCallback(
-    (name: string, value: string | number | null | undefined) => {
-      setSearchParams(
-        (prev) => {
-          const params = new URLSearchParams(prev);
-          if (value === null || value === undefined || value === '') params.delete(name);
-          else params.set(name, String(value));
-          return params;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
+  const setSearchParamsRef = useRef(setSearchParams);
+  setSearchParamsRef.current = setSearchParams;
+  const setParam = useCallback((name: string, value: string | number | null | undefined) => {
+    setSearchParamsRef.current(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (value === null || value === undefined || value === '') params.delete(name);
+        else params.set(name, String(value));
+        return params;
+      },
+      { replace: true },
+    );
+  }, []);
   const getNumberParam = (name: string) => {
     const raw = searchParams.get(name);
     return raw === null || raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw);
@@ -73,8 +72,6 @@ export default function PageTypeVersions() {
   const setVersionPage = (value?: number | null) => setParam('page', value);
   const buildSearch = searchParams.get('buildSearch') ?? undefined;
   const setBuildSearch = (value?: string | null) => setParam('buildSearch', value);
-  const buildPage = getNumberParam('buildPage');
-  const setBuildPage = (value?: number | null) => setParam('buildPage', value);
   const displayMode = searchParams.get('display') ?? undefined;
   const setDisplayMode = (value?: string | null) => setParam('display', value);
   const [installScript, setInstallScript] = useLocalStorage<'bash' | 'mcvcli'>('install-script', 'bash');
@@ -86,9 +83,10 @@ export default function PageTypeVersions() {
   const [buildsPerPage, setBuildsPerPage] = useLocalStorage<number>('builds-per-page', 20);
   const [compactColumns, setCompactColumns] = useState(1);
   const versionsContainerRef = useRef<HTMLDivElement>(null);
+  const buildsScrollRef = useRef<HTMLDivElement>(null);
+  const buildsSentinelRef = useRef<HTMLDivElement>(null);
 
   const currentVersionPage = Math.max(versionPage ?? 1, 1);
-  const currentBuildPage = Math.max(buildPage ?? 1, 1);
   const effectiveDisplayMode = displayMode ?? (mobile ? 'list' : 'compact');
 
   const { data: types } = useQuery({ queryKey: ['types'], queryFn: () => apiGetTypes() });
@@ -103,19 +101,27 @@ export default function PageTypeVersions() {
       }),
   });
 
-  const { data: buildsResponse } = useQuery({
-    queryKey: ['builds', type, browse, currentBuildPage, buildSearch ?? '', buildsPerPage],
-    queryFn: () =>
+  const {
+    data: buildsResponse,
+    fetchNextPage: fetchNextBuildPage,
+    hasNextPage: hasNextBuildPage,
+    isFetchingNextPage: isFetchingNextBuildPage,
+  } = useInfiniteQuery({
+    queryKey: ['builds', type, browse, buildSearch ?? '', buildsPerPage],
+    queryFn: ({ pageParam }) =>
       apiGetBuilds(type, browse as string, {
-        page: currentBuildPage,
+        page: pageParam,
         perPage: buildsPerPage,
         search: buildSearch ?? '',
       }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.page + 1 : undefined),
     enabled: Boolean(browse),
   });
 
   const versions = versionsResponse?.items;
-  const builds = buildsResponse?.items;
+  const builds = useMemo(() => buildsResponse?.pages.flatMap((page) => page.items), [buildsResponse]);
+  const buildTotal = buildsResponse?.pages[0]?.total ?? null;
 
   const filteredVersions = versions?.filter(
     (version) =>
@@ -126,16 +132,32 @@ export default function PageTypeVersions() {
 
   const expectedBuildCount = useMemo(
     () =>
-      !browse
-        ? 0
-        : (buildsResponse?.total ?? versions?.find((version) => version.latest.versionId === browse)?.builds ?? 0),
-    [buildsResponse, versions, browse],
+      !browse ? 0 : (buildTotal ?? versions?.find((version) => version.latest.versionId === browse)?.builds ?? 0),
+    [buildTotal, versions, browse],
   );
 
   useEffect(() => {
-    setParam('buildPage', 1);
     setParam('buildSearch', '');
   }, [browse, setParam]);
+
+  useEffect(() => {
+    if (!browse) return;
+    const root = buildsScrollRef.current;
+    const sentinel = buildsSentinelRef.current;
+    if (!root || !sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextBuildPage && !isFetchingNextBuildPage) {
+          fetchNextBuildPage();
+        }
+      },
+      { root, rootMargin: '200px' },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [browse, builds, hasNextBuildPage, isFetchingNextBuildPage, fetchNextBuildPage]);
 
   useEffect(() => {
     const updateColumns = () => {
@@ -181,10 +203,6 @@ export default function PageTypeVersions() {
     setParam('page', 1);
   }, [versionsPerPage, setParam]);
 
-  useEffect(() => {
-    setParam('buildPage', 1);
-  }, [buildsPerPage, setParam]);
-
   const typeData = useMemo(
     () =>
       Object.values(types ?? {})
@@ -211,24 +229,6 @@ export default function PageTypeVersions() {
     return Math.max(1, responsePage);
   }, [versionsResponse, versionsPerPage, currentVersionPage]);
 
-  const totalBuildPages = useMemo(() => {
-    if (!buildsResponse) return 1;
-
-    const total = buildsResponse.total;
-    const responsePage = buildsResponse.page ?? currentBuildPage;
-    const responsePerPage = buildsResponse.perPage ?? buildsPerPage;
-
-    if (typeof total === 'number' && total > 0) {
-      return Math.max(1, Math.ceil(total / responsePerPage));
-    }
-
-    if (buildsResponse.hasNextPage) {
-      return responsePage + 1;
-    }
-
-    return Math.max(1, responsePage);
-  }, [buildsResponse, buildsPerPage, currentBuildPage]);
-
   const getVersionPageNumbers = useMemo(() => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
@@ -248,25 +248,6 @@ export default function PageTypeVersions() {
     return pages;
   }, [totalVersionPages, currentVersionPage]);
 
-  const getBuildPageNumbers = useMemo(() => {
-    const pages: (number | string)[] = [];
-    const maxVisible = 5;
-    const total = totalBuildPages;
-
-    if (total <= maxVisible) {
-      for (let i = 1; i <= total; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentBuildPage > 3) pages.push('...');
-      for (let i = Math.max(2, currentBuildPage - 1); i <= Math.min(total - 1, currentBuildPage + 1); i++) {
-        if (!pages.includes(i)) pages.push(i);
-      }
-      if (currentBuildPage < total - 2) pages.push('...');
-      pages.push(total);
-    }
-    return pages;
-  }, [totalBuildPages, currentBuildPage]);
-
   useEffect(() => {
     const isTypingTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false;
@@ -281,17 +262,7 @@ export default function PageTypeVersions() {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (!isPrevKey(event) && !isNextKey(event)) return;
       if (isTypingTarget(event.target)) return;
-
-      if (browse) {
-        event.preventDefault();
-        if (isPrevKey(event)) {
-          setParam('buildPage', event.shiftKey ? 1 : Math.max(1, currentBuildPage - 1));
-          return;
-        }
-
-        setParam('buildPage', event.shiftKey ? totalBuildPages : currentBuildPage + 1);
-        return;
-      }
+      if (browse) return;
 
       event.preventDefault();
       if (isPrevKey(event)) {
@@ -304,7 +275,7 @@ export default function PageTypeVersions() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [browse, currentBuildPage, currentVersionPage, totalBuildPages, totalVersionPages, setParam]);
+  }, [browse, currentVersionPage, totalVersionPages, setParam]);
 
   const versionCount = versionsResponse?.total ?? null;
 
@@ -399,85 +370,28 @@ export default function PageTypeVersions() {
     );
   };
 
-  const buildCount = buildsResponse?.total ?? null;
+  const renderBuildsHeader = () => (
+    <div className={'flex flex-row flex-wrap items-center justify-end gap-2'}>
+      {buildTotal !== null && (
+        <span className={'mr-auto text-sm text-muted-foreground'}>
+          {buildTotal.toLocaleString()} build{buildTotal === 1 ? '' : 's'}
+        </span>
+      )}
 
-  const renderBuildPagination = (position: 'top' | 'bottom') => {
-    const hasMultiplePages = totalBuildPages > 1;
-
-    if (position === 'top' && !hasMultiplePages) return null;
-
-    return (
-      <div className={'flex flex-row flex-wrap items-center justify-end gap-2'}>
-        {buildCount !== null && (
-          <span className={'mr-auto text-sm text-muted-foreground'}>
-            {buildCount.toLocaleString()} build{buildCount === 1 ? '' : 's'}
-          </span>
-        )}
-
-        <Select value={String(buildsPerPage)} onValueChange={(value) => setBuildsPerPage(Number(value))}>
-          <SelectTrigger className={'w-36'}>
-            <SelectValue placeholder={'Page Size'} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={'10'}>10 / page</SelectItem>
-            <SelectItem value={'20'}>20 / page</SelectItem>
-            <SelectItem value={'50'}>50 / page</SelectItem>
-            <SelectItem value={'100'}>100 / page</SelectItem>
-            <SelectItem value={'200'}>200 / page</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {hasMultiplePages && (
-          <Pagination className={'mx-0 w-fit justify-end'}>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href='#'
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentBuildPage > 1) setBuildPage(currentBuildPage - 1);
-                  }}
-                  className={currentBuildPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                />
-              </PaginationItem>
-
-              {getBuildPageNumbers.map((pageNum, i) =>
-                typeof pageNum === 'string' ? (
-                  <PaginationItem key={`ellipsis-${i}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      href='#'
-                      isActive={pageNum === currentBuildPage}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setBuildPage(pageNum as number);
-                      }}
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  href='#'
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (buildsResponse?.hasNextPage) setBuildPage(currentBuildPage + 1);
-                  }}
-                  className={!buildsResponse?.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-      </div>
-    );
-  };
+      <Select value={String(buildsPerPage)} onValueChange={(value) => setBuildsPerPage(Number(value))}>
+        <SelectTrigger className={'w-36'}>
+          <SelectValue placeholder={'Page Size'} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={'10'}>10 / page</SelectItem>
+          <SelectItem value={'20'}>20 / page</SelectItem>
+          <SelectItem value={'50'}>50 / page</SelectItem>
+          <SelectItem value={'100'}>100 / page</SelectItem>
+          <SelectItem value={'200'}>200 / page</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 
   return (
     <>
@@ -645,19 +559,16 @@ export default function PageTypeVersions() {
           <DrawerHeader>
             <DrawerTitle>Browse {browse}</DrawerTitle>
           </DrawerHeader>
-          <div className={'p-4 h-full max-h-96 overflow-y-auto'}>
+          <div ref={buildsScrollRef} className={'p-4 h-full max-h-96 overflow-y-auto'}>
             <div className={'mb-3 flex flex-row items-center'}>
               <Input
                 placeholder={'Search Build'}
                 value={buildSearch ?? ''}
-                onChange={(e) => {
-                  setBuildPage(1);
-                  setBuildSearch(e.target.value);
-                }}
+                onChange={(e) => setBuildSearch(e.target.value)}
               />
             </div>
 
-            {totalBuildPages > 1 && <div className={'mb-3'}>{renderBuildPagination('top')}</div>}
+            <div className={'mb-3'}>{renderBuildsHeader()}</div>
             {!browse ? (
               <div className={'h-32'} />
             ) : !builds ? (
@@ -806,7 +717,9 @@ export default function PageTypeVersions() {
                     </Collapsible>
                   </Card>
                 ))}
-                {renderBuildPagination('bottom')}
+                {!builds.length && <p className={'text-center text-gray-500'}>No builds found.</p>}
+                {isFetchingNextBuildPage && <Skeleton className={'h-16 rounded-xl mb-2'} />}
+                <div ref={buildsSentinelRef} className={'h-px w-full'} />
               </>
             )}
           </div>

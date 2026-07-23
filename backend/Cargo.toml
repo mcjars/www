@@ -23,7 +23,7 @@ sentry = { version = "0.48.0", default-features = false, features = ["rustls", "
 sentry-tower = { version = "0.48.0", default-features = false, features = ["http", "axum-matched-path"] }
 sentry-anyhow = "0.48.0"
 reqwest = { version = "0.13.1", features = ["json"] }
-compact_str = { version = "0.9.0", features = ["serde", "utoipa", "sqlx", "sqlx-postgres", "sqlx-mysql"] }
+compact_str = { version = "0.10.0", features = ["serde", "utoipa", "garde", "sqlx", "sqlx-postgres", "sqlx-mysql"] }
 sha2 = "0.11.0"
 rand = "0.10.0"
 serde_yaml = "0.9.34"
@@ -46,9 +46,9 @@ accept-header = "0.2.3"
 mime = "0.3.17"
 hex = "0.4.3"
 uuid = { version = "1.23.0", features = ["serde"] }
-garde = { git = "https://github.com/0x7d8/garde.git", version = "0.22.1", features = ["full"] }
 axum-extra = { version = "0.12.5", features = ["query"] }
 ipnetwork = { version = "0.21.1", features = ["serde"] }
+garde = { version = "0.23.0", features = ["full"] }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 mimalloc = "0.1.52"
