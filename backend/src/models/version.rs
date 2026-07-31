@@ -287,14 +287,25 @@ impl Version {
                         let latest = super::build::Build::map(None, row)?;
                         let id = latest.project_version_id.clone().unwrap();
 
-                        let version = Version {
+                        const JAVA_MAPPING: &[(chrono::NaiveDate, i16)] = &[
+                            (chrono::NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), 25),
+                            (chrono::NaiveDate::from_ymd_opt(1999, 1, 1).unwrap(), 21),
+                        ];
+
+                        let mut version = Version {
                             r#type: VersionType::Release,
                             supported: i == data.len() - 1,
-                            java: 21,
+                            java: 0,
                             builds: row.get("builds"),
                             created: row.get("created_oldest"),
                             latest,
                         };
+
+                        version.java = JAVA_MAPPING
+                            .iter()
+                            .find(|(date, _)| version.created.date() >= *date)
+                            .map(|(_, java)| *java)
+                            .unwrap_or(21);
 
                         versions.insert(id, version);
                     }

@@ -16,7 +16,7 @@ use compact_str::ToCompactString;
 use include_dir::{Dir, include_dir};
 use sentry_tower::SentryHttpLayer;
 use sha2::Digest;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Instant};
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
@@ -200,12 +200,14 @@ async fn main() {
 
     let _guard = sentry::init((
         env.sentry_url.clone(),
-        sentry::ClientOptions {
-            server_name: env.server_name.clone().map(|s| s.into()),
-            release: Some(format!("{VERSION}:{GIT_COMMIT}").into()),
-            traces_sample_rate: 1.0,
-            ..Default::default()
-        },
+        sentry::ClientOptions::default()
+            .release(format!("{VERSION}:{GIT_COMMIT}"))
+            .server_name(
+                env.server_name
+                    .clone()
+                    .map_or(Cow::Borrowed("mcjars"), |s| s.into()),
+            )
+            .traces_sample_rate(1.0),
     ));
 
     let s3 = Arc::new(api::s3::S3::new(env.clone()).await);
