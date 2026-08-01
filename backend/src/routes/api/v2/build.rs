@@ -335,7 +335,8 @@ mod post {
                     FROM builds b
                     INNER JOIN spec_build sb ON
                         sb.id = b.id
-                        OR (COALESCE(sb.version_id, sb.project_version_id) = COALESCE(b.version_id, b.project_version_id) AND sb.type = b.type)
+                        OR (b.version_id = COALESCE(sb.version_id, sb.project_version_id) AND sb.type = b.type)
+                        OR (b.version_id IS NULL AND b.project_version_id = COALESCE(sb.version_id, sb.project_version_id) AND sb.type = b.type)
                     WHERE b.type <> 'ARCLIGHT'
                         OR split_part(sb.project_version_id, '-', -1) = split_part(b.project_version_id, '-', -1)
                         OR split_part(sb.project_version_id, '-', -1) NOT IN ('forge', 'neoforge', 'fabric')
@@ -344,10 +345,8 @@ mod post {
                 build_count AS (
                     SELECT count(*) AS count
                     FROM builds
-                    WHERE COALESCE(version_id, project_version_id) = COALESCE(
-                        (SELECT version_id FROM spec_build),
-                        (SELECT project_version_id FROM spec_build)
-                    )
+                    WHERE version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build)
+                        OR (version_id IS NULL AND project_version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build))
                 )
     
                 SELECT

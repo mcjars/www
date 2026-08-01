@@ -57,16 +57,20 @@ impl ConfigStats {
                 let rows = sqlx::query(
                     r#"
                     WITH build_data AS (
-                        SELECT 
-                            bc.config_id, 
-                            COUNT(DISTINCT bc.build_id) AS builds,
-                            ARRAY_AGG(DISTINCT b.type) AS build_types 
-                        FROM build_configs bc
-                        JOIN builds b ON bc.build_id = b.id 
-                        GROUP BY bc.config_id
-                    ), 
+                        SELECT
+                            config_id,
+                            SUM(cnt)::bigint AS builds,
+                            ARRAY_AGG(type ORDER BY type) AS build_types
+                        FROM (
+                            SELECT bc.config_id, b.type, COUNT(*) AS cnt
+                            FROM build_configs bc
+                            JOIN builds b ON bc.build_id = b.id
+                            GROUP BY bc.config_id, b.type
+                        ) t
+                        GROUP BY config_id
+                    ),
                     value_counts AS (
-                        SELECT config_id, COUNT(DISTINCT id) AS values
+                        SELECT config_id, COUNT(*) AS values
                         FROM config_values
                         GROUP BY config_id
                     )

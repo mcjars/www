@@ -141,42 +141,44 @@ impl File {
                             arr
                         FROM prefix
                     ),
-                    path_info AS (
+                    per_depth AS (
                         SELECT
-                            path[prefix_length.len + 1] AS current_entry,
+                            path[pl.len + 1] AS current_entry,
                             array_length(path, 1) AS path_len,
-                            files.*
-                        FROM files, prefix_length
+                            MIN(path) AS min_path,
+                            SUM(size) AS size_sum
+                        FROM files, prefix_length pl
                         WHERE
-                            array_length(path, 1) >= prefix_length.len + 1
+                            array_length(path, 1) >= pl.len + 1
                             AND (
-                                prefix_length.len = 0
+                                pl.len = 0
                                 OR
-                                path[1:prefix_length.len] = prefix_length.arr
+                                path[1:pl.len] = pl.arr
                             )
+                            AND path[pl.len + 1] IS NOT NULL
+                        GROUP BY path[pl.len + 1], array_length(path, 1)
                     ),
-                    directory_check AS (
-                        SELECT
+                    agg AS (
+                        SELECT DISTINCT ON (current_entry)
                             current_entry,
-                            MAX(CASE WHEN path_len > (SELECT len FROM prefix_length) + 1 THEN 1 ELSE 0 END)::boolean AS is_directory,
-                            SUM(size) AS total_size
-                        FROM path_info
-                        WHERE current_entry IS NOT NULL
-                        GROUP BY current_entry
+                            bool_or(path_len > pl.len + 1) OVER (PARTITION BY current_entry) AS is_directory,
+                            SUM(size_sum) OVER (PARTITION BY current_entry) AS total_size,
+                            min_path AS rep_path
+                        FROM per_depth, prefix_length pl
+                        ORDER BY current_entry, path_len
                     )
-                    SELECT DISTINCT ON (pi.current_entry)
-                        pi.current_entry,
-                        pi.path,
+                    SELECT
+                        a.current_entry,
+                        f.path,
                         CASE
-                            WHEN dc.is_directory THEN dc.total_size
-                            ELSE pi.size
+                            WHEN a.is_directory THEN a.total_size
+                            ELSE f.size
                         END AS total_size,
-                        pi.*,
-                        dc.is_directory
-                    FROM path_info pi
-                    JOIN directory_check dc ON pi.current_entry = dc.current_entry
-                    WHERE pi.current_entry IS NOT NULL
-                    ORDER BY pi.current_entry, pi.path_len
+                        f.*,
+                        a.is_directory
+                    FROM agg a
+                    JOIN files f ON f.path = a.rep_path
+                    ORDER BY a.current_entry
                     "#
                 )
                 .bind(
