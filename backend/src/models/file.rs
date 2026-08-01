@@ -162,7 +162,7 @@ impl File {
                         SELECT DISTINCT ON (current_entry)
                             current_entry,
                             bool_or(path_len > pl.len + 1) OVER (PARTITION BY current_entry) AS is_directory,
-                            SUM(size_sum) OVER (PARTITION BY current_entry) AS total_size,
+                            (SUM(size_sum) OVER (PARTITION BY current_entry))::int8 AS total_size,
                             min_path AS rep_path
                         FROM per_depth, prefix_length pl
                         ORDER BY current_entry, path_len
