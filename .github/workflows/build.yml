@@ -6,88 +6,92 @@ on:
       - main
 
 jobs:
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: |
+          cd ./frontend
+          pnpm install
+
+      - name: Build frontend
+        run: |
+          cd ./frontend
+          pnpm build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build
+          path: frontend/lib/
+          retention-days: 1
+
   build-and-package:
     name: Build and Package
+    needs: build-frontend
     strategy:
       matrix:
         include:
           - arch: amd64
             runner: ubuntu-24.04
             target: x86_64-unknown-linux-musl
-            cross: false
           - arch: arm64
-            runner: ubuntu-24.04
+            runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
-            cross: true
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v6
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v8
         with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
-          run_install: false
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install frontend dependencies
-        run: |
-          cd ./frontend
-          pnpm install
-          
-      - name: Build frontend
-        run: |
-          cd ./frontend
-          pnpm build
+          name: frontend-build
+          path: frontend/lib/
 
       - name: Install stable Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: stable
           target: ${{ matrix.target }}
-          override: true
+          cache-key: ${{ matrix.target }}
+          rustflags: ''
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools pkg-config libssl-dev
+          sudo apt-get install -y musl-tools
 
       - name: Install Sentry CLI
         run: |
           npm install -g @sentry/cli
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: ${{ runner.os }}-${{ matrix.target }}
-
       - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: build
-          args: --release --target ${{ matrix.target }}
+        run: |
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Process release binary
         run: |
@@ -96,13 +100,12 @@ jobs:
           mkdir -p dist/${{ matrix.arch }}
           cp target/${{ matrix.target }}/release/api dist/${{ matrix.arch }}/api
 
-      - name: Strip release binary (x86_64 only)
-        if: matrix.arch == 'amd64'
+      - name: Strip release binary
         run: |
           strip dist/${{ matrix.arch }}/api
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-${{ matrix.arch }}
           path: dist/${{ matrix.arch }}/api
@@ -111,45 +114,46 @@ jobs:
   create-multiarch-image:
     name: Create multi-arch Docker image
     needs: build-and-package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download all binary artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
+          pattern: api-*
           path: dist
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Prepare binaries
         run: |
           chmod +x dist/api-amd64/api
           chmod +x dist/api-arm64/api
-          
+
           mkdir -p .docker/amd64 .docker/arm64
           cp dist/api-amd64/api .docker/amd64/api
           cp dist/api-arm64/api .docker/arm64/api
           cp entrypoint.sh .docker/
 
       - name: Build and push multi-arch Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
