@@ -202,21 +202,20 @@ impl Clickhouse {
                                     count(*) AS total_requests,
                                     uniqExact(ip) AS unique_ips
                                 FROM requests
-                                WHERE 
-                                    status = 200 
-                                    AND data IS NOT NULL 
+                                WHERE
+                                    _partition_date >= toDate(now() - INTERVAL 7 DAY)
+                                    AND status = 200
+                                    AND data IS NOT NULL
                                     AND path NOT LIKE '%tracking=nostats%'
-                                GROUP BY 
-                                    request_type, 
-                                    search_type, 
-                                    search_version, 
-                                    build_type, 
-                                    build_version_id, 
-                                    build_project_version_id, 
-                                    date_only, 
+                                GROUP BY
+                                    request_type,
+                                    search_type,
+                                    search_version,
+                                    build_type,
+                                    build_version_id,
+                                    build_project_version_id,
+                                    date_only,
                                     day
-                                ORDER BY 
-                                    date_only DESC
                                 "#
                             )
                             .fetch()?;

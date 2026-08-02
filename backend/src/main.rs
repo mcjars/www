@@ -14,7 +14,7 @@ use axum::{
 };
 use compact_str::ToCompactString;
 use include_dir::{Dir, include_dir};
-use sentry_tower::SentryHttpLayer;
+use sentry_tower::{NewSentryLayer, SentryHttpLayer};
 use sha2::Digest;
 use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Instant};
 use tower::Layer;
@@ -516,6 +516,7 @@ async fn main() {
             .layer(CookieManagerLayer::new())
             .route_layer(axum::middleware::from_fn(handle_postprocessing))
             .route_layer(SentryHttpLayer::new().enable_transaction())
+            .route_layer(NewSentryLayer::<Request>::new_from_top())
             .with_state(state.clone());
 
     let listener = tokio::net::TcpListener::bind(format!("{}:{}", state.env.bind, state.env.port))
