@@ -106,12 +106,14 @@ export const organizationKeys = pgTable('organization_keys', {
 	organizationId: integer('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
 
 	name: varchar('name', { length: 255 }).notNull().default('Key'),
-	key: char('key', { length: 64 }).notNull().unique(),
+	keyId: char('key_id', { length: 16 }).notNull(),
+	key: text('key').notNull().unique(),
 
 	created: timestamp('created').default(sql`now()`).notNull()
 }, (organizationKeys) => [
 	uniqueIndex('organizationKeys_organization_name_idx').on(organizationKeys.organizationId, organizationKeys.name),
-	index('organizationKeys_organization_idx').on(organizationKeys.organizationId)
+	index('organizationKeys_organization_idx').on(organizationKeys.organizationId),
+	index('organizationKeys_key_id_idx').on(organizationKeys.keyId)
 ])
 
 export const organizationSubusers = pgTable('organization_subusers', {
@@ -170,7 +172,8 @@ export const userSessions = pgTable('user_sessions', {
 	id: serial('id').primaryKey().notNull(),
 	userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 
-	session: char('session', { length: 64 }).notNull(),
+	keyId: char('key_id', { length: 16 }).notNull(),
+	key: text('key').notNull(),
 
 	ip: inet('ip').notNull(),
 	userAgent: varchar('user_agent', { length: 255 }).notNull(),
@@ -179,7 +182,8 @@ export const userSessions = pgTable('user_sessions', {
 	created: timestamp('created').default(sql`now()`).notNull()
 }, (userSessions) => [
 	index('userSessions_user_idx').on(userSessions.userId),
-	uniqueIndex('userSessions_session_idx').on(userSessions.session)
+	uniqueIndex('userSessions_key_idx').on(userSessions.key),
+	index('userSessions_key_id_idx').on(userSessions.keyId)
 ])
 
 export const minecraftVersions = pgTable('minecraft_versions', {

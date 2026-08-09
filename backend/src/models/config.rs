@@ -139,10 +139,22 @@ impl Config {
             .find(|config| config.aliases.contains(&alias))
     }
 
+    #[inline]
+    fn check_budget<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<(), D::Error> {
+        const MAX_NODES: usize = 100_000;
+
+        let nodes = std::cell::Cell::new(MAX_NODES);
+
+        serde::de::DeserializeSeed::deserialize(
+            crate::deserialize::NodeBudget::new(&nodes),
+            deserializer,
+        )
+    }
+
     pub fn format(
         file: &str,
         content: &str,
-    ) -> Result<(String, Option<(String, serde_yaml::Value)>), anyhow::Error> {
+    ) -> Result<(String, Option<(String, serde_norway::Value)>), anyhow::Error> {
         let mut value = String::new();
         let mut key_value = None;
 
@@ -168,27 +180,29 @@ impl Config {
 
             value = data.join("\n");
         } else if file.ends_with(".yml") || file.ends_with(".yaml") {
-            let mut parsed: serde_yaml::Value = serde_yaml::from_str(&value)?;
+            Self::check_budget(serde_norway::Deserializer::from_str(&value))?;
+
+            let mut parsed: serde_norway::Value = serde_norway::from_str(&value)?;
 
             match file {
                 "config.yml" => {
                     if let Some(stats_uuid) = parsed.get_mut("stats_uuid")
                         && stats_uuid.is_string()
                     {
-                        *stats_uuid = serde_yaml::Value::String("xxx".to_string());
+                        *stats_uuid = serde_norway::Value::String("xxx".to_string());
                     }
 
                     if let Some(stats) = parsed.get_mut("stats")
                         && stats.is_string()
                     {
-                        *stats = serde_yaml::Value::String("xxx".to_string());
+                        *stats = serde_norway::Value::String("xxx".to_string());
                     }
                 }
                 "leaves.yml" => {
                     if let Some(server_id) = parsed.get_mut("server-id")
                         && server_id.is_string()
                     {
-                        *server_id = serde_yaml::Value::String("xxx".to_string());
+                        *server_id = serde_norway::Value::String("xxx".to_string());
                     }
                 }
                 _ => {}
@@ -207,8 +221,10 @@ impl Config {
             }
 
             Self::process_yaml_keys_recursively(&mut parsed, None);
-            value = serde_yaml::to_string(&parsed).unwrap();
+            value = serde_norway::to_string(&parsed).unwrap();
         } else if file.ends_with(".json") || file.ends_with(".json5") {
+            Self::check_budget(&mut json5::Deserializer::from_str(&value))?;
+
             let mut parsed: serde_json::Value = json5::from_str(&value)?;
 
             Self::process_json_keys_recursively(&mut parsed, None);
@@ -218,10 +234,10 @@ impl Config {
 
             if let Some(version) = parsed.get("config-version") {
                 let value = match version {
-                    toml::Value::String(s) => Some(serde_yaml::Value::String(s.clone())),
-                    toml::Value::Integer(i) => Some(serde_yaml::Value::Number((*i).into())),
+                    toml::Value::String(s) => Some(serde_norway::Value::String(s.clone())),
+                    toml::Value::Integer(i) => Some(serde_norway::Value::Number((*i).into())),
                     toml::Value::Float(f) => {
-                        Some(serde_yaml::Value::Number(serde_yaml::Number::from(*f)))
+                        Some(serde_norway::Value::Number(serde_norway::Number::from(*f)))
                     }
                     _ => None,
                 };
@@ -245,23 +261,23 @@ impl Config {
     }
 
     pub fn process_yaml_keys_recursively(
-        value: &mut serde_yaml::Value,
-        key: Option<&serde_yaml::Value>,
+        value: &mut serde_norway::Value,
+        key: Option<&serde_norway::Value>,
     ) {
         match value {
-            serde_yaml::Value::Mapping(map) => {
-                let mut entries: Vec<(serde_yaml::Value, serde_yaml::Value)> =
+            serde_norway::Value::Mapping(map) => {
+                let mut entries: Vec<(serde_norway::Value, serde_norway::Value)> =
                     std::mem::take(map).into_iter().collect();
 
                 entries.sort_by(|(k1, _), (k2, _)| {
                     let k1_str = match k1 {
-                        serde_yaml::Value::String(s) => s.clone(),
-                        _ => serde_yaml::to_string(k1).unwrap_or_default(),
+                        serde_norway::Value::String(s) => s.clone(),
+                        _ => serde_norway::to_string(k1).unwrap_or_default(),
                     };
 
                     let k2_str = match k2 {
-                        serde_yaml::Value::String(s) => s.clone(),
-                        _ => serde_yaml::to_string(k2).unwrap_or_default(),
+                        serde_norway::Value::String(s) => s.clone(),
+                        _ => serde_norway::to_string(k2).unwrap_or_default(),
                     };
 
                     k1_str.cmp(&k2_str)
@@ -271,25 +287,25 @@ impl Config {
                     Self::process_yaml_keys_recursively(v, Some(k));
                 }
 
-                *map = serde_yaml::Mapping::from_iter(entries);
+                *map = serde_norway::Mapping::from_iter(entries);
             }
-            serde_yaml::Value::Sequence(seq) => {
+            serde_norway::Value::Sequence(seq) => {
                 for item in seq.iter_mut() {
                     Self::process_yaml_keys_recursively(item, None);
                 }
             }
-            serde_yaml::Value::String(s) => {
+            serde_norway::Value::String(s) => {
                 if let Some(key) = key.and_then(|k| k.as_str())
                     && key.starts_with("seed-")
                 {
                     *s = "xxx".to_string();
                 }
             }
-            serde_yaml::Value::Number(_) => {
+            serde_norway::Value::Number(_) => {
                 if let Some(key) = key.and_then(|k| k.as_str())
                     && key.starts_with("seed-")
                 {
-                    *value = serde_yaml::Value::String("xxx".to_string());
+                    *value = serde_norway::Value::String("xxx".to_string());
                 }
             }
             _ => {}

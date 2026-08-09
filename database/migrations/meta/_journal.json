@@ -281,6 +281,13 @@
       "when": 1775640223646,
       "tag": "0039_outgoing_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1786314883126,
+      "tag": "0040_curved_gorgon",
+      "breakpoints": true
     }
   ]
 }

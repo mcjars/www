@@ -2,7 +2,13 @@ use axum::http::HeaderMap;
 use compact_str::ToCompactString;
 use garde::Validate;
 use serde::Serialize;
+use sha2::Digest;
 use std::net::IpAddr;
+
+#[inline]
+pub fn cache_key_hash(data: &str) -> String {
+    hex::encode(sha2::Sha256::digest(data.as_bytes()))
+}
 
 #[inline]
 pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
@@ -37,6 +43,24 @@ pub fn slice_up_to(s: &str, max_len: usize) -> &str {
     }
 
     &s[..idx]
+}
+
+#[inline]
+pub fn escape_html(data: &str) -> String {
+    let mut escaped = String::with_capacity(data.len());
+
+    for char in data.chars() {
+        match char {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#39;"),
+            _ => escaped.push(char),
+        }
+    }
+
+    escaped
 }
 
 #[inline]

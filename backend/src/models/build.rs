@@ -192,29 +192,35 @@ impl Build {
         cache: &crate::cache::Cache,
         identifier: &str,
     ) -> Result<Option<(Self, Self, super::version::MinifiedVersion)>, anyhow::Error> {
-        cache.cached(&format!("build::{identifier}"), 3600, || async {
-            let hash: Option<&str> = match identifier.len() {
-                32 => Some("md5"),
-                40 => Some("sha1"),
-                56 => Some("sha224"),
-                64 => Some("sha256"),
-                96 => Some("sha384"),
-                128 => Some("sha512"),
-                _ => {
-                    if let Ok(id) = identifier.parse::<i32>() {
-                        if id < 1 {
-                            return Ok(None);
-                        } else {
-                            None
-                        }
-                    } else if identifier.parse::<uuid::Uuid>().is_ok() {
-                        None
-                    } else {
+        let hash: Option<&str> = match identifier.len() {
+            32 => Some("md5"),
+            40 => Some("sha1"),
+            56 => Some("sha224"),
+            64 => Some("sha256"),
+            96 => Some("sha384"),
+            128 => Some("sha512"),
+            _ => {
+                if let Ok(id) = identifier.parse::<i32>() {
+                    if id < 1 {
                         return Ok(None);
+                    } else {
+                        None
                     }
+                } else if identifier.parse::<uuid::Uuid>().is_ok() {
+                    None
+                } else {
+                    return Ok(None);
                 }
-            };
+            }
+        };
 
+        if hash.is_some() && !identifier.chars().all(|char| char.is_ascii_hexdigit()) {
+            return Ok(None);
+        }
+
+        let identifier = &identifier.to_ascii_lowercase();
+
+        cache.cached(&format!("build::identifier::{identifier}"), 3600, || async {
             let query = sqlx::query(sqlx::AssertSqlSafe(format!(
                 r#"
                 WITH spec_build AS (

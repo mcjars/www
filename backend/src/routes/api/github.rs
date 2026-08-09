@@ -9,6 +9,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::get,
 };
+use rand::distr::SampleString;
 use serde::Deserialize;
 use serde_json::json;
 use tower_cookies::{Cookie, Cookies};
@@ -17,26 +18,59 @@ use utoipa_axum::router::OpenApiRouter;
 #[derive(Deserialize)]
 struct Params {
     code: String,
+    state: String,
 }
 
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .route(
             "/",
-            get(|state: GetState| async move {
-                let mut headers = HeaderMap::new();
+            get(|state: GetState, cookies: Cookies| async move {
+                let csrf_state = rand::distr::Alphanumeric.sample_string(&mut rand::rng(), 32);
 
-                headers.insert(
-                    "Location",
-                    format!("https://github.com/login/oauth/authorize?allow_signup=true&client_id={}&redirect_uri={}/api/github/callback&scope=read:user,user:email", state.env.github_client_id, state.env.app_url).parse().unwrap(),
+                state
+                    .cache
+                    .set(&format!("oauth_state::{csrf_state}"), 10 * 60, &0u16)
+                    .await?;
+
+                cookies.add(
+                    Cookie::build(("oauth_state", csrf_state.clone()))
+                        .http_only(true)
+                        .same_site(tower_cookies::cookie::SameSite::Lax)
+                        .secure(true)
+                        .path("/api/github")
+                        .max_age(tower_cookies::cookie::time::Duration::minutes(10))
+                        .build(),
                 );
 
-                (StatusCode::FOUND, headers, "")
+                ApiResponse::new(Body::empty()).with_status(StatusCode::FOUND).with_header(
+                    "Location",
+                    &format!("https://github.com/login/oauth/authorize?allow_signup=true&client_id={}&redirect_uri={}/api/github/callback&scope=read:user,user:email&state={}", state.env.github_client_id, state.env.app_url, csrf_state),
+                ).ok()
             }),
         )
         .route(
             "/callback",
             get(|state: GetState, headers: HeaderMap, cookies: Cookies, params: Query<Params>| async move {
+                let state_cookie = cookies.get("oauth_state").map(|cookie| cookie.value().to_owned());
+                cookies.remove(
+                    Cookie::build("oauth_state")
+                        .path("/api/github")
+                        .build(),
+                );
+
+                let cache_key = format!("oauth_state::{}", params.state);
+
+                if state_cookie.as_deref() != Some(params.state.as_str())
+                    || state.cache.get::<u16>(&cache_key).await?.is_none()
+                {
+                    return ApiResponse::error("oauth csrf state not found, please try again")
+                        .with_status(StatusCode::NOT_FOUND)
+                        .ok();
+                }
+
+                state.cache.invalidate(&cache_key).await?;
+
                 let client = reqwest::Client::builder()
                     .user_agent("MCJars API https://mcjars.app")
                     .build()?;

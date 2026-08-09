@@ -1,5 +1,6 @@
 use super::{BaseModel, r#type::ServerType};
 use crate::prelude::IteratorExtension;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
@@ -208,24 +209,39 @@ impl Organization {
         cache: &crate::cache::Cache,
         key: &str,
     ) -> Result<Option<Self>, anyhow::Error> {
-        cache
-            .cached(&format!("organization::key::{key}"), 300, || async {
-                let data = sqlx::query(sqlx::AssertSqlSafe(format!(
-                    r#"
-                    SELECT {}
-                    FROM organizations
-                    LEFT JOIN users ON organizations.owner_id = users.id
-                    LEFT JOIN organization_keys ON organizations.id = organization_keys.organization_id
-                    WHERE organization_keys.key = $1
-                    "#,
-                    Self::columns_sql(None, None)
-                )))
-                .bind(key)
-                .fetch_optional(database.read())
-                .await?;
+        let Some(key_id) = key.get(0..16) else {
+            return Ok(None);
+        };
 
-                data.map(|row| Self::map(None, &row)).transpose()
-            })
+        cache
+            .cached(
+                &format!(
+                    "organization::key::{key_id}::{}",
+                    crate::utils::cache_key_hash(key)
+                ),
+                300,
+                || async {
+                    let data = sqlx::query(sqlx::AssertSqlSafe(format!(
+                        r#"
+                        WITH organization_keys AS MATERIALIZED (
+                            SELECT * FROM organization_keys WHERE organization_keys.key_id = $1
+                        )
+                        SELECT {}
+                        FROM organizations
+                        LEFT JOIN users ON organizations.owner_id = users.id
+                        JOIN organization_keys ON organizations.id = organization_keys.organization_id
+                        WHERE organization_keys.key = crypt($2, organization_keys.key)
+                        "#,
+                        Self::columns_sql(None, None)
+                    )))
+                    .bind(key_id)
+                    .bind(key)
+                    .fetch_optional(database.read())
+                    .await?;
+
+                    data.map(|row| Self::map(None, &row)).transpose()
+                },
+            )
             .await
     }
 
@@ -268,9 +284,12 @@ impl Organization {
 
     pub async fn delete_by_id(
         database: &crate::database::Database,
+        cache: &crate::cache::Cache,
         id: i32,
     ) -> Result<bool, anyhow::Error> {
-        Ok(sqlx::query(
+        let keys = OrganizationKey::all_by_organization(database, id).await?;
+
+        let deleted = sqlx::query(
             r#"
             DELETE FROM organizations
             WHERE organizations.id = $1
@@ -280,7 +299,15 @@ impl Organization {
         .execute(database.write())
         .await?
         .rows_affected()
-            == 1)
+            == 1;
+
+        for key in keys {
+            cache.clear_organization_key(&key.key_id).await?;
+        }
+
+        cache.clear_organization(id).await?;
+
+        Ok(deleted)
     }
 }
 
@@ -292,6 +319,9 @@ pub struct OrganizationKey {
     pub organization_id: i32,
 
     pub name: compact_str::CompactString,
+    #[serde(skip)]
+    #[schema(ignore)]
+    pub key_id: compact_str::CompactString,
 
     pub created: NaiveDateTime,
 }
@@ -313,6 +343,10 @@ impl BaseModel for OrganizationKey {
                 compact_str::format_compact!("{}name", prefix.unwrap_or_default()),
             ),
             (
+                compact_str::format_compact!("{table}.key_id"),
+                compact_str::format_compact!("{}key_id", prefix.unwrap_or_default()),
+            ),
+            (
                 compact_str::format_compact!("{table}.organization_id"),
                 compact_str::format_compact!("{}organization_id", prefix.unwrap_or_default()),
             ),
@@ -332,6 +366,7 @@ impl BaseModel for OrganizationKey {
                 .try_get(compact_str::format_compact!("{prefix}organization_id").as_str())?,
 
             name: row.try_get(compact_str::format_compact!("{prefix}name").as_str())?,
+            key_id: row.try_get(compact_str::format_compact!("{prefix}key_id").as_str())?,
 
             created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
         })
@@ -348,18 +383,20 @@ impl OrganizationKey {
         let mut hash = sha2::Sha256::new();
         hash.update(chrono::Utc::now().timestamp().to_be_bytes());
         hash.update(organization_id.to_be_bytes());
+        hash.update(rand::rng().random::<[u8; 32]>());
         let hash = hex::encode(hash.finalize());
 
         Ok((
             sqlx::query(
                 r#"
-                INSERT INTO organization_keys (organization_id, name, key)
-                VALUES ($1, $2, $3)
+                INSERT INTO organization_keys (organization_id, name, key_id, key)
+                VALUES ($1, $2, $3, crypt($4, gen_salt('bf', 12)))
                 ON CONFLICT (organization_id, name) DO NOTHING
                 "#,
             )
             .bind(organization_id)
             .bind(name)
+            .bind(&hash[0..16])
             .bind(&hash)
             .execute(database.write())
             .await?
@@ -425,21 +462,26 @@ impl OrganizationKey {
         data.map(|row| Self::map(None, &row)).transpose()
     }
 
-    pub async fn delete_by_id(
+    pub async fn delete(
+        &self,
         database: &crate::database::Database,
-        id: i32,
+        cache: &crate::cache::Cache,
     ) -> Result<bool, anyhow::Error> {
-        Ok(sqlx::query(
+        let deleted = sqlx::query(
             r#"
             DELETE FROM organization_keys
             WHERE organization_keys.id = $1
             "#,
         )
-        .bind(id)
+        .bind(self.id)
         .execute(database.write())
         .await?
         .rows_affected()
-            == 1)
+            == 1;
+
+        cache.clear_organization_key(&self.key_id).await?;
+
+        Ok(deleted)
     }
 }
 

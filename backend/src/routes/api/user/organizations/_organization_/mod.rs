@@ -250,7 +250,7 @@ mod delete {
                 .unwrap_or_default();
         }
 
-        Organization::delete_by_id(&state.database, organization.id).await?;
+        Organization::delete_by_id(&state.database, &state.cache, organization.id).await?;
 
         ApiResponse::new_serialized(Response { success: true }).ok()
     }

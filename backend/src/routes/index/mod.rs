@@ -19,7 +19,7 @@ pub struct IndexFile {
 pub fn render(state: &GetState, location: &str, files: Vec<IndexFile>) -> ApiResponseResult {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
-        .replace("{{LOCATION}}", location)
+        .replace("{{LOCATION}}", &crate::utils::escape_html(location))
         .replace(
             "<!-- ENTRIES -->",
             &files
@@ -43,13 +43,13 @@ pub fn render(state: &GetState, location: &str, files: Vec<IndexFile>) -> ApiRes
                         } else {
                             "file"
                         },
-                        if href.starts_with("https") {
+                        crate::utils::escape_html(&if href.starts_with("https") {
                             href
                         } else {
                             compact_str::format_compact!("./{href}")
-                        },
-                        f.name,
-                        f.size
+                        }),
+                        crate::utils::escape_html(&f.name),
+                        crate::utils::escape_html(&f.size)
                     )
                 })
                 .collect::<Vec<_>>()

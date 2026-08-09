@@ -1,4 +1,5 @@
 use super::BaseModel;
+use rand::{RngExt, distr::SampleString};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sqlx::{Row, postgres::PgRow, types::chrono::NaiveDateTime};
@@ -118,17 +119,25 @@ impl User {
         database: &crate::database::Database,
         session: &str,
     ) -> Result<Option<(Self, UserSession)>, anyhow::Error> {
+        let Some((key_id, key)) = session.split_once(':') else {
+            return Ok(None);
+        };
+
         let row = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
+            WITH user_sessions AS MATERIALIZED (
+                SELECT * FROM user_sessions WHERE user_sessions.key_id = $1
+            )
             SELECT {}, {}
             FROM users
             JOIN user_sessions ON user_sessions.user_id = users.id
-            WHERE user_sessions.session = $1
+            WHERE user_sessions.key = crypt($2, user_sessions.key)
             "#,
             Self::columns_sql(None, None),
             UserSession::columns_sql(Some("session_"), None)
         )))
-        .bind(session)
+        .bind(key_id)
+        .bind(key)
         .fetch_optional(database.read())
         .await?;
 
@@ -268,27 +277,31 @@ impl UserSession {
         ip: sqlx::types::ipnetwork::IpNetwork,
         user_agent: &str,
     ) -> Result<(Self, String), anyhow::Error> {
+        let key_id = rand::distr::Alphanumeric.sample_string(&mut rand::rng(), 16);
+
         let mut hash = sha2::Sha256::new();
         hash.update(chrono::Utc::now().timestamp().to_be_bytes());
         hash.update(user_id.to_be_bytes());
+        hash.update(rand::rng().random::<[u8; 32]>());
         let hash = hex::encode(hash.finalize());
 
         let row = sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
-            INSERT INTO user_sessions (user_id, session, ip, user_agent, last_used, created)
-            VALUES ($1, $2, $3, $4, NOW(), NOW())
+            INSERT INTO user_sessions (user_id, key_id, key, ip, user_agent, last_used, created)
+            VALUES ($1, $2, crypt($3, gen_salt('bf', 12)), $4, $5, NOW(), NOW())
             RETURNING {}
             "#,
             Self::columns_sql(None, None)
         )))
         .bind(user_id)
+        .bind(&key_id)
         .bind(&hash)
         .bind(ip)
         .bind(user_agent)
         .fetch_one(database.write())
         .await?;
 
-        Ok((Self::map(None, &row)?, hash))
+        Ok((Self::map(None, &row)?, format!("{key_id}:{hash}")))
     }
 
     #[inline]
@@ -314,19 +327,32 @@ impl UserSession {
     }
 
     #[inline]
+    pub fn cache_key(session: &str) -> String {
+        format!("user::session::{}", crate::utils::cache_key_hash(session))
+    }
+
+    #[inline]
     pub async fn delete_by_session(
         database: &crate::database::Database,
+        cache: &crate::cache::Cache,
         session: &str,
     ) -> Result<(), anyhow::Error> {
+        let Some((key_id, key)) = session.split_once(':') else {
+            return Ok(());
+        };
+
         sqlx::query(
             r#"
             DELETE FROM user_sessions
-            WHERE user_sessions.session = $1
+            WHERE user_sessions.key_id = $1 AND user_sessions.key = crypt($2, user_sessions.key)
             "#,
         )
-        .bind(session)
+        .bind(key_id)
+        .bind(key)
         .execute(database.write())
         .await?;
+
+        cache.invalidate(&Self::cache_key(session)).await?;
 
         Ok(())
     }

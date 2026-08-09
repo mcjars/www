@@ -21,7 +21,7 @@ mod post {
     ))]
     pub async fn route(state: GetState, cookies: Cookies) -> ApiResponseResult {
         let session = cookies.get("session").unwrap();
-        UserSession::delete_by_session(&state.database, session.value()).await?;
+        UserSession::delete_by_session(&state.database, &state.cache, session.value()).await?;
 
         cookies.add(
             Cookie::build(("session", ""))

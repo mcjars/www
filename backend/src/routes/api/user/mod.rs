@@ -1,5 +1,8 @@
 use super::{ApiError, GetState, State};
-use crate::{models::user::User, response::ApiResponse};
+use crate::{
+    models::user::{User, UserSession},
+    response::ApiResponse,
+};
 use axum::{
     body::Body,
     extract::Request,
@@ -29,7 +32,7 @@ async fn auth(
         .map(|c| c.value().to_string())
         .unwrap_or_default();
 
-    if session_id.len() != 64 {
+    if session_id.len() != 81 || !session_id.contains(':') {
         return Ok(Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .header("Content-Type", "application/json")
@@ -41,7 +44,7 @@ async fn auth(
 
     let user = state
         .cache
-        .cached(&format!("user::session::{session_id}"), 300, || {
+        .cached(&UserSession::cache_key(&session_id), 300, || {
             User::by_session(&state.database, &session_id)
         })
         .await;

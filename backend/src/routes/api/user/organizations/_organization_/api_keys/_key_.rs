@@ -105,7 +105,7 @@ mod delete {
                     .ok();
             }
 
-            OrganizationKey::delete_by_id(&state.database, key.id).await?;
+            key.delete(&state.database, &state.cache).await?;
 
             ApiResponse::new_serialized(Response { success: true }).ok()
         } else {

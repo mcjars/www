@@ -237,86 +237,86 @@ mod post {
             return Ok(None);
         }
 
-        cache.cached(&format!("build::{}", serde_json::to_string(&search).unwrap()), 3600, || async {
+        cache.cached(&format!("build::search::{}", crate::utils::cache_key_hash(&serde_json::to_string(&search)?)), 3600, || async {
             let mut where_clause: Vec<String> = Vec::new();
             let mut data: Vec<serde_json::Value> = Vec::new();
 
             if let Some(id) = search.id {
                 where_clause.push(format!("builds.id = ($1->>{})::int", data.len()));
-                data.push(serde_json::to_value(id).unwrap());
+                data.push(serde_json::to_value(id)?);
             }
             if let Some(uuid) = search.uuid {
                 where_clause.push(format!("builds.uuid = ($1->>{})::uuid", data.len()));
-                data.push(serde_json::to_value(uuid).unwrap());
+                data.push(serde_json::to_value(uuid)?);
             }
             if let Some(r#type) = search.r#type {
                 where_clause.push(format!("builds.type = ($1->>{})::server_type", data.len()));
-                data.push(serde_json::to_value(r#type).unwrap());
+                data.push(serde_json::to_value(r#type)?);
             }
             if let Some(version_id) = &search.version_id {
                 where_clause.push(format!("builds.version_id = $1->>{}", data.len()));
-                data.push(serde_json::to_value(version_id).unwrap());
+                data.push(serde_json::to_value(version_id)?);
             }
             if let Some(project_version_id) = &search.project_version_id {
                 where_clause.push(format!("builds.project_version_id = $1->>{}", data.len()));
-                data.push(serde_json::to_value(project_version_id).unwrap());
+                data.push(serde_json::to_value(project_version_id)?);
             }
             if let Some(name) = &search.name {
                 where_clause.push(format!("builds.name = $1->>{}", data.len()));
-                data.push(serde_json::to_value(name).unwrap());
+                data.push(serde_json::to_value(name)?);
             }
             if let Some(build_number) = search.build_number {
                 where_clause.push(format!("builds.build_number = ($1->>{})::int", data.len()));
-                data.push(serde_json::to_value(build_number).unwrap());
+                data.push(serde_json::to_value(build_number)?);
             }
             if let Some(experimental) = search.experimental {
                 where_clause.push(format!("builds.experimental = ($1->>{})::bool", data.len()));
-                data.push(serde_json::to_value(experimental).unwrap());
+                data.push(serde_json::to_value(experimental)?);
             }
             if let Some(jar_url) = &search.jar_url {
                 where_clause.push(format!("builds.jar_url = $1->>{}", data.len()));
-                data.push(serde_json::to_value(jar_url).unwrap());
+                data.push(serde_json::to_value(jar_url)?);
             }
             if let Some(jar_size) = search.jar_size {
                 where_clause.push(format!("builds.jar_size = ($1->>{})::int", data.len()));
-                data.push(serde_json::to_value(jar_size).unwrap());
+                data.push(serde_json::to_value(jar_size)?);
             }
             if let Some(zip_url) = &search.zip_url {
                 where_clause.push(format!("builds.zip_url = $1->>{}", data.len()));
-                data.push(serde_json::to_value(zip_url).unwrap());
+                data.push(serde_json::to_value(zip_url)?);
             }
             if let Some(zip_size) = search.zip_size {
                 where_clause.push(format!("builds.zip_size = ($1->>{})::int", data.len()));
-                data.push(serde_json::to_value(zip_size).unwrap());
+                data.push(serde_json::to_value(zip_size)?);
             }
             if let Some(hash) = &search.hash && hash.has_any() {
                 if let Some(primary) = hash.primary {
                     where_clause.push(format!("build_hashes.primary = ($1->>{})::bool", data.len()));
-                    data.push(serde_json::to_value(primary).unwrap());
+                    data.push(serde_json::to_value(primary)?);
                 }
                 if let Some(sha1) = &hash.sha1 {
                     where_clause.push(format!("build_hashes.sha1 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(sha1).unwrap());
+                    data.push(serde_json::to_value(sha1)?);
                 }
                 if let Some(sha224) = &hash.sha224 {
                     where_clause.push(format!("build_hashes.sha224 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(sha224).unwrap());
+                    data.push(serde_json::to_value(sha224)?);
                 }
                 if let Some(sha256) = &hash.sha256 {
                     where_clause.push(format!("build_hashes.sha256 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(sha256).unwrap());
+                    data.push(serde_json::to_value(sha256)?);
                 }
                 if let Some(sha384) = &hash.sha384 {
                     where_clause.push(format!("build_hashes.sha384 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(sha384).unwrap());
+                    data.push(serde_json::to_value(sha384)?);
                 }
                 if let Some(sha512) = &hash.sha512 {
                     where_clause.push(format!("build_hashes.sha512 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(sha512).unwrap());
+                    data.push(serde_json::to_value(sha512)?);
                 }
                 if let Some(md5) = &hash.md5 {
                     where_clause.push(format!("build_hashes.md5 = decode($1->>{}, 'hex')", data.len()));
-                    data.push(serde_json::to_value(md5).unwrap());
+                    data.push(serde_json::to_value(md5)?);
                 }
             }
 
@@ -390,7 +390,7 @@ mod post {
                 Build::columns_sql(None, Some("b")),
                 Build::columns_sql(None, Some("b"))
             )))
-            .bind(serde_json::to_value(data).unwrap())
+            .bind(serde_json::to_value(data)?)
             .fetch_all(database.read())
             .await?;
 

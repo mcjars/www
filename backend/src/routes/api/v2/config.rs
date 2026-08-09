@@ -63,7 +63,10 @@ mod post {
         let configs = state
             .cache
             .cached(
-                &format!("config::{}", serde_json::to_string(&data).unwrap()),
+                &format!(
+                    "config::{}",
+                    crate::utils::cache_key_hash(&serde_json::to_string(&data).unwrap())
+                ),
                 10800,
                 || async {
                     let data = if let Some((key, value)) = key_value {

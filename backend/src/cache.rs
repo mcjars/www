@@ -167,6 +167,50 @@ impl Cache {
         Ok(())
     }
 
+    pub async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>, anyhow::Error> {
+        let cached_value: Option<BulkString> = self.client.get(key).await?;
+
+        Ok(cached_value.and_then(|value| rmp_serde::from_slice::<T>(&value).ok()))
+    }
+
+    pub async fn set<T: Serialize + Send + Sync>(
+        &self,
+        key: &str,
+        ttl: u64,
+        value: &T,
+    ) -> Result<(), anyhow::Error> {
+        self.client
+            .set_with_options(
+                key,
+                rmp_serde::to_vec(value)?,
+                SetCondition::None,
+                SetExpiration::Ex(ttl),
+                false,
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn invalidate(&self, key: &str) -> Result<(), anyhow::Error> {
+        self.client.del(key).await?;
+
+        Ok(())
+    }
+
+    pub async fn clear_organization_key(&self, key_id: &str) -> Result<(), anyhow::Error> {
+        let keys: Vec<String> = self
+            .client
+            .keys(format!("organization::key::{key_id}::*"))
+            .await?;
+
+        if !keys.is_empty() {
+            self.client.del(keys).await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn clear_organization(&self, organization: i32) -> Result<(), anyhow::Error> {
         let keys: Vec<String> = self
             .client
