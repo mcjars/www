@@ -216,6 +216,7 @@ impl Env {
             app_frontend_url: std::env::var("APP_FRONTEND_URL")
                 .expect("APP_FRONTEND_URL is required")
                 .trim_matches('"')
+                .trim_end_matches('/')
                 .to_string(),
             app_cookie_domain: std::env::var("APP_COOKIE_DOMAIN")
                 .expect("APP_COOKIE_DOMAIN is required")

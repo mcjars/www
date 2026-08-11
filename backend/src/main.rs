@@ -16,7 +16,7 @@ use compact_str::ToCompactString;
 use include_dir::{Dir, include_dir};
 use sentry_tower::{NewSentryLayer, SentryHttpLayer};
 use sha2::Digest;
-use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Instant};
+use std::{borrow::Cow, sync::Arc, time::Instant};
 use tower::Layer;
 use tower_cookies::CookieManagerLayer;
 use tower_http::{
@@ -51,11 +51,17 @@ fn content_type_for(extension: Option<&std::ffi::OsStr>) -> &'static str {
     }
 }
 
-fn inject_head(html: &str, meta: HashMap<&str, String>, version: &str) -> String {
+fn inject_head(html: &str, meta: Vec<(&str, String)>, version: &str) -> String {
     let mut head = String::new();
 
     for (key, value) in meta {
-        head.push_str(&format!("<meta name=\"{key}\" content=\"{value}\">"));
+        let attribute = if key.starts_with("og:") {
+            "property"
+        } else {
+            "name"
+        };
+
+        head.push_str(&format!("<meta {attribute}=\"{key}\" content=\"{value}\">"));
     }
 
     head.push_str(&format!(
@@ -64,11 +70,7 @@ fn inject_head(html: &str, meta: HashMap<&str, String>, version: &str) -> String
 
     html.replacen("</head>", &format!("{head}</head>"), 1)
 }
-fn render_page(
-    file_path: &str,
-    meta: HashMap<&str, String>,
-    state: &GetState,
-) -> ApiResponseResult {
+fn render_page(file_path: &str, meta: Vec<(&str, String)>, state: &GetState) -> ApiResponseResult {
     let file = FRONTEND_ASSETS
         .get_file(file_path)
         .or_else(|| FRONTEND_ASSETS.get_file(SPA_FALLBACK))
@@ -352,46 +354,57 @@ async fn main() {
                     },
                 ),
             )
-            .route("/", get(|state: GetState, req: Request<Body>| async move {
-                let meta = HashMap::from([
+            .route("/", get(|state: GetState| async move {
+                let meta = Vec::from([
                     ("description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
                     ("og:description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
                     ("og:title", "MCJars".to_string()),
                     ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
-                    ("og:url", req.uri().to_string()),
+                    ("og:url", state.env.app_frontend_url.clone()),
                 ]);
 
                 render_page("index.html", meta, &state)
             }))
-            .route("/lookup", get(|state: GetState, req: Request<Body>| async move {
-                let meta = HashMap::from([
+            .route("/lookup", get(|state: GetState| async move {
+                let meta = Vec::from([
                     ("description", "Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.".to_string()),
                     ("og:description", "Lookup Minecraft server jars and configs by their hash. Not affiliated with Mojang AB.".to_string()),
                     ("og:title", "MCJars | Reverse Lookup".to_string()),
                     ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
-                    ("og:url", req.uri().to_string()),
+                    ("og:url", format!("{}/lookup", state.env.app_frontend_url)),
                 ]);
 
                 render_page("lookup/index.html", meta, &state)
             }))
-            .route("/job-status", get(|state: GetState, req: Request<Body>| async move {
-                let meta = HashMap::from([
+            .route("/configs", get(|state: GetState| async move {
+                let meta = Vec::from([
+                    ("description", "Browse the default configuration files shipped by every Minecraft server software MCJars tracks. Not affiliated with Mojang AB.".to_string()),
+                    ("og:description", "Browse the default configuration files shipped by every Minecraft server software MCJars tracks. Not affiliated with Mojang AB.".to_string()),
+                    ("og:title", "MCJars | Configs".to_string()),
+                    ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
+                    ("og:url", format!("{}/configs", state.env.app_frontend_url)),
+                ]);
+
+                render_page("configs/index.html", meta, &state)
+            }))
+            .route("/job-status", get(|state: GetState| async move {
+                let meta = Vec::from([
                     ("description", "View the job status for MCJars. Not affiliated with Mojang AB.".to_string()),
                     ("og:description", "View the job status for MCJars. Not affiliated with Mojang AB.".to_string()),
                     ("og:title", "MCJars | Job Status".to_string()),
                     ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
-                    ("og:url", req.uri().to_string()),
+                    ("og:url", format!("{}/job-status", state.env.app_frontend_url)),
                 ]);
 
                 render_page(SPA_FALLBACK, meta, &state)
             }))
-            .route("/organizations", get(|state: GetState, req: Request<Body>| async move {
-                let meta = HashMap::from([
+            .route("/organizations", get(|state: GetState| async move {
+                let meta = Vec::from([
                     ("description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
                     ("og:description", "MCJars is a service that provides Minecraft server owners with the ability to download server jars and other files with ease. Not affiliated with Mojang AB.".to_string()),
                     ("og:title", "MCJars".to_string()),
                     ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
-                    ("og:url", req.uri().to_string()),
+                    ("og:url", format!("{}/organizations", state.env.app_frontend_url)),
                 ]);
 
                 render_page(SPA_FALLBACK, meta, &state)
@@ -410,25 +423,38 @@ async fn main() {
                     data.1.versions.minecraft
                 };
 
-                let meta = HashMap::from([
+                let meta = Vec::from([
                     ("description", format!("Download the latest {} server builds with ease. Browse {} builds for {} different versions on our website. Not affiliated with Mojang AB.", data.1.name, builds, versions).to_string()),
                     ("og:description", format!("Download the latest {} server builds with ease. Browse {} builds for {} different versions on our website. Not affiliated with Mojang AB.", data.1.name, builds, versions).to_string()),
                     ("og:title", format!("MCJars | {} Versions", data.1.name).to_string()),
                     ("og:image", format!("{}/icons/{}.png", state.env.s3_url, r#type.to_string().to_lowercase())),
-                    ("og:url", format!("https://mcjars.app/{type}/versions")),
+                    ("og:url", format!("{}/{type}/versions", state.env.app_frontend_url)),
                 ]);
 
                 render_page(&format!("{type}/versions/index.html"), meta, &state)
             }))
+            .route("/{type}/config", get(|state: GetState, Path::<ServerType>(r#type)| async move {
+                let data = r#type.infos(&state.env);
+
+                let meta = Vec::from([
+                    ("description", format!("Browse and compare the {} configuration files across builds and versions. Not affiliated with Mojang AB.", data.name).to_string()),
+                    ("og:description", format!("Browse and compare the {} configuration files across builds and versions. Not affiliated with Mojang AB.", data.name).to_string()),
+                    ("og:title", format!("MCJars | {} Configs", data.name).to_string()),
+                    ("og:image", format!("{}/icons/{}.png", state.env.s3_url, r#type.to_string().to_lowercase())),
+                    ("og:url", format!("{}/{type}/config", state.env.app_frontend_url)),
+                ]);
+
+                render_page(&format!("{type}/config/index.html"), meta, &state)
+            }))
             .route("/{type}/statistics", get(|state: GetState, Path::<ServerType>(r#type)| async move {
                 let data = r#type.infos(&state.env);
 
-                let meta = HashMap::from([
+                let meta = Vec::from([
                     ("description", format!("View the latest statistics for {}. Not affiliated with Mojang AB.", data.name).to_string()),
                     ("og:description", format!("View the latest statistics for {}. Not affiliated with Mojang AB.", data.name).to_string()),
                     ("og:title", format!("MCJars | {} Statistics", data.name).to_string()),
                     ("og:image", format!("{}/icons/{}.png", state.env.s3_url, r#type.to_string().to_lowercase())),
-                    ("og:url", format!("https://mcjars.app/{type}/versions")),
+                    ("og:url", format!("{}/{type}/statistics", state.env.app_frontend_url)),
                 ]);
 
                 render_page(&format!("{type}/statistics/index.html"), meta, &state)
@@ -475,7 +501,7 @@ async fn main() {
 
                     if extension == Some("html".as_ref()) && let Some(contents_utf8) = file.contents_utf8() {
                         let content =
-                            inject_head(contents_utf8, HashMap::new(), &state.version);
+                            inject_head(contents_utf8, Vec::new(), &state.version);
 
                         return ApiResponse::new(Body::from(content))
                             .with_header("Content-Type", "text/html")
@@ -499,7 +525,7 @@ async fn main() {
                     .unwrap();
 
                 if let Some(contents_utf8) = file.contents_utf8() {
-                    let content = inject_head(contents_utf8, HashMap::new(), &state.version);
+                    let content = inject_head(contents_utf8, Vec::new(), &state.version);
 
                     return ApiResponse::new(Body::from(content))
                         .with_header("Content-Type", "text/html")

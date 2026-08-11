@@ -33,7 +33,7 @@ mod post {
         mut organization: GetOrganization,
         image: Bytes,
     ) -> ApiResponseResult {
-        let image = match ImageReader::new(std::io::Cursor::new(image)).with_guessed_format() {
+        let mut image = match ImageReader::new(std::io::Cursor::new(image)).with_guessed_format() {
             Ok(reader) => reader,
             Err(_) => {
                 return ApiResponse::error("invalid image")
@@ -41,6 +41,12 @@ mod post {
                     .ok();
             }
         };
+
+        let mut limits = image::Limits::default();
+        limits.max_alloc = Some(64 * 1024 * 1024);
+        limits.max_image_width = Some(16384);
+        limits.max_image_height = Some(16384);
+        image.limits(limits);
 
         let image = match tokio::task::spawn_blocking(move || image.decode()).await? {
             Ok(image) => image,

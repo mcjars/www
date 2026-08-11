@@ -19,6 +19,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="darkreader-lock" />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="MCJars" />
+        <meta name="twitter:card" content="summary" />
         <meta
           name="keywords"
           content="minecraft, server, jar, download, lookup, reverse, lookup, mcjars, site, spigot download, latest version, 1.21, server jar"
