@@ -11,6 +11,11 @@ pub fn cache_key_hash(data: &str) -> String {
 }
 
 #[inline]
+pub fn is_hex(data: &str, length: usize) -> bool {
+    data.len() == length && data.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+#[inline]
 pub fn extract_ip(headers: &HeaderMap) -> Option<IpAddr> {
     let ip = headers
         .get("x-real-ip")

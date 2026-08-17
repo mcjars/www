@@ -46,6 +46,30 @@ mod post {
                 || self.sha512.is_some()
                 || self.md5.is_some()
         }
+
+        #[inline]
+        pub fn normalize(&mut self) -> bool {
+            for (hash, length) in [
+                (&mut self.sha1, 40),
+                (&mut self.sha224, 56),
+                (&mut self.sha256, 64),
+                (&mut self.sha384, 96),
+                (&mut self.sha512, 128),
+                (&mut self.md5, 32),
+            ] {
+                let Some(hash) = hash else {
+                    continue;
+                };
+
+                if !crate::utils::is_hex(hash, length) {
+                    return false;
+                }
+
+                hash.make_ascii_lowercase();
+            }
+
+            true
+        }
     }
 
     #[derive(ToSchema, Serialize, Deserialize)]
@@ -68,8 +92,14 @@ mod post {
                 || self.r#type.is_some()
                 || self.version_id.is_some()
                 || self.project_version_id.is_some()
+                || self.name.is_some()
                 || self.experimental.is_some()
                 || self.hash.as_ref().map(|h| h.has_any()).unwrap_or(false)
+        }
+
+        #[inline]
+        pub fn normalize(&mut self) -> bool {
+            self.hash.as_mut().map(Hash::normalize).unwrap_or(true)
         }
     }
 
@@ -169,9 +199,9 @@ mod post {
     async fn lookup_build(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,
-        search: BuildSearch,
+        mut search: BuildSearch,
     ) -> Result<Option<RawBuildResult>, anyhow::Error> {
-        if !search.has_any() {
+        if !search.has_any() || !search.normalize() {
             return Ok(None);
         }
 
