@@ -2,14 +2,20 @@ use super::{GetState, State};
 use crate::{
     models::file::File,
     response::ApiResponse,
-    routes::index::{IndexFile, render},
+    routes::index::{IndexFile, render, render_robots},
 };
-use axum::{body::Body, extract::Request, http::Method, routing::any};
+use axum::{
+    body::Body,
+    extract::Request,
+    http::Method,
+    routing::{any, get},
+};
 use std::path::{Component, Path, PathBuf};
 use utoipa_axum::router::OpenApiRouter;
 
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
+        .route("/robots.txt", get(|| async { render_robots() }))
         .fallback(any(|state: GetState, request: Request| async move {
             let path = Path::new(&request.uri().path()[1..]);
 

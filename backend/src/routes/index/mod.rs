@@ -9,6 +9,14 @@ use utoipa_axum::router::OpenApiRouter;
 mod _type_;
 
 const INDEX_HTML: &str = include_str!("../../../static/index.html");
+pub const ROBOTS_TXT: &str = "User-agent: *\nDisallow: /\n";
+
+pub fn render_robots() -> ApiResponseResult {
+    ApiResponse::new(Body::from(ROBOTS_TXT))
+        .with_header("Content-Type", "text/plain")
+        .with_header("Cache-Control", "public, max-age=86400")
+        .ok()
+}
 
 pub struct IndexFile {
     pub name: compact_str::CompactString,
@@ -84,6 +92,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
                 render(&state, "/", files)
             }),
         )
+        .route("/robots.txt", get(|| async { render_robots() }))
         .nest("/{type}", _type_::router(state))
         .with_state(state.clone())
 }
