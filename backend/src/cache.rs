@@ -1,9 +1,7 @@
 use crate::{env::RedisMode, response::ApiResponse};
 use rustis::{
     client::Client,
-    commands::{
-        GenericCommands, InfoSection, ServerCommands, SetCondition, SetExpiration, StringCommands,
-    },
+    commands::{GenericCommands, InfoSection, ServerCommands, SetExpiration, StringCommands},
     resp::BulkString,
 };
 use serde::{Serialize, de::DeserializeOwned};
@@ -11,6 +9,9 @@ use std::{
     future::Future,
     sync::{Arc, atomic::AtomicUsize},
 };
+
+#[derive(Serialize)]
+struct BulkStringRef<'a>(#[serde(serialize_with = "::rustis::resp::serialize_byte_buf")] &'a [u8]);
 
 pub struct Cache {
     pub client: Client,
@@ -104,10 +105,9 @@ impl Cache {
                 self.client
                     .set_with_options(
                         key,
-                        serialized,
-                        SetCondition::None,
+                        BulkStringRef(&serialized),
+                        None,
                         SetExpiration::Ex(ttl),
-                        false,
                     )
                     .await?;
 
@@ -140,13 +140,7 @@ impl Cache {
 
         let limit_used = self.client.get::<u64>(&*key).await.unwrap_or_default() + 1;
         self.client
-            .set_with_options(
-                &*key,
-                limit_used,
-                SetCondition::None,
-                SetExpiration::Exat(expire_unix),
-                false,
-            )
+            .set_with_options(&*key, limit_used, None, SetExpiration::Exat(expire_unix))
             .await?;
 
         if limit_used >= limit {
@@ -179,13 +173,13 @@ impl Cache {
         ttl: u64,
         value: &T,
     ) -> Result<(), anyhow::Error> {
+        let serialized = rmp_serde::to_vec(value)?;
         self.client
             .set_with_options(
                 key,
-                rmp_serde::to_vec(value)?,
-                SetCondition::None,
+                BulkStringRef(&serialized),
+                None,
                 SetExpiration::Ex(ttl),
-                false,
             )
             .await?;
 

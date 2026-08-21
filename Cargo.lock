@@ -79,7 +79,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "api"
-version = "3.12.3"
+version = "3.13.0"
 dependencies = [
  "accept-header",
  "anyhow",
@@ -177,6 +177,15 @@ name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28d99ec8bfea296261ca1af174f24225171fea9664ba9003cbebee704810528"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "atoi"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7a8bbe9949e43a1edaa043038c68703b04774156afdfb62ba2cef5bf93d67be"
 dependencies = [
  "num-traits",
 ]
@@ -3331,26 +3340,29 @@ dependencies = [
 
 [[package]]
 name = "rustis"
-version = "0.17.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acb664b5134ae634c200d6ef4e63550e5bbfc2e654335e9eb0bce296f0003d60"
+checksum = "a0b4a712c98a157b24f8b037a957f0f5c9aba32f55c244b6e17b092a265dd2de"
 dependencies = [
- "atoi",
+ "atoi 3.1.0",
  "bytes",
  "crc16",
+ "crossbeam-queue",
  "dtoa",
  "fast-float2",
  "futures-channel",
  "futures-util",
  "itoa",
- "log",
  "memchr",
- "rand 0.9.5",
+ "pin-project-lite",
+ "rand 0.10.2",
  "serde",
  "smallvec",
  "socket2",
+ "thiserror",
  "tokio",
  "tokio-util",
+ "tracing",
  "url",
 ]
 
@@ -4034,7 +4046,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87a2bdd6e83f6b3ea525ca9fee568030508b58355a43d0b2c1674d5f79dcd65e"
 dependencies = [
- "atoi",
+ "atoi 2.0.0",
  "base64 0.22.1",
  "bitflags",
  "byteorder",
@@ -4072,7 +4084,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488e99c397a62007e4229aec669a179816339afc6d2620ca6fa420dbee2e982c"
 dependencies = [
- "atoi",
+ "atoi 2.0.0",
  "chrono",
  "flume",
  "form_urlencoded",

@@ -288,6 +288,13 @@
       "when": 1786314883126,
       "tag": "0040_curved_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787305670755,
+      "tag": "0041_new_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

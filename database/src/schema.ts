@@ -422,3 +422,41 @@ export const chRequestStatsDaily = pgTable('ch_request_stats_daily', {
   index('chRequestStatsDaily_date_idx').on(t.dateOnly),
   index('chRequestStatsDaily_day_idx').on(t.day),
 ]);
+
+export const chFileStats = pgTable('ch_file_stats', {
+  root: text('root').notNull(),
+  path: text('path').notNull(),
+  kind: text('kind').notNull(),
+  extension: text('extension').notNull(),
+
+  totalRequests: bigint('total_requests', { mode: 'number' }).notNull(),
+  uniqueIps: bigint('unique_ips', { mode: 'number' }).notNull(),
+  totalBytes: bigint('total_bytes', { mode: 'number' }).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.root, t.path, t.kind, t.extension] }),
+
+  index('chFileStats_root_idx').on(t.root),
+  index('chFileStats_kind_idx').on(t.kind),
+  index('chFileStats_root_kind_idx').on(t.root, t.kind),
+  index('chFileStats_extension_idx').on(t.extension),
+]);
+
+export const chFileStatsDaily = pgTable('ch_file_stats_daily', {
+  root: text('root').notNull(),
+  path: text('path').notNull(),
+  kind: text('kind').notNull(),
+  extension: text('extension').notNull(),
+  dateOnly: date('date_only').notNull(),
+  day: smallint('day').notNull(),
+
+  totalRequests: bigint('total_requests', { mode: 'number' }).notNull(),
+  uniqueIps: bigint('unique_ips', { mode: 'number' }).notNull(),
+  totalBytes: bigint('total_bytes', { mode: 'number' }).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.root, t.path, t.kind, t.extension, t.dateOnly] }),
+
+  index('chFileStatsDaily_root_date_idx').on(t.root, t.dateOnly),
+  index('chFileStatsDaily_kind_date_idx').on(t.kind, t.dateOnly),
+  index('chFileStatsDaily_date_idx').on(t.dateOnly),
+  index('chFileStatsDaily_day_idx').on(t.day),
+]);

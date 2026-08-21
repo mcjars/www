@@ -3,7 +3,7 @@ use crate::{
     models::r#type::ServerType,
     response::{ApiResponse, ApiResponseResult},
 };
-use axum::{body::Body, routing::get};
+use axum::{body::Body, http::StatusCode, routing::get};
 use utoipa_axum::router::OpenApiRouter;
 
 mod _type_;
@@ -25,6 +25,19 @@ pub struct IndexFile {
 }
 
 pub fn render(state: &GetState, location: &str, files: Vec<IndexFile>) -> ApiResponseResult {
+    render_with_status(state, location, files, StatusCode::OK)
+}
+
+pub fn render_not_found(state: &GetState, location: &str) -> ApiResponseResult {
+    render_with_status(state, location, Vec::new(), StatusCode::NOT_FOUND)
+}
+
+fn render_with_status(
+    state: &GetState,
+    location: &str,
+    files: Vec<IndexFile>,
+    status: StatusCode,
+) -> ApiResponseResult {
     let html = INDEX_HTML
         .replace("{{VERSION}}", &state.version)
         .replace("{{LOCATION}}", &crate::utils::escape_html(location))
@@ -65,6 +78,7 @@ pub fn render(state: &GetState, location: &str, files: Vec<IndexFile>) -> ApiRes
         );
 
     ApiResponse::new(Body::from(html))
+        .with_status(status)
         .with_header("Content-Type", "text/html")
         .with_header("Cache-Control", "no-cache")
         .ok()

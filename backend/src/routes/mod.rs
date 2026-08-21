@@ -95,9 +95,10 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
             .with_header("X-RateLimit-Limit", &ratelimit.limit.to_string())
             .with_header(
                 "X-RateLimit-Remaining",
-                &(ratelimit.limit - ratelimit.hits).to_string(),
+                &(ratelimit.limit - ratelimit.hits).max(0).to_string(),
             )
-            .with_header("X-RateLimit-Reset", "60")
+            .with_header("X-RateLimit-Reset", &ratelimit.reset.to_string())
+            .with_header("Retry-After", &ratelimit.reset.to_string())
             .into_response();
     } else if let Err(None) = request_id {
         return ApiResponse::error("broken request, likely invalid IP")
@@ -119,11 +120,15 @@ async fn handle_api_request(state: GetState, req: Request, next: Next) -> Respon
         headers.insert(
             "X-RateLimit-Remaining",
             (ratelimit.limit - ratelimit.hits)
+                .max(0)
                 .to_string()
                 .parse()
                 .unwrap(),
         );
-        headers.insert("X-RateLimit-Reset", "60".parse().unwrap());
+        headers.insert(
+            "X-RateLimit-Reset",
+            ratelimit.reset.to_string().parse().unwrap(),
+        );
     }
 
     let mut req = Request::from_parts(parts, body);

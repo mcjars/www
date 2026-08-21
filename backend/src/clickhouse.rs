@@ -316,6 +316,259 @@ impl Clickhouse {
                         tracing::error!("failed to refresh daily clickhouse stats: {:?}", err);
                         sentry_anyhow::capture_anyhow(&err);
                     }
+
+                    let run_files = async || -> Result<(), anyhow::Error> {
+                        let start = std::time::Instant::now();
+
+                        #[derive(Deserialize, clickhouse::Row)]
+                        struct FileStatsRow {
+                            root: String,
+                            path: String,
+                            kind: String,
+                            extension: String,
+                            total_requests: u64,
+                            unique_ips: u64,
+                            total_bytes: i64,
+                        }
+
+                        let mut file_stats: RowCursor<FileStatsRow> = client
+                            .query(
+                                r#"
+                                SELECT
+                                    root,
+                                    path,
+                                    toString(kind) AS kind,
+                                    extension,
+                                    count(*) AS total_requests,
+                                    uniqExact(ip) AS unique_ips,
+                                    sum(bytes_sent) AS total_bytes
+                                FROM file_requests
+                                WHERE status = 200
+                                GROUP BY
+                                    root,
+                                    path,
+                                    kind,
+                                    extension
+                                "#,
+                            )
+                            .fetch()?;
+
+                        let flush_buffer =
+                            async |buffer: &[FileStatsRow]| -> Result<(), anyhow::Error> {
+                                if buffer.is_empty() {
+                                    return Ok(());
+                                }
+
+                                let roots: Vec<&str> =
+                                    buffer.iter().map(|r| r.root.as_str()).collect();
+                                let paths: Vec<&str> =
+                                    buffer.iter().map(|r| r.path.as_str()).collect();
+                                let kinds: Vec<&str> =
+                                    buffer.iter().map(|r| r.kind.as_str()).collect();
+                                let extensions: Vec<&str> =
+                                    buffer.iter().map(|r| r.extension.as_str()).collect();
+                                let total_requests: Vec<i64> =
+                                    buffer.iter().map(|r| r.total_requests as i64).collect();
+                                let unique_ips: Vec<i64> =
+                                    buffer.iter().map(|r| r.unique_ips as i64).collect();
+                                let total_bytes: Vec<i64> =
+                                    buffer.iter().map(|r| r.total_bytes).collect();
+
+                                sqlx::query(
+                                    r#"
+                                    INSERT INTO ch_file_stats (
+                                        root, path, kind, extension,
+                                        total_requests, unique_ips, total_bytes
+                                    )
+                                    SELECT * FROM UNNEST(
+                                        $1::text[],
+                                        $2::text[],
+                                        $3::text[],
+                                        $4::text[],
+                                        $5::bigint[],
+                                        $6::bigint[],
+                                        $7::bigint[]
+                                    )
+                                    ON CONFLICT (root, path, kind, extension)
+                                    DO UPDATE SET
+                                        total_requests = EXCLUDED.total_requests,
+                                        unique_ips = EXCLUDED.unique_ips,
+                                        total_bytes = EXCLUDED.total_bytes
+                                    "#,
+                                )
+                                .bind(&roots)
+                                .bind(&paths)
+                                .bind(&kinds)
+                                .bind(&extensions)
+                                .bind(&total_requests)
+                                .bind(&unique_ips)
+                                .bind(&total_bytes)
+                                .execute(database.write())
+                                .await?;
+
+                                Ok(())
+                            };
+
+                        let mut row_buffer = Vec::new();
+                        row_buffer.reserve_exact(2048);
+                        while let Some(row) = file_stats.next().await? {
+                            if row_buffer.len() < 2048 {
+                                row_buffer.push(row);
+                            } else {
+                                flush_buffer(&row_buffer).await?;
+                                row_buffer.clear();
+                                row_buffer.push(row);
+                            }
+                        }
+                        flush_buffer(&row_buffer).await?;
+
+                        tracing::info!(
+                            "clickhouse file stats refreshed in {}ms",
+                            start.elapsed().as_millis()
+                        );
+
+                        Ok(())
+                    };
+
+                    if let Err(err) = run_files().await {
+                        tracing::error!("failed to refresh clickhouse file stats: {:?}", err);
+                        sentry_anyhow::capture_anyhow(&err);
+                    }
+
+                    let run_files_daily = async || -> Result<(), anyhow::Error> {
+                        let start = std::time::Instant::now();
+
+                        #[derive(Deserialize, clickhouse::Row)]
+                        struct FileStatsDailyRow {
+                            root: String,
+                            path: String,
+                            kind: String,
+                            extension: String,
+                            #[serde(with = "clickhouse::serde::chrono::date")]
+                            date_only: chrono::NaiveDate,
+                            day: u8,
+                            total_requests: u64,
+                            unique_ips: u64,
+                            total_bytes: i64,
+                        }
+
+                        let mut file_stats: RowCursor<FileStatsDailyRow> = client
+                            .query(
+                                r#"
+                                SELECT
+                                    root,
+                                    path,
+                                    toString(kind) AS kind,
+                                    extension,
+                                    toDate(created) AS date_only,
+                                    toDayOfMonth(created) AS day,
+                                    count(*) AS total_requests,
+                                    uniqExact(ip) AS unique_ips,
+                                    sum(bytes_sent) AS total_bytes
+                                FROM file_requests
+                                WHERE
+                                    _partition_date >= toDate(now() - INTERVAL 7 DAY)
+                                    AND status = 200
+                                GROUP BY
+                                    root,
+                                    path,
+                                    kind,
+                                    extension,
+                                    date_only,
+                                    day
+                                "#,
+                            )
+                            .fetch()?;
+
+                        let flush_buffer =
+                            async |buffer: &[FileStatsDailyRow]| -> Result<(), anyhow::Error> {
+                                if buffer.is_empty() {
+                                    return Ok(());
+                                }
+
+                                let roots: Vec<&str> =
+                                    buffer.iter().map(|r| r.root.as_str()).collect();
+                                let paths: Vec<&str> =
+                                    buffer.iter().map(|r| r.path.as_str()).collect();
+                                let kinds: Vec<&str> =
+                                    buffer.iter().map(|r| r.kind.as_str()).collect();
+                                let extensions: Vec<&str> =
+                                    buffer.iter().map(|r| r.extension.as_str()).collect();
+                                let date_only: Vec<chrono::NaiveDate> =
+                                    buffer.iter().map(|r| r.date_only).collect();
+                                let day: Vec<i16> = buffer.iter().map(|r| r.day as i16).collect();
+                                let total_requests: Vec<i64> =
+                                    buffer.iter().map(|r| r.total_requests as i64).collect();
+                                let unique_ips: Vec<i64> =
+                                    buffer.iter().map(|r| r.unique_ips as i64).collect();
+                                let total_bytes: Vec<i64> =
+                                    buffer.iter().map(|r| r.total_bytes).collect();
+
+                                sqlx::query(
+                                    r#"
+                                    INSERT INTO ch_file_stats_daily (
+                                        root, path, kind, extension,
+                                        date_only, day,
+                                        total_requests, unique_ips, total_bytes
+                                    )
+                                    SELECT * FROM UNNEST(
+                                        $1::text[],
+                                        $2::text[],
+                                        $3::text[],
+                                        $4::text[],
+                                        $5::date[],
+                                        $6::smallint[],
+                                        $7::bigint[],
+                                        $8::bigint[],
+                                        $9::bigint[]
+                                    )
+                                    ON CONFLICT (root, path, kind, extension, date_only)
+                                    DO UPDATE SET
+                                        total_requests = EXCLUDED.total_requests,
+                                        unique_ips = EXCLUDED.unique_ips,
+                                        total_bytes = EXCLUDED.total_bytes
+                                    "#,
+                                )
+                                .bind(&roots)
+                                .bind(&paths)
+                                .bind(&kinds)
+                                .bind(&extensions)
+                                .bind(&date_only)
+                                .bind(&day)
+                                .bind(&total_requests)
+                                .bind(&unique_ips)
+                                .bind(&total_bytes)
+                                .execute(database.write())
+                                .await?;
+
+                                Ok(())
+                            };
+
+                        let mut row_buffer = Vec::new();
+                        row_buffer.reserve_exact(2048);
+                        while let Some(row) = file_stats.next().await? {
+                            if row_buffer.len() < 2048 {
+                                row_buffer.push(row);
+                            } else {
+                                flush_buffer(&row_buffer).await?;
+                                row_buffer.clear();
+                                row_buffer.push(row);
+                            }
+                        }
+                        flush_buffer(&row_buffer).await?;
+
+                        tracing::info!(
+                            "clickhouse daily file stats refreshed in {}ms",
+                            start.elapsed().as_millis()
+                        );
+
+                        Ok(())
+                    };
+
+                    if let Err(err) = run_files_daily().await {
+                        tracing::error!("failed to refresh daily clickhouse file stats: {:?}", err);
+                        sentry_anyhow::capture_anyhow(&err);
+                    }
                 }
             });
         }

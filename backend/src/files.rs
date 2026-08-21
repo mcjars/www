@@ -69,11 +69,12 @@ impl FileCache {
         }
     }
 
+    /// Returns whether the file was already resident in the local cache alongside its reader.
     pub async fn get(
         &self,
         path: &Path,
         file: &File,
-    ) -> std::io::Result<Box<dyn tokio::io::AsyncRead + Send + Unpin>> {
+    ) -> std::io::Result<(bool, Box<dyn tokio::io::AsyncRead + Send + Unpin>)> {
         if file.is_directory {
             return Err(std::io::Error::other("cannot get file for directory"));
         }
@@ -82,7 +83,7 @@ impl FileCache {
 
         let existing = self.cached_files.read().await.get(&key).cloned();
         if let Some(entry) = existing {
-            return self.serve(entry).await;
+            return Ok((true, self.serve(entry).await?));
         }
 
         let file_size = file.size as u64;
@@ -90,7 +91,7 @@ impl FileCache {
 
         if let Some(entry) = map.get(&key).cloned() {
             drop(map);
-            return self.serve(entry).await;
+            return Ok((true, self.serve(entry).await?));
         }
 
         if self.total_size.load(Ordering::Relaxed) + file_size > self.max_cache_size {
@@ -117,7 +118,8 @@ impl FileCache {
         drop(map);
 
         self.spawn_fill(key, entry.clone(), path.to_path_buf(), id, file_size, tx);
-        self.serve(entry).await
+
+        Ok((false, self.serve(entry).await?))
     }
 
     async fn serve(
