@@ -130,6 +130,7 @@ mod patch {
         pub name: Option<String>,
         pub owner: Option<String>,
         pub public: Option<bool>,
+        pub verified: Option<bool>,
         pub types: Option<Vec<ServerType>>,
     }
 
@@ -154,9 +155,15 @@ mod patch {
         mut organization: GetOrganization,
         crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
+        if data.verified.is_some() && !user.admin {
+            return ApiResponse::error("unauthorized")
+                .with_status(StatusCode::UNAUTHORIZED)
+                .ok();
+        }
+
         let mut owner_id = organization.owner.id;
         if let Some(owner) = data.owner {
-            if user.id != organization.owner.id {
+            if user.id != organization.owner.id && !user.admin {
                 return ApiResponse::error("unauthorized")
                     .with_status(StatusCode::UNAUTHORIZED)
                     .ok();
@@ -187,6 +194,10 @@ mod patch {
 
         if let Some(public) = data.public {
             organization.public = public;
+        }
+
+        if let Some(verified) = data.verified {
+            organization.verified = verified;
         }
 
         if let Some(types) = data.types {
@@ -232,7 +243,7 @@ mod delete {
         user: GetUser,
         organization: GetOrganization,
     ) -> ApiResponseResult {
-        if user.id != organization.owner.id {
+        if user.id != organization.owner.id && !user.admin {
             return ApiResponse::error("unauthorized")
                 .with_status(StatusCode::UNAUTHORIZED)
                 .ok();

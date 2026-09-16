@@ -107,6 +107,7 @@ mod delete {
 
         if auth_user.id != user.as_ref().map(|u| u.id).unwrap_or_default()
             && auth_user.id != organization.owner.id
+            && !auth_user.admin
         {
             return ApiResponse::error("only the owner can delete subusers")
                 .with_status(StatusCode::FORBIDDEN)
@@ -120,6 +121,8 @@ mod delete {
             if subuser.is_some() {
                 OrganizationSubuser::delete_by_ids(&state.database, organization.id, user.id)
                     .await?;
+
+                state.cache.clear_organization(organization.id).await?;
 
                 ApiResponse::new_serialized(Response { success: true }).ok()
             } else {

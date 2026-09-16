@@ -45,6 +45,20 @@ mod get {
     #[derive(ToSchema, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     #[schema(rename_all = "camelCase")]
+    struct TopOrganization {
+        id: i32,
+        name: Option<compact_str::CompactString>,
+        verified: bool,
+
+        requests: u64,
+        unique_ips: u64,
+        bytes: u64,
+        cache_hits: u64,
+    }
+
+    #[derive(ToSchema, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[schema(rename_all = "camelCase")]
     struct Files {
         window: compact_str::CompactString,
 
@@ -64,6 +78,8 @@ mod get {
         extensions: Vec<Breakdown>,
         #[schema(inline)]
         top: Vec<Breakdown>,
+        #[schema(inline)]
+        organizations: Vec<TopOrganization>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -102,7 +118,7 @@ mod get {
                 let partition =
                     format!("_partition_date >= toDate(now() - INTERVAL {partition_days} DAY)");
 
-                let (totals, timeline, breakdowns) = tokio::try_join!(
+                let (totals, timeline, breakdowns, organizations) = tokio::try_join!(
                     async {
                         Ok::<_, anyhow::Error>(
                             state
@@ -178,7 +194,34 @@ mod get {
 
                         Ok(rows)
                     },
+                    async {
+                        Ok(state
+                            .clickhouse
+                            .client()
+                            .query(&format!(
+                                r#"
+                                SELECT
+                                    assumeNotNull(organization_id),
+                                    COUNT(*),
+                                    uniqExact(ip),
+                                    toUInt64(SUM(bytes_sent)),
+                                    countIf(cache_hit)
+                                FROM file_requests
+                                WHERE {partition} AND created > {since} AND organization_id IS NOT NULL
+                                GROUP BY organization_id
+                                ORDER BY SUM(bytes_sent) DESC
+                                LIMIT 15
+                                "#
+                            ))
+                            .fetch_all::<(i32, u64, u64, u64, u64)>()
+                            .await?)
+                    },
                 )?;
+
+                let organization_ids: Vec<i32> =
+                    organizations.iter().map(|(id, _, _, _, _)| *id).collect();
+                let organization_names =
+                    super::super::organization_names(&state, &organization_ids).await?;
 
                 let mut roots = Vec::new();
                 let mut kinds = Vec::new();
@@ -232,6 +275,26 @@ mod get {
                     kinds,
                     extensions,
                     top,
+                    organizations: organizations
+                        .into_iter()
+                        .map(|(id, requests, unique_ips, bytes, cache_hits)| {
+                            let (name, verified) = organization_names
+                                .get(&id)
+                                .map_or((None, false), |(name, verified)| {
+                                    (Some(name.clone()), *verified)
+                                });
+
+                            TopOrganization {
+                                id,
+                                name,
+                                verified,
+                                requests,
+                                unique_ips,
+                                bytes,
+                                cache_hits,
+                            }
+                        })
+                        .collect(),
                 })
             })
             .await?;

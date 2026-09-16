@@ -6,6 +6,7 @@ export type PatchOrganizationData = {
   types?: string[];
   owner?: string;
   public?: boolean;
+  verified?: boolean;
 };
 
 export default async function apiPatchUserOrganization(

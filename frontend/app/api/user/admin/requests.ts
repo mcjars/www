@@ -24,6 +24,16 @@ export type TopIp = {
   country: string | null;
 };
 
+export type TopOrganization = {
+  id: number;
+  name: string | null;
+  verified: boolean;
+
+  total: number;
+  uniqueIps: number;
+  errors: number;
+};
+
 export type AdminRequests = {
   window: AdminWindow;
 
@@ -40,6 +50,7 @@ export type AdminRequests = {
   userAgents: TopEntry[];
   origins: TopEntry[];
   countries: TopEntry[];
+  organizations: TopOrganization[];
 };
 
 export default async function apiGetUserAdminRequests(window: AdminWindow): Promise<AdminRequests> {

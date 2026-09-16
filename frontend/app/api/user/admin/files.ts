@@ -16,6 +16,17 @@ export type Breakdown = {
   bytes: number;
 };
 
+export type TopOrganization = {
+  id: number;
+  name: string | null;
+  verified: boolean;
+
+  requests: number;
+  uniqueIps: number;
+  bytes: number;
+  cacheHits: number;
+};
+
 export type AdminFiles = {
   window: AdminWindow;
 
@@ -30,6 +41,7 @@ export type AdminFiles = {
   kinds: Breakdown[];
   extensions: Breakdown[];
   top: Breakdown[];
+  organizations: TopOrganization[];
 };
 
 export default async function apiGetUserAdminFiles(window: AdminWindow): Promise<AdminFiles> {

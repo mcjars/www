@@ -22,7 +22,7 @@ export type SystemSnapshot = {
 
 export type Paginated<T> = {
   total: number;
-  perPage: number;
+  per_page: number;
   page: number;
   data: T[];
 };

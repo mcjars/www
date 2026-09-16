@@ -78,7 +78,7 @@ mod post {
         organization: GetOrganization,
         crate::Payload(data): crate::Payload<Payload>,
     ) -> ApiResponseResult {
-        if user.id != organization.owner.id {
+        if user.id != organization.owner.id && !user.admin {
             return ApiResponse::error("only the owner can add subusers")
                 .with_status(StatusCode::FORBIDDEN)
                 .ok();
@@ -105,6 +105,8 @@ mod post {
                 OrganizationSubuser::new(&state.database, organization.id, user.id).await?;
 
             if inserted {
+                state.cache.clear_organization(organization.id).await?;
+
                 ApiResponse::new_serialized(Response { success: true })
                     .with_status(StatusCode::CREATED)
                     .ok()

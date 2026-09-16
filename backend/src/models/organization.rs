@@ -175,6 +175,46 @@ impl Organization {
         .try_collect_vec()
     }
 
+    pub async fn all_with_pagination(
+        database: &crate::database::Database,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+    ) -> Result<crate::models::Pagination<Self>, anyhow::Error> {
+        let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
+            r#"
+            SELECT {}, COUNT(*) OVER() AS total_count
+            FROM organizations
+            LEFT JOIN users ON organizations.owner_id = users.id
+            WHERE
+                $3 IS NULL
+                OR organizations.name ILIKE '%' || $3 || '%'
+                OR users.login ILIKE '%' || $3 || '%'
+                OR users.email ILIKE '%' || $3 || '%'
+            ORDER BY organizations.id DESC
+            LIMIT $1 OFFSET $2
+            "#,
+            Self::columns_sql(None, None)
+        )))
+        .bind(per_page)
+        .bind((page - 1) * per_page)
+        .bind(search)
+        .fetch_all(database.read())
+        .await?;
+
+        Ok(crate::models::Pagination {
+            total: rows
+                .first()
+                .map_or(Ok(0), |row| row.try_get("total_count"))?,
+            per_page,
+            page,
+            data: rows
+                .into_iter()
+                .map(|row| Self::map(None, &row))
+                .try_collect_vec()?,
+        })
+    }
+
     pub async fn by_id(
         database: &crate::database::Database,
         cache: &crate::cache::Cache,

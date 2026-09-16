@@ -16,17 +16,22 @@ import {
   WebhookIcon,
   ZapIcon,
 } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
-import { useQuery } from '@tanstack/react-query';
+import { useDebounceValue } from 'usehooks-ts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import apiGetTypes from '~/api/types.ts';
 import apiGetUserAdminBandwidth from '~/api/user/admin/bandwidth.ts';
 import apiGetUserAdminFiles from '~/api/user/admin/files.ts';
 import apiGetUserAdminNodes from '~/api/user/admin/nodes.ts';
+import apiGetUserAdminOrganizations from '~/api/user/admin/organizations.ts';
 import apiGetUserAdminRatelimits from '~/api/user/admin/ratelimits.ts';
 import apiGetUserAdminRequests from '~/api/user/admin/requests.ts';
 import apiGetUserAdminStats from '~/api/user/admin/stats.ts';
-import { AdminWindow, NodeStatus, SystemSnapshot } from '~/api/user/admin/types.ts';
+import { AdminWindow, NodeStatus, Paginated, SystemSnapshot } from '~/api/user/admin/types.ts';
+import { Organization } from '~/api/user/organizations.ts';
+import OrganizationRow from '~/components/organization-row.tsx';
 import { Badge } from '~/components/ui/badge.tsx';
 import { Button } from '~/components/ui/button.tsx';
 import { Card } from '~/components/ui/card.tsx';
@@ -42,6 +47,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
 import { Skeleton } from '~/components/ui/skeleton.tsx';
 import { useAuth } from '~/hooks/use-auth.tsx';
+import { createMutator } from '~/lib/mutator.ts';
 
 const LIVE_REFETCH_MS = 10_000;
 const PER_PAGE = 25;
@@ -53,6 +59,7 @@ const SECTIONS = [
   { id: 'bandwidth', label: 'Bandwidth', icon: DownloadIcon },
   { id: 'requests', label: 'Requests', icon: ActivityIcon },
   { id: 'files', label: 'Files', icon: FileIcon },
+  { id: 'organizations', label: 'Organizations', icon: BuildingIcon },
 ] as const;
 
 const WINDOWS: { value: AdminWindow; label: string }[] = [
@@ -69,6 +76,9 @@ const BUCKET_LABELS: Record<string, string> = {
 };
 
 const formatBytes = (value: number) => bytes(value) ?? '0B';
+
+const organizationLabel = (entry: { id: number; name: string | null; verified: boolean }) =>
+  `${entry.name ?? `#${entry.id}`}${entry.verified ? ' ✓' : ''}`;
 
 const formatDuration = (seconds: number) => {
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -245,6 +255,8 @@ function TopList({ title, entries }: { title: string; entries: { label: string; 
 
 export default function PageAdmin() {
   const [user, , isUserLoading] = useAuth();
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const queryClient = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -323,6 +335,52 @@ export default function PageAdmin() {
     enabled: isAdmin && section === 'files',
     staleTime: 30_000,
   });
+
+  const [debouncedSearch] = useDebounceValue(search, 300);
+
+  const { data: organizations, isFetching: organizationsFetching } = useQuery({
+    queryKey: ['admin', 'organizations', page, debouncedSearch],
+    queryFn: () => apiGetUserAdminOrganizations(page, PER_PAGE, debouncedSearch),
+    enabled: isAdmin && section === 'organizations',
+    staleTime: 10_000,
+  });
+
+  const { data: rawTypes } = useQuery({
+    queryKey: ['types'],
+    queryFn: () => apiGetTypes(),
+    enabled: isAdmin && section === 'organizations',
+  });
+
+  const organizationTypes = useMemo(
+    () =>
+      Object.values(rawTypes ?? {})
+        .flat()
+        .map((type) => type.identifier),
+    [rawTypes],
+  );
+
+  useEffect(() => {
+    if (!organizations) return;
+
+    const pages = Math.max(1, Math.ceil(organizations.total / PER_PAGE));
+    if (page > pages) setParam('page', pages === 1 ? null : pages);
+  }, [organizations, page, setParam]);
+
+  const organizationsKey = ['admin', 'organizations', page, debouncedSearch];
+  const mutateOrganizations = createMutator<Paginated<Organization>>(queryClient, organizationsKey);
+
+  const refetchOrganizations = () =>
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] });
+
+  const updateOrganization = (id: number) => (data: Partial<Organization>) =>
+    mutateOrganizations(
+      (current) =>
+        current && {
+          ...current,
+          data: current.data.map((entry) => (entry.id === id ? { ...entry, ...data } : entry)),
+        },
+      false,
+    );
 
   const statusChart = useMemo(
     () =>
@@ -840,6 +898,15 @@ export default function PageAdmin() {
                 sub: `${entry.uniqueIps.toLocaleString()} IPs`,
               }))}
             />
+
+            <TopList
+              title={'By Organization'}
+              entries={(requests?.organizations ?? []).map((entry) => ({
+                label: organizationLabel(entry),
+                value: entry.total.toLocaleString(),
+                sub: `${entry.uniqueIps.toLocaleString()} IPs · ${entry.errors.toLocaleString()} errors`,
+              }))}
+            />
           </div>
         </div>
       )}
@@ -933,7 +1000,59 @@ export default function PageAdmin() {
                 sub: formatBytes(entry.bytes),
               }))}
             />
+
+            <TopList
+              title={'By Organization'}
+              entries={(files?.organizations ?? []).map((entry) => ({
+                label: organizationLabel(entry),
+                value: formatBytes(entry.bytes),
+                sub: `${entry.requests.toLocaleString()} reqs · ${entry.uniqueIps.toLocaleString()} IPs`,
+              }))}
+            />
           </div>
+        </div>
+      )}
+
+      {section === 'organizations' && (
+        <div className={'flex flex-col'}>
+          <Card className={'p-3 mb-2'}>
+            <div className={'flex flex-row flex-wrap items-center justify-between gap-2'}>
+              {searchInput('Filter by name or owner...')}
+
+              <p className={'text-xs text-muted-foreground'}>
+                Every organization on the instance. Managing one here acts with administrator rights.
+              </p>
+            </div>
+          </Card>
+
+          {!organizations ? (
+            <Skeleton className={'w-full h-32 rounded-xl'} />
+          ) : !organizations.data.length ? (
+            <Card className={'p-4 flex flex-row items-center justify-center'}>
+              {organizationsFetching ? (
+                <LoaderCircle className={'animate-spin'} />
+              ) : (
+                <p className={'text-sm text-muted-foreground'}>No organizations matched.</p>
+              )}
+            </Card>
+          ) : (
+            <>
+              {organizations.data.map((organization) => (
+                <OrganizationRow
+                  key={organization.id}
+                  admin
+                  types={organizationTypes}
+                  mutate={refetchOrganizations}
+                  updateOrg={updateOrganization(organization.id)}
+                  organization={organization}
+                  currentOrganization={currentOrganization}
+                  setCurrentOrganization={setCurrentOrganization}
+                />
+              ))}
+
+              {renderPagination(organizations.total)}
+            </>
+          )}
         </div>
       )}
     </div>

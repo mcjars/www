@@ -78,6 +78,19 @@ mod get {
     #[derive(ToSchema, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     #[schema(rename_all = "camelCase")]
+    struct TopOrganization {
+        id: i32,
+        name: Option<compact_str::CompactString>,
+        verified: bool,
+
+        total: u64,
+        unique_ips: u64,
+        errors: u64,
+    }
+
+    #[derive(ToSchema, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[schema(rename_all = "camelCase")]
     struct Requests {
         window: compact_str::CompactString,
 
@@ -101,6 +114,8 @@ mod get {
         origins: Vec<TopEntry>,
         #[schema(inline)]
         countries: Vec<TopEntry>,
+        #[schema(inline)]
+        organizations: Vec<TopOrganization>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -140,7 +155,17 @@ mod get {
                     "_partition_date >= toDate(now() - INTERVAL {partition_days} DAY)"
                 );
 
-                let (totals, timeline, statuses, slowest, ips, user_agents, origins, countries) = tokio::try_join!(
+                let (
+                    totals,
+                    timeline,
+                    statuses,
+                    slowest,
+                    ips,
+                    user_agents,
+                    origins,
+                    countries,
+                    organizations,
+                ) = tokio::try_join!(
                     async {
                         Ok::<_, anyhow::Error>(
                             state
@@ -294,7 +319,33 @@ mod get {
                             .fetch_all::<(String, u64, u64)>()
                             .await?)
                     },
+                    async {
+                        Ok(state
+                            .clickhouse
+                            .client()
+                            .query(&format!(
+                                r#"
+                                SELECT
+                                    assumeNotNull(organization_id),
+                                    COUNT(*),
+                                    uniqExact(ip),
+                                    countIf(status >= 400)
+                                FROM requests
+                                WHERE {partition} AND created > {since} AND organization_id IS NOT NULL
+                                GROUP BY organization_id
+                                ORDER BY COUNT(*) DESC
+                                LIMIT 15
+                                "#
+                            ))
+                            .fetch_all::<(i32, u64, u64, u64)>()
+                            .await?)
+                    },
                 )?;
+
+                let organization_ids: Vec<i32> =
+                    organizations.iter().map(|(id, _, _, _)| *id).collect();
+                let organization_names =
+                    super::super::organization_names(&state, &organization_ids).await?;
 
                 let top = |rows: Vec<(String, u64, u64)>| {
                     rows.into_iter()
@@ -351,6 +402,25 @@ mod get {
                     user_agents: top(user_agents),
                     origins: top(origins),
                     countries: top(countries),
+                    organizations: organizations
+                        .into_iter()
+                        .map(|(id, total, unique_ips, errors)| {
+                            let (name, verified) = organization_names
+                                .get(&id)
+                                .map_or((None, false), |(name, verified)| {
+                                    (Some(name.clone()), *verified)
+                                });
+
+                            TopOrganization {
+                                id,
+                                name,
+                                verified,
+                                total,
+                                unique_ips,
+                                errors,
+                            }
+                        })
+                        .collect(),
                 })
             })
             .await?;
