@@ -395,6 +395,17 @@ async fn main() {
 
                 render_page("lookup/index.html", meta, &state)
             }))
+            .route("/ai", get(|state: GetState| async move {
+                let meta = Vec::from([
+                    ("description", "Connect Claude, ChatGPT, Cursor, VS Code and other AI assistants to MCJars through its MCP server. Not affiliated with Mojang AB.".to_string()),
+                    ("og:description", "Connect Claude, ChatGPT, Cursor, VS Code and other AI assistants to MCJars through its MCP server. Not affiliated with Mojang AB.".to_string()),
+                    ("og:title", "MCJars | AI Assistants".to_string()),
+                    ("og:image", format!("{}/icons/vanilla.png", state.env.s3_url)),
+                    ("og:url", format!("{}/ai", state.env.app_frontend_url)),
+                ]);
+
+                render_page("ai/index.html", meta, &state)
+            }))
             .route("/configs", get(|state: GetState| async move {
                 let meta = Vec::from([
                     ("description", "Browse the default configuration files shipped by every Minecraft server software MCJars tracks. Not affiliated with Mojang AB.".to_string()),
@@ -484,6 +495,7 @@ async fn main() {
                 <url><loc>https://mcjars.app</loc></url>
                 <url><loc>https://mcjars.app/lookup</loc></url>
                 <url><loc>https://mcjars.app/configs</loc></url>
+                <url><loc>https://mcjars.app/ai</loc></url>
                 ".trim().to_string();
 
                 let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();

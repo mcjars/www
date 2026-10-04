@@ -1,5 +1,6 @@
 import {
   BarChart3Icon,
+  BotIcon,
   Building,
   ChevronDown,
   CodeIcon,
@@ -127,6 +128,14 @@ export function AppSidebar() {
                         <AutoCloseLink to={'/configs'}>
                           <FileIcon className={'mr-2'} />
                           Configs
+                        </AutoCloseLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location.pathname === '/ai'}>
+                        <AutoCloseLink to={'/ai'}>
+                          <BotIcon className={'mr-2'} />
+                          AI Assistants
                         </AutoCloseLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

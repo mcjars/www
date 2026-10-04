@@ -2,7 +2,7 @@ import axios from 'axios';
 import { BASE_URL } from '~/api/index.ts';
 import { NodeStatus, Paginated } from '~/api/user/admin/types.ts';
 
-export type RateLimitBucket = 'regular' | 'files' | 'files_download';
+export type RateLimitBucket = 'regular' | 'files_browse' | 'files_download' | 'mcp';
 
 export type AdminRateLimit = {
   ip: string;

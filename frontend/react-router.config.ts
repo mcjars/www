@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { Config } from '@react-router/dev/config';
 
-const STATIC_ROUTES = ['/', '/configs', '/lookup'];
+const STATIC_ROUTES = ['/', '/configs', '/lookup', '/ai'];
 const ROUTE_IDENTIFIER_OVERRIDES: Record<string, string> = {
   LEGACY_FABRIC: 'LEGACYFABRIC',
   LOOHP_LIMBO: 'LOOHPLIMBO',

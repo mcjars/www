@@ -20,6 +20,9 @@ export default defineConfig({
         target: 'http://localhost:9000',
         ws: true,
       },
+      '/mcp': {
+        target: 'http://localhost:9000',
+      },
     },
   },
 });

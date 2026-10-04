@@ -4,6 +4,7 @@ export default [
   index('pages/index.tsx'),
   route('configs', 'pages/config.tsx'),
   route('lookup', 'pages/lookup.tsx'),
+  route('ai', 'pages/ai.tsx'),
   route('job-status', 'pages/job-status.tsx'),
   route('organizations', 'pages/organizations.tsx'),
   route('admin', 'pages/admin.tsx'),

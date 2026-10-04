@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse } from 'react-router';
 
 import { AppSidebar } from '~/components/app-sidebar.tsx';
@@ -6,6 +7,7 @@ import { ThemeProvider } from '~/components/theme-provider.tsx';
 import { SidebarProvider, SidebarTrigger } from '~/components/ui/sidebar.tsx';
 import { Toaster } from '~/components/ui/toaster.tsx';
 import { getQueryClient } from '~/lib/query-client.ts';
+import { registerWebMcpTools } from '~/lib/webmcp.ts';
 
 import type { Route } from './+types/root';
 
@@ -45,6 +47,10 @@ export function meta(): Route.MetaDescriptors {
 
 export default function App() {
   const queryClient = getQueryClient();
+
+  useEffect(() => {
+    void registerWebMcpTools();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

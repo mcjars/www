@@ -3,31 +3,19 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 mod get {
     use crate::{
-        models::{build::Build, config::Format, r#type::ServerType},
+        models::build::Build,
         response::{ApiResponse, ApiResponseResult},
         routes::{ApiErrorV3, GetData, GetState},
     };
     use axum::{extract::Path, http::StatusCode};
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
     use serde_json::json;
-    use sqlx::Row;
     use utoipa::ToSchema;
-
-    #[derive(ToSchema, Serialize, Deserialize)]
-    struct ResponseConfig {
-        config_uuid: uuid::Uuid,
-        value_uuid: uuid::Uuid,
-
-        location: compact_str::CompactString,
-        r#type: ServerType,
-        format: Format,
-        value: String,
-    }
 
     #[derive(ToSchema, Serialize)]
     struct Response {
         #[schema(inline)]
-        configs: Vec<ResponseConfig>,
+        configs: Vec<crate::models::build::BuildConfig>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -65,45 +53,7 @@ mod get {
             }
         });
 
-        let configs = state
-            .cache
-            .cached(&format!("build_configs::{}", build.id), 3600, || async {
-                let rows = sqlx::query(
-                    r#"
-                    SELECT
-                        config_values.uuid AS value_uuid,
-                        configs.uuid AS config_uuid,
-                        configs.type AS type,
-                        configs.format AS format,
-                        configs.location AS location,
-                        config_values.value AS value
-                    FROM config_values
-                    INNER JOIN build_configs ON build_configs.config_value_id = config_values.id
-                    INNER JOIN configs ON configs.id = config_values.config_id
-                    WHERE build_configs.build_id = $1
-                    ORDER BY configs.id ASC
-                    "#,
-                )
-                .bind(build.id)
-                .fetch_all(state.database.read())
-                .await?;
-
-                let mut configs = Vec::new();
-
-                for row in rows {
-                    configs.push(ResponseConfig {
-                        value_uuid: row.try_get("value_uuid")?,
-                        config_uuid: row.try_get("config_uuid")?,
-                        location: row.try_get("location")?,
-                        r#type: row.try_get("type")?,
-                        format: row.try_get("format")?,
-                        value: row.try_get("value")?,
-                    });
-                }
-
-                Ok::<_, sqlx::Error>(configs)
-            })
-            .await?;
+        let configs = build.configs(&state.database, &state.cache).await?;
 
         ApiResponse::new_serialized(Response { configs }).ok()
     }

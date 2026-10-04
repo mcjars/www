@@ -32,6 +32,17 @@ pub struct InstallationStepRemove {
     pub location: compact_str::CompactString,
 }
 
+#[derive(ToSchema, Serialize, Deserialize)]
+pub struct BuildConfig {
+    pub config_uuid: uuid::Uuid,
+    pub value_uuid: uuid::Uuid,
+
+    pub location: compact_str::CompactString,
+    pub r#type: ServerType,
+    pub format: super::config::Format,
+    pub value: String,
+}
+
 #[derive(ToSchema, Serialize, Deserialize, Clone)]
 pub struct Build {
     pub id: i32,
@@ -246,10 +257,12 @@ impl Build {
                         (
                             SELECT count(*) FROM builds
                             WHERE version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build)
+                                AND type = (SELECT type FROM spec_build)
                         ) + (
                             SELECT count(*) FROM builds
                             WHERE version_id IS NULL
                                 AND project_version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build)
+                                AND type = (SELECT type FROM spec_build)
                         ) AS count
                 )
 
@@ -303,22 +316,25 @@ impl Build {
                 return Ok(None);
             }
 
-            Ok::<_, anyhow::Error>(Some((
-                Self::map(None, &query[0])?,
-                Self::map(None, &query[1])?,
-                super::version::MinifiedVersion {
-                    id: query[1]
-                        .try_get("version_id")
-                        .unwrap_or_else(|_| query[1].get("project_version_id")),
-                    r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
-                    supported: query[1].try_get("version_supported").unwrap_or(true),
-                    java: query[1].try_get("version_java").unwrap_or(21),
-                    builds: query[1].try_get("build_count").unwrap_or(0),
-                    created: query[1]
-                        .try_get("version_created")
-                        .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
-                },
-            )))})
+            let build = Self::map(None, &query[0])?;
+            let fallback = super::version::MinifiedVersion {
+                id: query[1]
+                    .try_get("version_id")
+                    .unwrap_or_else(|_| query[1].get("project_version_id")),
+                r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
+                supported: query[1].try_get("version_supported").unwrap_or(true),
+                java: query[1].try_get("version_java").unwrap_or(21),
+                builds: query[1].try_get("build_count").unwrap_or(0),
+                created: query[1]
+                    .try_get("version_created")
+                    .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
+            };
+            let version = super::version::Version::minified(database, cache, &build)
+                .await?
+                .unwrap_or(fallback);
+
+            Ok::<_, anyhow::Error>(Some((build, Self::map(None, &query[1])?, version)))
+        })
         .await
     }
 
@@ -354,6 +370,51 @@ impl Build {
         .await?;
 
         data.map(|row| Self::map(None, &row)).transpose()
+    }
+
+    pub async fn configs(
+        &self,
+        database: &crate::database::Database,
+        cache: &crate::cache::Cache,
+    ) -> Result<Vec<BuildConfig>, anyhow::Error> {
+        cache
+            .cached(&format!("build_configs::{}", self.id), 3600, || async {
+                let rows = sqlx::query(
+                    r#"
+                    SELECT
+                        config_values.uuid AS value_uuid,
+                        configs.uuid AS config_uuid,
+                        configs.type AS type,
+                        configs.format AS format,
+                        configs.location AS location,
+                        config_values.value AS value
+                    FROM config_values
+                    INNER JOIN build_configs ON build_configs.config_value_id = config_values.id
+                    INNER JOIN configs ON configs.id = config_values.config_id
+                    WHERE build_configs.build_id = $1
+                    ORDER BY configs.id ASC
+                    "#,
+                )
+                .bind(self.id)
+                .fetch_all(database.read())
+                .await?;
+
+                let mut configs = Vec::new();
+
+                for row in rows {
+                    configs.push(BuildConfig {
+                        value_uuid: row.try_get("value_uuid")?,
+                        config_uuid: row.try_get("config_uuid")?,
+                        location: row.try_get("location")?,
+                        r#type: row.try_get("type")?,
+                        format: row.try_get("format")?,
+                        value: row.try_get("value")?,
+                    });
+                }
+
+                Ok::<_, sqlx::Error>(configs)
+            })
+            .await
     }
 
     pub async fn all_by_version(
@@ -414,10 +475,31 @@ impl Build {
         .fetch_all(database.read())
         .await?;
 
+        let total = match rows.first() {
+            Some(row) => row.try_get("total_count")?,
+            None if page > 1 => {
+                sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+                    r#"
+                    SELECT COUNT(*)
+                    FROM builds
+                    WHERE
+                        {} = $1
+                        AND type = $2
+                        AND ($3::text IS NULL OR name ILIKE '%' || $3 || '%')
+                    "#,
+                    version_location
+                )))
+                .bind(version_id)
+                .bind(r#type)
+                .bind(search)
+                .fetch_one(database.read())
+                .await?
+            }
+            None => 0,
+        };
+
         Ok(super::Pagination {
-            total: rows
-                .first()
-                .map_or(Ok(0), |row| row.try_get("total_count"))?,
+            total,
             per_page,
             page,
             data: rows

@@ -71,8 +71,9 @@ const WINDOWS: { value: AdminWindow; label: string }[] = [
 
 const BUCKET_LABELS: Record<string, string> = {
   regular: 'API',
-  files: 'File Browsing',
+  files_browse: 'File Browsing',
   files_download: 'File Downloads',
+  mcp: 'MCP',
 };
 
 const formatBytes = (value: number) => bytes(value) ?? '0B';

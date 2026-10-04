@@ -7,7 +7,7 @@ mod post {
             BaseModel,
             build::Build,
             r#type::ServerType,
-            version::{MinifiedVersion, VersionType},
+            version::{MinifiedVersion, Version, VersionType},
         },
         response::{ApiResponse, ApiResponseResult},
         routes::{ApiErrorV3, GetData, GetState},
@@ -291,10 +291,12 @@ mod post {
                         (
                             SELECT count(*) FROM builds
                             WHERE version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build)
+                                AND type = (SELECT type FROM spec_build)
                         ) + (
                             SELECT count(*) FROM builds
                             WHERE version_id IS NULL
                                 AND project_version_id = (SELECT COALESCE(version_id, project_version_id) FROM spec_build)
+                                AND type = (SELECT type FROM spec_build)
                         ) AS count
                 )
     
@@ -347,21 +349,27 @@ mod post {
                 return Ok(None);
             }
 
+            let build = Build::map(None, &query[0])?;
+            let fallback = MinifiedVersion {
+                id: query[1]
+                    .try_get("version_id")
+                    .unwrap_or_else(|_| query[1].get("project_version_id")),
+                r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
+                supported: query[1].try_get("version_supported").unwrap_or(true),
+                java: query[1].try_get("version_java").unwrap_or(21),
+                builds: query[1].try_get("build_count").unwrap_or(0),
+                created: query[1]
+                    .try_get("version_created")
+                    .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
+            };
+            let version = Version::minified(database, cache, &build)
+                .await?
+                .unwrap_or(fallback);
+
             Ok::<_, anyhow::Error>(Some(RawBuildResult {
-                build: Build::map(None, &query[0])?,
+                build,
                 latest: Build::map(None, &query[1])?,
-                version: MinifiedVersion {
-                    id: query[1]
-                        .try_get("version_id")
-                        .unwrap_or_else(|_| query[1].get("project_version_id")),
-                    r#type: query[1].try_get("version_type").unwrap_or(VersionType::Release),
-                    supported: query[1].try_get("version_supported").unwrap_or(true),
-                    java: query[1].try_get("version_java").unwrap_or(21),
-                    builds: query[1].try_get("build_count").unwrap_or(0),
-                    created: query[1]
-                        .try_get("version_created")
-                        .unwrap_or(query[1].try_get("version2_created").unwrap_or_default()),
-                },
+                version,
             }))
         })
         .await

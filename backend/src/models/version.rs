@@ -363,6 +363,33 @@ impl Version {
             .await
     }
 
+    pub async fn minified(
+        database: &crate::database::Database,
+        cache: &crate::cache::Cache,
+        build: &Build,
+    ) -> Result<Option<MinifiedVersion>, anyhow::Error> {
+        let id = if SERVER_TYPES_WITH_PROJECT_AS_IDENTIFIER.contains(&build.r#type) {
+            build.project_version_id.as_ref()
+        } else {
+            build.version_id.as_ref()
+        };
+
+        let Some(id) = id else {
+            return Ok(None);
+        };
+
+        let mut versions = Self::all(database, cache, build.r#type).await?;
+
+        Ok(versions.swap_remove(id).map(|version| MinifiedVersion {
+            id: id.clone(),
+            r#type: version.r#type,
+            supported: version.supported,
+            java: version.java as i32,
+            builds: version.builds,
+            created: version.created,
+        }))
+    }
+
     pub fn into_api_version_v3(self, id: compact_str::CompactString) -> ApiVersionV3 {
         ApiVersionV3 {
             id,

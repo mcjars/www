@@ -243,12 +243,22 @@ pub enum RateLimitBucket {
     Regular,
     FilesBrowse,
     FilesDownload,
+    Mcp,
 }
 
 impl RateLimitBucket {
-    pub const ALL: [Self; 3] = [Self::Regular, Self::FilesBrowse, Self::FilesDownload];
+    pub const ALL: [Self; 4] = [
+        Self::Regular,
+        Self::FilesBrowse,
+        Self::FilesDownload,
+        Self::Mcp,
+    ];
 
     fn from_request(path: &str, method: &Method) -> Self {
+        if path == "/mcp" {
+            return Self::Mcp;
+        }
+
         if path != "/files" && !path.starts_with("/files/") {
             return Self::Regular;
         }
@@ -265,6 +275,7 @@ impl RateLimitBucket {
             Self::Regular => "regular",
             Self::FilesBrowse => "files",
             Self::FilesDownload => "files_download",
+            Self::Mcp => "mcp",
         }
     }
 
@@ -272,6 +283,7 @@ impl RateLimitBucket {
         let base = match self {
             Self::Regular | Self::FilesBrowse => 120,
             Self::FilesDownload => 30,
+            Self::Mcp => 240,
         };
 
         if organization.is_some() {
