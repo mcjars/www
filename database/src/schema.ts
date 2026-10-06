@@ -243,6 +243,7 @@ export const files = pgTable('files', {
 export const builds = pgTable('builds', {
 	id: serial('id').primaryKey().notNull(),
 	uuid: uuid('uuid').notNull().default(sql`gen_random_uuid()`),
+	sort: serial('sort').notNull(),
 
 	versionId: varchar('version_id', { length: 63 }).references(() => minecraftVersions.id, { onDelete: 'cascade' }),
 	projectVersionId: varchar('project_version_id', { length: 63 }),
@@ -277,6 +278,8 @@ export const builds = pgTable('builds', {
 	index('builds_created_idx').on(builds.created),
 	index('builds_version_type_idx').on(builds.versionId, builds.type),
 	index('builds_project_version_type_idx').on(builds.projectVersionId, builds.type),
+	index('builds_version_type_sort_idx').on(builds.versionId, builds.type, builds.sort),
+	index('builds_project_version_type_sort_idx').on(builds.projectVersionId, builds.type, builds.sort),
 	index('builds_version_idx').on(builds.versionId),
 	index('builds_changes_idx').on(builds.changes).where(sql`jsonb_array_length(changes) > 0 AND jsonb_array_length(changes) < 10`),
 

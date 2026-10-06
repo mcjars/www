@@ -266,7 +266,7 @@ impl Version {
                         FROM (
                             SELECT
                                 COUNT(builds.id) AS builds,
-                                MAX(builds.id) AS latest,
+                                (ARRAY_AGG(builds.id ORDER BY builds.sort DESC, builds.id DESC))[1] AS latest,
                                 MIN(builds.created) AS created_oldest,
                                 project_versions.id AS project_version_id
                             FROM project_versions
@@ -324,7 +324,7 @@ impl Version {
                         FROM (
                             SELECT
                                 COUNT(builds.id) AS builds,
-                                MAX(builds.id) AS latest,
+                                (ARRAY_AGG(builds.id ORDER BY builds.sort DESC, builds.id DESC))[1] AS latest,
                                 minecraft_versions.type AS minecraft_version_type,
                                 minecraft_versions.created AS minecraft_version_created,
                                 minecraft_versions.supported AS minecraft_version_supported,

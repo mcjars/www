@@ -270,12 +270,12 @@ mod post {
                     SELECT {}
                     FROM {}
                     WHERE {}
-                    ORDER BY builds.id DESC
+                    ORDER BY builds.sort DESC, builds.id DESC
                     LIMIT 1
                 ),
     
                 filtered_builds AS (
-                    SELECT {}
+                    SELECT {}, b.sort
                     FROM builds b
                     INNER JOIN spec_build sb ON
                         sb.id = b.id
@@ -326,7 +326,7 @@ mod post {
                             (SELECT count FROM build_count) AS build_count,
                             min(b.created) OVER () AS version2_created
                         FROM filtered_builds b
-                        ORDER BY b.id DESC
+                        ORDER BY b.sort DESC, b.id DESC
                     ) LIMIT 1
                 ) x
                 LEFT JOIN minecraft_versions mv ON mv.id = x.version_id

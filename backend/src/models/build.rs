@@ -237,11 +237,12 @@ impl Build {
                 WITH spec_build AS (
                     SELECT {}
                     FROM {}
+                    ORDER BY builds.sort DESC, builds.id DESC
                     LIMIT 1
                 ),
 
                 filtered_builds AS (
-                    SELECT {}
+                    SELECT {}, b.sort
                     FROM builds b
                     INNER JOIN spec_build sb ON
                         sb.id = b.id
@@ -292,7 +293,7 @@ impl Build {
                             (SELECT count FROM build_count) AS build_count,
                             min(b.created) OVER () AS version2_created
                         FROM filtered_builds b
-                        ORDER BY b.id DESC
+                        ORDER BY b.sort DESC, b.id DESC
                     ) LIMIT 1
                 ) x
                 LEFT JOIN minecraft_versions mv ON mv.id = x.version_id
@@ -353,7 +354,7 @@ impl Build {
                 {} = $1
                 AND type = $2
                 {}
-            ORDER BY id DESC
+            ORDER BY sort DESC, id DESC
             "#,
             Self::columns_sql(None, None),
             version_location,
@@ -430,7 +431,7 @@ impl Build {
             WHERE
                 {} = $1
                 AND type = $2
-            ORDER BY id DESC
+            ORDER BY sort DESC, id DESC
             "#,
             Self::columns_sql(None, None),
             version_location
@@ -461,7 +462,7 @@ impl Build {
                 {} = $1
                 AND type = $2
                 AND ($5 IS NULL OR name ILIKE '%' || $5 || '%')
-            ORDER BY id DESC
+            ORDER BY sort DESC, id DESC
             LIMIT $3 OFFSET $4
             "#,
             Self::columns_sql(None, None),
@@ -518,7 +519,7 @@ impl Build {
             SELECT {}
             FROM builds
             WHERE version_id = $1
-            ORDER BY id DESC
+            ORDER BY sort DESC, id DESC
             "#,
             Self::columns_sql(None, None)
         )))
