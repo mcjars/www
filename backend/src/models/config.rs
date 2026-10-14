@@ -205,6 +205,15 @@ impl Config {
                         *server_id = serde_norway::Value::String("xxx".to_string());
                     }
                 }
+                "mohist-config/worlds.yml" | "worlds.yml" => {
+                    if let Some(serde_norway::Value::Mapping(worlds)) = parsed.get_mut("worlds") {
+                        for world in worlds.values_mut() {
+                            if let Some(seed) = world.get_mut("seed") {
+                                *seed = serde_norway::Value::String("xxx".to_string());
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
 
@@ -444,6 +453,22 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "config/canvas-server.yml",
+            Config {
+                r#type: ServerType::Canvas,
+                format: Format::Yaml,
+                aliases: &["config/canvas-server.yml", "canvas-server.yml"],
+            },
+        ),
+        (
+            "config/canvas-worlds.yml",
+            Config {
+                r#type: ServerType::Canvas,
+                format: Format::Yaml,
+                aliases: &["config/canvas-worlds.yml", "canvas-worlds.yml"],
+            },
+        ),
+        (
             "divinemc.yml",
             Config {
                 r#type: ServerType::Divinemc,
@@ -484,6 +509,22 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "config/fml.toml",
+            Config {
+                r#type: ServerType::Forge,
+                format: Format::Toml,
+                aliases: &["config/fml.toml", "fml.toml"],
+            },
+        ),
+        (
+            "config/forge-common.toml",
+            Config {
+                r#type: ServerType::Forge,
+                format: Format::Toml,
+                aliases: &["config/forge-common.toml", "forge-common.toml"],
+            },
+        ),
+        (
             "config/neoforge-server.toml",
             Config {
                 r#type: ServerType::Neoforge,
@@ -500,6 +541,22 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "config/neoforge-synced.toml",
+            Config {
+                r#type: ServerType::Neoforge,
+                format: Format::Toml,
+                aliases: &["config/neoforge-synced.toml", "neoforge-synced.toml"],
+            },
+        ),
+        (
+            "config/neoforge-local.toml",
+            Config {
+                r#type: ServerType::Neoforge,
+                format: Format::Toml,
+                aliases: &["config/neoforge-local.toml", "neoforge-local.toml"],
+            },
+        ),
+        (
             "mohist-config/mohist.yml",
             Config {
                 r#type: ServerType::Mohist,
@@ -508,11 +565,43 @@ pub static CONFIGS: LazyLock<IndexMap<&'static str, Config>> = LazyLock::new(|| 
             },
         ),
         (
+            "mohist-config/worlds.yml",
+            Config {
+                r#type: ServerType::Mohist,
+                format: Format::Yaml,
+                aliases: &["mohist-config/worlds.yml", "worlds.yml"],
+            },
+        ),
+        (
+            "mohist-config/items.yml",
+            Config {
+                r#type: ServerType::Mohist,
+                format: Format::Yaml,
+                aliases: &["mohist-config/items.yml", "items.yml"],
+            },
+        ),
+        (
             "youer-config/youer.yml",
             Config {
                 r#type: ServerType::Youer,
                 format: Format::Yaml,
                 aliases: &["youer-config/youer.yml", "youer.yml"],
+            },
+        ),
+        (
+            "youer-config/database.yml",
+            Config {
+                r#type: ServerType::Youer,
+                format: Format::Yaml,
+                aliases: &["youer-config/database.yml", "database.yml"],
+            },
+        ),
+        (
+            "youer-config/commands.yml",
+            Config {
+                r#type: ServerType::Youer,
+                format: Format::Yaml,
+                aliases: &["youer-config/commands.yml", "commands.yml"],
             },
         ),
         (

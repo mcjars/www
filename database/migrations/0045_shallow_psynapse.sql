@@ -1,0 +1,1 @@
+ALTER TABLE "builds" ADD COLUMN "reconfig" boolean DEFAULT false NOT NULL;

@@ -250,6 +250,7 @@ export const builds = pgTable('builds', {
 
 	type: typesEnum('type').notNull(),
 	rehash: boolean('rehash').default(false).notNull(),
+	reconfig: boolean('reconfig').default(false).notNull(),
 	experimental: boolean('experimental').default(false).notNull(),
 
 	name: varchar('name', { length: 255 }).default('').notNull(),

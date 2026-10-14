@@ -76,6 +76,14 @@ export const configs: Record<string, {
 		type: 'CANVAS',
 		format: 'JSON5',
 		aliases: ['config/canvas-server.json5', 'canvas-server.json5']
+	}, 'config/canvas-server.yml': {
+		type: 'CANVAS',
+		format: 'YAML',
+		aliases: ['config/canvas-server.yml', 'canvas-server.yml']
+	}, 'config/canvas-worlds.yml': {
+		type: 'CANVAS',
+		format: 'YAML',
+		aliases: ['config/canvas-worlds.yml', 'canvas-worlds.yml']
 	},
 
 	// DivineMC
@@ -107,6 +115,17 @@ export const configs: Record<string, {
 		aliases: ['arclight.conf']
 	},
 
+	// Forge
+	'config/fml.toml': {
+		type: 'FORGE',
+		format: 'TOML',
+		aliases: ['config/fml.toml', 'fml.toml']
+	}, 'config/forge-common.toml': {
+		type: 'FORGE',
+		format: 'TOML',
+		aliases: ['config/forge-common.toml', 'forge-common.toml']
+	},
+
 	// NeoForge
 	'config/neoforge-server.toml': {
 		type: 'NEOFORGE',
@@ -116,6 +135,14 @@ export const configs: Record<string, {
 		type: 'NEOFORGE',
 		format: 'TOML',
 		aliases: ['config/neoforge-common.toml', 'neoforge-common.toml']
+	}, 'config/neoforge-synced.toml': {
+		type: 'NEOFORGE',
+		format: 'TOML',
+		aliases: ['config/neoforge-synced.toml', 'neoforge-synced.toml']
+	}, 'config/neoforge-local.toml': {
+		type: 'NEOFORGE',
+		format: 'TOML',
+		aliases: ['config/neoforge-local.toml', 'neoforge-local.toml']
 	},
 
 	// Mohist
@@ -123,6 +150,14 @@ export const configs: Record<string, {
 		type: 'MOHIST',
 		format: 'YAML',
 		aliases: ['mohist-config/mohist.yml', 'mohist.yml']
+	}, 'mohist-config/worlds.yml': {
+		type: 'MOHIST',
+		format: 'YAML',
+		aliases: ['mohist-config/worlds.yml', 'worlds.yml']
+	}, 'mohist-config/items.yml': {
+		type: 'MOHIST',
+		format: 'YAML',
+		aliases: ['mohist-config/items.yml', 'items.yml']
 	},
 
 	// Youer
@@ -130,6 +165,14 @@ export const configs: Record<string, {
 		type: 'YOUER',
 		format: 'YAML',
 		aliases: ['youer-config/youer.yml', 'youer.yml']
+	}, 'youer-config/database.yml': {
+		type: 'YOUER',
+		format: 'YAML',
+		aliases: ['youer-config/database.yml', 'database.yml']
+	}, 'youer-config/commands.yml': {
+		type: 'YOUER',
+		format: 'YAML',
+		aliases: ['youer-config/commands.yml', 'commands.yml']
 	},
 
 	// Velocity
@@ -305,6 +348,10 @@ export default Object.assign(db, {
 
 		if (file === 'leaves.yml') {
 			value = value.replace(/server-id: (.*)/, 'server-id: xxx')
+		}
+
+		if (file === 'mohist-config/worlds.yml') {
+			value = value.replace(/^(\s+)seed: (.*)/gm, '$1seed: xxx')
 		}
 
 		value = value
