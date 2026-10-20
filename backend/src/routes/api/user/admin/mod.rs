@@ -13,6 +13,7 @@ mod organizations;
 mod ratelimits;
 mod requests;
 mod stats;
+mod webhooks;
 
 const UNNAMED_NODE: &str = "local";
 
@@ -110,6 +111,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
         .nest("/requests", requests::router(state))
         .nest("/files", files::router(state))
         .nest("/organizations", organizations::router(state))
+        .nest("/webhooks", webhooks::router(state))
         .route_layer(axum::middleware::from_fn_with_state(state.clone(), auth))
         .with_state(state.clone())
 }

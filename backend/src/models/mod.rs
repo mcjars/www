@@ -13,6 +13,7 @@ pub mod organization;
 pub mod r#type;
 pub mod user;
 pub mod version;
+pub mod webhook;
 
 #[derive(ToSchema, Validate, Deserialize)]
 pub struct PaginationParams {

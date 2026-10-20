@@ -10,6 +10,7 @@ import {
   HardDriveIcon,
   KeyRoundIcon,
   LoaderCircle,
+  PlusIcon,
   ServerIcon,
   TriangleAlertIcon,
   UsersIcon,
@@ -30,6 +31,7 @@ import apiGetUserAdminRatelimits from '~/api/user/admin/ratelimits.ts';
 import apiGetUserAdminRequests from '~/api/user/admin/requests.ts';
 import apiGetUserAdminStats from '~/api/user/admin/stats.ts';
 import { AdminWindow, NodeStatus, Paginated, SystemSnapshot } from '~/api/user/admin/types.ts';
+import apiGetUserAdminWebhooks, { Webhook } from '~/api/user/admin/webhooks.ts';
 import { Organization } from '~/api/user/organizations.ts';
 import OrganizationRow from '~/components/organization-row.tsx';
 import { Badge } from '~/components/ui/badge.tsx';
@@ -46,6 +48,8 @@ import {
 } from '~/components/ui/pagination.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
 import { Skeleton } from '~/components/ui/skeleton.tsx';
+import WebhookDialog from '~/components/webhook-dialog.tsx';
+import WebhookRow from '~/components/webhook-row.tsx';
 import { useAuth } from '~/hooks/use-auth.tsx';
 import { createMutator } from '~/lib/mutator.ts';
 
@@ -60,6 +64,7 @@ const SECTIONS = [
   { id: 'requests', label: 'Requests', icon: ActivityIcon },
   { id: 'files', label: 'Files', icon: FileIcon },
   { id: 'organizations', label: 'Organizations', icon: BuildingIcon },
+  { id: 'webhooks', label: 'Webhooks', icon: WebhookIcon },
 ] as const;
 
 const WINDOWS: { value: AdminWindow; label: string }[] = [
@@ -257,6 +262,7 @@ function TopList({ title, entries }: { title: string; entries: { label: string; 
 export default function PageAdmin() {
   const [user, , isUserLoading] = useAuth();
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const [creatingWebhook, setCreatingWebhook] = useState(false);
   const queryClient = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -346,10 +352,17 @@ export default function PageAdmin() {
     staleTime: 10_000,
   });
 
+  const { data: webhooks, isFetching: webhooksFetching } = useQuery({
+    queryKey: ['admin', 'webhooks', page, debouncedSearch],
+    queryFn: () => apiGetUserAdminWebhooks(page, PER_PAGE, debouncedSearch),
+    enabled: isAdmin && section === 'webhooks',
+    staleTime: 10_000,
+  });
+
   const { data: rawTypes } = useQuery({
     queryKey: ['types'],
     queryFn: () => apiGetTypes(),
-    enabled: isAdmin && section === 'organizations',
+    enabled: isAdmin && (section === 'organizations' || section === 'webhooks'),
   });
 
   const organizationTypes = useMemo(
@@ -361,11 +374,12 @@ export default function PageAdmin() {
   );
 
   useEffect(() => {
-    if (!organizations) return;
+    const total = section === 'webhooks' ? webhooks?.total : organizations?.total;
+    if (total === undefined) return;
 
-    const pages = Math.max(1, Math.ceil(organizations.total / PER_PAGE));
+    const pages = Math.max(1, Math.ceil(total / PER_PAGE));
     if (page > pages) setParam('page', pages === 1 ? null : pages);
-  }, [organizations, page, setParam]);
+  }, [section, organizations, webhooks, page, setParam]);
 
   const organizationsKey = ['admin', 'organizations', page, debouncedSearch];
   const mutateOrganizations = createMutator<Paginated<Organization>>(queryClient, organizationsKey);
@@ -379,6 +393,20 @@ export default function PageAdmin() {
         current && {
           ...current,
           data: current.data.map((entry) => (entry.id === id ? { ...entry, ...data } : entry)),
+        },
+      false,
+    );
+
+  const mutateWebhooks = createMutator<Paginated<Webhook>>(queryClient, ['admin', 'webhooks', page, debouncedSearch]);
+
+  const refetchWebhooks = () => void queryClient.invalidateQueries({ queryKey: ['admin', 'webhooks'] });
+
+  const updateWebhook = (webhook: Webhook) =>
+    mutateWebhooks(
+      (current) =>
+        current && {
+          ...current,
+          data: current.data.map((entry) => (entry.id === webhook.id ? webhook : entry)),
         },
       false,
     );
@@ -1052,6 +1080,60 @@ export default function PageAdmin() {
               ))}
 
               {renderPagination(organizations.total)}
+            </>
+          )}
+        </div>
+      )}
+
+      {section === 'webhooks' && (
+        <div className={'flex flex-col'}>
+          <WebhookDialog
+            open={creatingWebhook}
+            onOpenChange={setCreatingWebhook}
+            types={organizationTypes}
+            onSaved={refetchWebhooks}
+          />
+
+          <Card className={'p-3 mb-2'}>
+            <div className={'flex flex-row flex-wrap items-center justify-between gap-2'}>
+              <div className={'flex flex-row items-center gap-2'}>
+                {searchInput('Filter by label, URL or organization...')}
+
+                <Button onClick={() => setCreatingWebhook(true)}>
+                  <PlusIcon size={16} className={'mr-1'} />
+                  Create
+                </Button>
+              </div>
+
+              <p className={'text-xs text-muted-foreground'}>
+                Discord webhooks notified of new builds. Changes reach the indexer within a minute.
+              </p>
+            </div>
+          </Card>
+
+          {!webhooks ? (
+            <Skeleton className={'w-full h-32 rounded-xl'} />
+          ) : !webhooks.data.length ? (
+            <Card className={'p-4 flex flex-row items-center justify-center'}>
+              {webhooksFetching ? (
+                <LoaderCircle className={'animate-spin'} />
+              ) : (
+                <p className={'text-sm text-muted-foreground'}>No webhooks matched.</p>
+              )}
+            </Card>
+          ) : (
+            <>
+              {webhooks.data.map((webhook) => (
+                <WebhookRow
+                  key={webhook.id}
+                  webhook={webhook}
+                  types={organizationTypes}
+                  updateWebhook={updateWebhook}
+                  mutate={refetchWebhooks}
+                />
+              ))}
+
+              {renderPagination(webhooks.total)}
             </>
           )}
         </div>
