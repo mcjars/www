@@ -255,6 +255,7 @@ export const builds = pgTable('builds', {
 
 	name: varchar('name', { length: 255 }).default('').notNull(),
 	buildNumber: integer('build_number').notNull(),
+	java: smallint('java'),
 	jarUrl: varchar('jar_url', { length: 255 }),
 	jarSize: integer('jar_size'),
 	jarLocation: varchar('jar_location', { length: 51 }),

@@ -62,6 +62,7 @@ pub struct Build {
     #[serde(rename(serialize = "buildNumber"), alias = "buildNumber")]
     #[schema(rename = "buildNumber")]
     pub build_number: i32,
+    pub java: Option<i16>,
     #[serde(rename(serialize = "jarUrl"), alias = "jarUrl")]
     #[schema(rename = "jarUrl")]
     pub jar_url: Option<compact_str::CompactString>,
@@ -122,6 +123,12 @@ impl BaseModel for Build {
                 compact_str::format_compact!("{}build_number", prefix.unwrap_or_default()),
             ),
             (
+                compact_str::format_compact!(
+                    "NULLIF({table}.java, (SELECT minecraft_versions.java FROM minecraft_versions WHERE minecraft_versions.id = {table}.version_id))"
+                ),
+                compact_str::format_compact!("{}java", prefix.unwrap_or_default()),
+            ),
+            (
                 compact_str::format_compact!("{table}.jar_url"),
                 compact_str::format_compact!("{}jar_url", prefix.unwrap_or_default()),
             ),
@@ -170,6 +177,7 @@ impl BaseModel for Build {
             name: row.try_get(compact_str::format_compact!("{prefix}name").as_str())?,
             build_number: row
                 .try_get(compact_str::format_compact!("{prefix}build_number").as_str())?,
+            java: row.try_get(compact_str::format_compact!("{prefix}java").as_str())?,
             jar_url: row.try_get(compact_str::format_compact!("{prefix}jar_url").as_str())?,
             jar_size: row.try_get(compact_str::format_compact!("{prefix}jar_size").as_str())?,
             zip_url: row.try_get(compact_str::format_compact!("{prefix}zip_url").as_str())?,
@@ -539,6 +547,7 @@ impl Build {
             r#type: self.r#type,
             experimental: self.experimental,
             name: self.name,
+            java: self.java.map(|java| java as u16),
             installation: self.installation,
             changes: self.changes,
             created: self.created.map(|dt| dt.and_utc()),
@@ -557,6 +566,7 @@ pub struct ApiBuildV3 {
     pub experimental: bool,
 
     pub name: compact_str::CompactString,
+    pub java: Option<u16>,
 
     pub installation: Vec<Vec<InstallationStep>>,
     pub changes: Vec<compact_str::CompactString>,

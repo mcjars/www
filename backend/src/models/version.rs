@@ -262,12 +262,14 @@ impl Version {
                             {},
                             builds,
                             latest,
-                            created_oldest
+                            created_oldest,
+                            max_java
                         FROM (
                             SELECT
                                 COUNT(builds.id) AS builds,
                                 (ARRAY_AGG(builds.id ORDER BY builds.sort DESC, builds.id DESC))[1] AS latest,
                                 MIN(builds.created) AS created_oldest,
+                                MAX(builds.java) AS max_java,
                                 project_versions.id AS project_version_id
                             FROM project_versions
                             INNER JOIN builds ON builds.project_version_id = project_versions.id
@@ -301,11 +303,14 @@ impl Version {
                             latest,
                         };
 
-                        version.java = JAVA_MAPPING
-                            .iter()
-                            .find(|(date, _)| version.created.date() >= *date)
-                            .map(|(_, java)| *java)
-                            .unwrap_or(21);
+                        version.java = match row.get::<Option<i16>, _>("max_java") {
+                            Some(java) => java,
+                            None => JAVA_MAPPING
+                                .iter()
+                                .find(|(date, _)| version.created.date() >= *date)
+                                .map(|(_, java)| *java)
+                                .unwrap_or(21),
+                        };
 
                         versions.insert(id, version);
                     }
@@ -384,7 +389,7 @@ impl Version {
             id: id.clone(),
             r#type: version.r#type,
             supported: version.supported,
-            java: version.java as i32,
+            java: build.java.unwrap_or(version.java) as i32,
             builds: version.builds,
             created: version.created,
         }))
