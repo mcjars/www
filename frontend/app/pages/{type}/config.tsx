@@ -325,7 +325,8 @@ export default function PageTypeConfig() {
     queryKey: ['default-version', normalizedType],
     queryFn: () => apiGetVersions(normalizedType, { page: 1, perPage: 1, search: '' }),
   });
-  const defaultVersion = defaultVersionData?.items[0]?.latest.versionId ?? null;
+  const defaultVersion =
+    defaultVersionData?.items[0]?.latest.versionId ?? defaultVersionData?.items[0]?.latest.projectVersionId ?? null;
 
   const selectedVersion = useMemo(() => {
     if (versionParam) return versionParam;
@@ -602,7 +603,7 @@ export default function PageTypeConfig() {
         </div>
       </div>
 
-      {!types || !defaultVersionData || !buildItems || !configs ? (
+      {!types || !defaultVersionData || (selectedVersion && !buildItems) || (selectedBuildUuid && !configs) ? (
         <div className={'w-full'}>
           <Skeleton className={'mb-2 h-16 w-full rounded-xl'} />
           <Skeleton className={'mb-2 h-16 w-full rounded-xl'} />

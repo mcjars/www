@@ -70,7 +70,7 @@ export function VersionCombobox({
             <p className={'px-2 py-1.5 text-sm text-muted-foreground'}>No versions found.</p>
           )}
           {items.map(({ latest }) => {
-            const versionId = latest.versionId;
+            const versionId = latest.versionId ?? latest.projectVersionId;
             if (!versionId) return null;
 
             return (
