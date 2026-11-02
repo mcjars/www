@@ -299,40 +299,31 @@ impl Env {
         } else {
             (None, None)
         };
-        if let Some(file_appender) = appender {
-            tracing::subscriber::set_global_default(
-                tracing_subscriber::fmt()
-                    .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc_3339())
-                    .with_writer(std::io::stdout.and(file_appender))
-                    .with_target(false)
-                    .with_level(true)
-                    .with_file(true)
-                    .with_line_number(true)
-                    .with_max_level(if env.app_debug {
-                        tracing::Level::DEBUG
-                    } else {
-                        tracing::Level::INFO
-                    })
-                    .finish()
-                    .with(sentry_layer()),
-            )?;
+        let fmt_layer = tracing_subscriber::fmt::layer()
+            .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc_3339())
+            .with_target(false)
+            .with_level(true)
+            .with_file(true)
+            .with_line_number(true);
+
+        let fmt_layer = if let Some(file_appender) = appender {
+            fmt_layer
+                .with_writer(std::io::stdout.and(file_appender))
+                .boxed()
         } else {
-            tracing::subscriber::set_global_default(
-                tracing_subscriber::fmt()
-                    .with_timer(tracing_subscriber::fmt::time::ChronoLocal::rfc_3339())
-                    .with_target(false)
-                    .with_level(true)
-                    .with_file(true)
-                    .with_line_number(true)
-                    .with_max_level(if env.app_debug {
-                        tracing::Level::DEBUG
-                    } else {
-                        tracing::Level::INFO
-                    })
-                    .finish()
-                    .with(sentry_layer()),
-            )?;
-        }
+            fmt_layer.boxed()
+        };
+
+        tracing::subscriber::set_global_default(
+            tracing_subscriber::registry()
+                .with(if env.app_debug {
+                    LevelFilter::DEBUG
+                } else {
+                    LevelFilter::INFO
+                })
+                .with(fmt_layer)
+                .with(sentry_layer()),
+        )?;
 
         Ok((Arc::new(env), guard))
     }
