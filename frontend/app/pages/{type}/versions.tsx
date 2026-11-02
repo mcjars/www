@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { Skeleton } from '~/components/ui/skeleton.tsx';
 import { ResponsiveTooltip, Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip.tsx';
 import { useIsMobile } from '~/hooks/use-mobile.tsx';
+import { isSameTypeId } from '~/lib/utils.ts';
 
 export default function PageTypeVersions() {
   const { type = '' } = useParams<{ type: string }>();
@@ -207,7 +208,7 @@ export default function PageTypeVersions() {
     () =>
       Object.values(types ?? {})
         .flat()
-        ?.find((t) => t.identifier === type),
+        ?.find((t) => isSameTypeId(t.identifier, type)),
     [types, type],
   );
 

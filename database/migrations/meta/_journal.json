@@ -330,6 +330,13 @@
       "when": 1792839927181,
       "tag": "0046_wandering_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793626699550,
+      "tag": "0047_normalize_type_identifiers",
+      "breakpoints": true
     }
   ]
 }

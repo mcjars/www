@@ -4,10 +4,6 @@ import { fileURLToPath } from 'node:url';
 import type { Config } from '@react-router/dev/config';
 
 const STATIC_ROUTES = ['/', '/configs', '/lookup', '/ai'];
-const ROUTE_IDENTIFIER_OVERRIDES: Record<string, string> = {
-  LEGACY_FABRIC: 'LEGACYFABRIC',
-  LOOHP_LIMBO: 'LOOHPLIMBO',
-};
 
 function getTypeIdentifiers(): string[] {
   try {
@@ -17,10 +13,7 @@ function getTypeIdentifiers(): string[] {
     const block = source.match(/export const types = \[([\s\S]*?)\]/);
     if (!block) return [];
 
-    return [...block[1].matchAll(/'([^']+)'/g)].map((match) => {
-      const identifier = match[1];
-      return ROUTE_IDENTIFIER_OVERRIDES[identifier] ?? identifier;
-    });
+    return [...block[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
   } catch {
     return [];
   }

@@ -1,7 +1,37 @@
 use anyhow::Context;
 use dotenvy::dotenv;
 use std::sync::Arc;
-use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt};
+use tracing_subscriber::{
+    Layer,
+    filter::{FilterExt, LevelFilter, filter_fn},
+    fmt::writer::MakeWriterExt,
+    layer::SubscriberExt,
+    registry::LookupSpan,
+};
+
+fn sentry_layer<S>() -> impl Layer<S>
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+{
+    sentry_tracing::SpanLayer::new()
+        .with_filter(LevelFilter::INFO)
+        .and_then(
+            sentry_tracing::BreadcrumbLayer::new()
+                .enable_span_attributes()
+                .with_filter(filter_fn(|metadata| {
+                    metadata.is_span()
+                        || matches!(
+                            *metadata.level(),
+                            tracing::Level::WARN | tracing::Level::INFO
+                        )
+                })),
+        )
+        .and_then(
+            sentry_tracing::ErrorLayer::new()
+                .enable_span_attributes()
+                .with_filter(LevelFilter::ERROR.or(filter_fn(|metadata| metadata.is_span()))),
+        )
+}
 
 #[derive(Clone)]
 pub enum RedisMode {
@@ -284,7 +314,7 @@ impl Env {
                         tracing::Level::INFO
                     })
                     .finish()
-                    .with(sentry_tracing::layer().enable_span_attributes()),
+                    .with(sentry_layer()),
             )?;
         } else {
             tracing::subscriber::set_global_default(
@@ -300,7 +330,7 @@ impl Env {
                         tracing::Level::INFO
                     })
                     .finish()
-                    .with(sentry_tracing::layer().enable_span_attributes()),
+                    .with(sentry_layer()),
             )?;
         }
 

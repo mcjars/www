@@ -24,7 +24,7 @@ import { Card } from '~/components/ui/card.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '~/components/ui/select.tsx';
 import { Skeleton } from '~/components/ui/skeleton.tsx';
 import { VersionCombobox } from '~/components/version-combobox.tsx';
-import { cn } from '~/lib/utils.ts';
+import { cn, isSameTypeId } from '~/lib/utils.ts';
 
 type TreeNode = {
   folders: Record<string, TreeNode>;
@@ -390,7 +390,7 @@ export default function PageTypeConfig() {
     () =>
       Object.values(types ?? {})
         .flat()
-        .find((entry: any) => normalizeTypeId(entry.identifier) === normalizeTypeId(type)),
+        .find((entry: any) => isSameTypeId(entry.identifier, type)),
     [types, type],
   );
 

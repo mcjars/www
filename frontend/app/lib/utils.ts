@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function isSameTypeId(a?: string, b?: string) {
+  const key = (value?: string) => (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  return key(a) === key(b);
+}
+
 export function mergeLessThanPercent(data: { label: string; total: number }[], threshold = 1) {
   const total = data.reduce((acc, { total }) => acc + total, 0);
 
