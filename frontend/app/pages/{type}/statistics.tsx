@@ -29,7 +29,7 @@ export default function PageTypeRequestStatistics() {
           else params.set(name, String(value));
           return params;
         },
-        { replace: true },
+        { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],

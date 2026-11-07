@@ -17,6 +17,8 @@ import apiGetVersionLookups from '~/api/lookups/versions.ts';
 import apiGetVersionRequestsAllTime from '~/api/requests/version/all-time.ts';
 import apiGetVersionRequestsMonth from '~/api/requests/version/month.ts';
 import apiGetStats from '~/api/stats.ts';
+import apiGetBuildsHistory from '~/api/stats/history.ts';
+import apiGetJavaStats from '~/api/stats/java.ts';
 import apiGetTypes from '~/api/types.ts';
 import apiGetVersions from '~/api/versions.ts';
 import { Alert, AlertDescription } from '~/components/ui/alert.tsx';
@@ -38,7 +40,7 @@ export default function PageIndex() {
           else params.set(name, String(value));
           return params;
         },
-        { replace: true },
+        { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],
@@ -174,6 +176,66 @@ export default function PageIndex() {
       ),
     [requestVersionStatsAllTimeRaw, requestVersionStatsAllTimeType],
   );
+
+  const typeInfos = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.values(types ?? {}).flatMap((group) => group.map((type) => [type.identifier, type])),
+      ),
+    [types],
+  );
+
+  const buildsHistoryYear = getNumberParam('buildsHistoryYear');
+  const setBuildsHistoryYear = (value?: number | null) => setParam('buildsHistoryYear', value);
+  const buildsHistoryMonth = getNumberParam('buildsHistoryMonth');
+  const setBuildsHistoryMonth = (value?: number | null) => setParam('buildsHistoryMonth', value);
+  const { data: buildsHistoryRaw } = useQuery({
+    queryKey: ['buildsHistory', buildsHistoryYear, buildsHistoryMonth],
+    queryFn: () =>
+      apiGetBuildsHistory(
+        buildsHistoryYear ?? new Date().getFullYear(),
+        buildsHistoryMonth ?? new Date().getMonth() + 1,
+      ),
+  });
+
+  const buildsHistoryTypes = useMemo(
+    () =>
+      Object.entries(buildsHistoryRaw ?? {})
+        .map(([type, days]) => ({ type, total: days.reduce((acc, { builds }) => acc + builds, 0) }))
+        .sort((a, b) => b.total - a.total)
+        .map(({ type }) => type),
+    [buildsHistoryRaw],
+  );
+
+  const buildsHistory = useMemo(
+    () =>
+      Object.values(buildsHistoryRaw ?? {})[0]?.map(({ day }) => ({
+        day,
+        ...Object.fromEntries(
+          Object.entries(buildsHistoryRaw ?? {}).map(([type, days]) => [type, days[day - 1]?.builds ?? 0]),
+        ),
+      })) ?? [],
+    [buildsHistoryRaw],
+  );
+
+  const javaStatsType = searchParams.get('javaStatsType') ?? undefined;
+  const setJavaStatsType = (value?: string | null) => setParam('javaStatsType', value === 'all' ? null : value);
+  const { data: javaStatsRaw } = useQuery({ queryKey: ['javaStats'], queryFn: () => apiGetJavaStats() });
+
+  const javaStats = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const [type, versions] of Object.entries(javaStatsRaw ?? {})) {
+      if (javaStatsType && type !== javaStatsType) continue;
+
+      for (const [java, builds] of Object.entries(versions)) {
+        totals.set(java, (totals.get(java) ?? 0) + builds);
+      }
+    }
+
+    return [...totals.entries()]
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([java, total]) => ({ label: `Java ${java}`, total }));
+  }, [javaStatsRaw, javaStatsType]);
 
   return (
     <div>
@@ -526,6 +588,119 @@ export default function PageIndex() {
                   label={({ name }) => name}
                 >
                   {requestVersionStatsAllTime.map(({ label }, i) => (
+                    <Cell key={label} fill={`hsl(var(--chart-${(i % 5) + 1}))`} stroke={'hsl(var(--border))'} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+          )}
+        </Card>
+
+        <Card className={'p-4 h-[500px]'}>
+          <div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
+            <h1 className={'text-xl font-semibold ml-2'}>Builds Released per Day</h1>
+          </div>
+
+          <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 pb-1 z-10'}>
+            <Select
+              value={String(buildsHistoryYear ?? new Date().getFullYear())}
+              onValueChange={(value) => setBuildsHistoryYear(Number(value))}
+            >
+              <SelectTrigger className={'w-[6em] mr-1 mb-1'}>
+                <SelectValue placeholder={'Year'} />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: new Date().getFullYear() - 2011 }, (_, i) => new Date().getFullYear() - i).map(
+                  (year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={String(buildsHistoryMonth ?? new Date().getMonth() + 1)}
+              onValueChange={(value) => setBuildsHistoryMonth(Number(value))}
+            >
+              <SelectTrigger className={'w-[10em] mr-1 mb-1'}>
+                <SelectValue placeholder={'Month'} />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                  <SelectItem key={month} value={String(month)}>
+                    {Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(2023, month - 1))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {!buildsHistoryRaw ? (
+            <div className={'w-full h-full flex flex-row items-center justify-center'}>
+              <LoaderCircle className={'animate-spin'} />
+            </div>
+          ) : !buildsHistory.length ? (
+            <div className={'w-full h-full flex flex-row items-center justify-center'}>
+              <p className={'text-muted-foreground'}>No builds were released this month.</p>
+            </div>
+          ) : (
+            <ChartContainer
+              config={{}}
+              className={'w-full md:h-[calc(100%-5rem)] h-[calc(100%-8rem)] absolute bottom-8 -left-4'}
+            >
+              <BarChart data={buildsHistory} layout={'horizontal'}>
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey={'day'} type={'category'} />
+                <YAxis type={'number'} allowDecimals={false} />
+                {buildsHistoryTypes.map((type) => (
+                  <Bar
+                    key={type}
+                    stackId={'types'}
+                    barSize={32}
+                    dataKey={type}
+                    fill={typeInfos[type]?.color ?? 'hsl(var(--chart-1))'}
+                    radius={2}
+                  />
+                ))}
+              </BarChart>
+            </ChartContainer>
+          )}
+        </Card>
+
+        <Card className={'p-4 h-[500px]'}>
+          <div className={'absolute left-0 w-full top-0 flex flex-row items-center justify-between p-2 z-10'}>
+            <h1 className={'text-xl font-semibold ml-2'}>Required Java Versions of Builds</h1>
+
+            <div className={'flex flex-row flex-wrap items-start justify-end self-start'}>
+              <Select value={javaStatsType ?? 'all'} onValueChange={(value) => setJavaStatsType(value)}>
+                <SelectTrigger className={'w-[10em]'}>
+                  <SelectValue placeholder={'All Types'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={'all'}>All Types</SelectItem>
+                  {Object.keys(javaStatsRaw ?? {}).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {typeInfos[type]?.name ?? type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {!javaStats.length ? (
+            <div className={'w-full h-full flex flex-row items-center justify-center'}>
+              <LoaderCircle className={'animate-spin'} />
+            </div>
+          ) : (
+            <ChartContainer config={{}} className={'w-full h-full'}>
+              <PieChart accessibilityLayer>
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Pie data={javaStats} dataKey={'total'} nameKey={'label'} fillRule={'evenodd'} label={({ name }) => name}>
+                  {javaStats.map(({ label }, i) => (
                     <Cell key={label} fill={`hsl(var(--chart-${(i % 5) + 1}))`} stroke={'hsl(var(--border))'} />
                   ))}
                 </Pie>

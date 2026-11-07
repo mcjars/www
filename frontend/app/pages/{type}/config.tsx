@@ -288,7 +288,7 @@ export default function PageTypeConfig() {
           else params.set(name, value);
           return params;
         },
-        { replace: true },
+        { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],

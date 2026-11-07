@@ -280,7 +280,7 @@ export default function PageAdmin() {
 
           return params;
         },
-        { replace: true },
+        { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],

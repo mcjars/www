@@ -101,7 +101,7 @@ mod get {
         let stats = state
             .cache
             .cached(
-                &format!("stats::versions::{version}::history::{start}::{end}"),
+                &format!("stats::versions::{version}::history::{start}::{end}::v2"),
                 10800,
                 || async {
                     let data = sqlx::query(
@@ -117,14 +117,14 @@ mod get {
                         WHERE
                             builds.version_id = $1
                             AND builds.created >= $2
-                            AND builds.created <= $3
+                            AND builds.created < $3
                         GROUP BY day
                         ORDER BY day ASC
                         "#,
                     )
                     .bind(version)
                     .bind(start)
-                    .bind(end)
+                    .bind(end.succ_opt().unwrap())
                     .fetch_all(state.database.read())
                     .await?;
 
@@ -142,7 +142,7 @@ mod get {
 
                     for row in data {
                         let entry = stats
-                            .get_mut(row.try_get::<i16, _>("day")? as usize)
+                            .get_mut(row.try_get::<i16, _>("day")? as usize - 1)
                             .unwrap();
 
                         entry.buids = row.try_get("builds")?;

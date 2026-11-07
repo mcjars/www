@@ -55,7 +55,7 @@ export default function PageTypeVersions() {
         else params.set(name, String(value));
         return params;
       },
-      { replace: true },
+      { replace: true, preventScrollReset: true },
     );
   }, []);
   const getNumberParam = (name: string) => {
