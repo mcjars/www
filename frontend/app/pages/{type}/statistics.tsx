@@ -14,25 +14,32 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '~/components/
 import { SearchableSelect } from '~/components/searchable-select.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
 import { Skeleton } from '~/components/ui/skeleton.tsx';
+import MonthPicker from '~/components/month-picker.tsx';
 import { mergeLessThanPercent } from '~/lib/utils.ts';
 
 export default function PageTypeRequestStatistics() {
   const { type = '' } = useParams<{ type: string }>();
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const setParam = useCallback(
-    (name: string, value: string | number | null | undefined) => {
+  const setParams = useCallback(
+    (entries: Record<string, string | number | null | undefined>) => {
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
-          if (value === null || value === undefined || value === '') params.delete(name);
-          else params.set(name, String(value));
+          for (const [name, value] of Object.entries(entries)) {
+            if (value === null || value === undefined || value === '') params.delete(name);
+            else params.set(name, String(value));
+          }
           return params;
         },
         { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],
+  );
+  const setParam = useCallback(
+    (name: string, value: string | number | null | undefined) => setParams({ [name]: value }),
+    [setParams],
   );
   const getNumberParam = (name: string) => {
     const raw = searchParams.get(name);
@@ -83,9 +90,9 @@ export default function PageTypeRequestStatistics() {
   const requestStatsMonthDisplay = searchParams.get('requestStatsMonthDisplay') ?? undefined;
   const setRequestStatsMonthDisplay = (value?: string | null) => setParam('requestStatsMonthDisplay', value);
   const requestStatsMonthYear = getNumberParam('requestStatsMonthYear');
-  const setRequestStatsMonthYear = (value?: number | null) => setParam('requestStatsMonthYear', value);
   const requestStatsMonthMonth = getNumberParam('requestStatsMonthMonth');
-  const setRequestStatsMonthMonth = (value?: number | null) => setParam('requestStatsMonthMonth', value);
+  const setRequestStatsMonthYearMonth = (year: number, month: number) =>
+    setParams({ requestStatsMonthYear: year, requestStatsMonthMonth: month });
   const { data: requestStatsMonthRaw } = useQuery({
     queryKey: ['requestStatsMonth', type, requestStatsMonthYear, requestStatsMonthMonth],
     queryFn: () =>
@@ -147,9 +154,9 @@ export default function PageTypeRequestStatistics() {
   const setLookupVersionStatsMonthDisplay = (value?: string | null) =>
     setParam('lookupVersionStatsMonthDisplay', value);
   const lookupVersionStatsMonthYear = getNumberParam('lookupVersionStatsMonthYear');
-  const setLookupVersionStatsMonthYear = (value?: number | null) => setParam('lookupVersionStatsMonthYear', value);
   const lookupVersionStatsMonthMonth = getNumberParam('lookupVersionStatsMonthMonth');
-  const setLookupVersionStatsMonthMonth = (value?: number | null) => setParam('lookupVersionStatsMonthMonth', value);
+  const setLookupVersionStatsMonthYearMonth = (year: number, month: number) =>
+    setParams({ lookupVersionStatsMonthYear: year, lookupVersionStatsMonthMonth: month });
   const { data: lookupVersionStatsMonthRaw } = useQuery({
     queryKey: ['lookupVersionStatsMonth', type, lookupVersionStatsMonthYear, lookupVersionStatsMonthMonth],
     queryFn: () =>
@@ -348,38 +355,13 @@ export default function PageTypeRequestStatistics() {
             </div>
           </div>
 
-          <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 z-10'}>
-            <Select
-              value={String(requestStatsMonthYear ?? new Date().getFullYear())}
-              onValueChange={(value) => setRequestStatsMonthYear(Number(value))}
-            >
-              <SelectTrigger className={'w-[6em] mr-1'}>
-                <SelectValue placeholder={'Year'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: new Date().getFullYear() - 2023 }, (_, i) => 2024 + i).map((year) => (
-                  <SelectItem key={year} value={String(year)}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={String(requestStatsMonthMonth ?? new Date().getMonth() + 1)}
-              onValueChange={(value) => setRequestStatsMonthMonth(Number(value))}
-            >
-              <SelectTrigger className={'w-[10em]'}>
-                <SelectValue placeholder={'Month'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                  <SelectItem key={month} value={String(month)}>
-                    {Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(2023, month - 1))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 pb-1 z-10'}>
+            <MonthPicker
+              year={requestStatsMonthYear ?? new Date().getFullYear()}
+              month={requestStatsMonthMonth ?? new Date().getMonth() + 1}
+              onChange={setRequestStatsMonthYearMonth}
+              minYear={2024}
+            />
           </div>
 
           {!requestStatsMonth?.length ||
@@ -478,38 +460,13 @@ export default function PageTypeRequestStatistics() {
             </div>
           </div>
 
-          <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 z-10'}>
-            <Select
-              value={String(lookupVersionStatsMonthYear ?? new Date().getFullYear())}
-              onValueChange={(value) => setLookupVersionStatsMonthYear(Number(value))}
-            >
-              <SelectTrigger className={'w-[6em] mr-1'}>
-                <SelectValue placeholder={'Year'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: new Date().getFullYear() - 2023 }, (_, i) => 2024 + i).map((year) => (
-                  <SelectItem key={year} value={String(year)}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={String(lookupVersionStatsMonthMonth ?? new Date().getMonth() + 1)}
-              onValueChange={(value) => setLookupVersionStatsMonthMonth(Number(value))}
-            >
-              <SelectTrigger className={'w-[10em]'}>
-                <SelectValue placeholder={'Month'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                  <SelectItem key={month} value={String(month)}>
-                    {Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(2023, month - 1))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 pb-1 z-10'}>
+            <MonthPicker
+              year={lookupVersionStatsMonthYear ?? new Date().getFullYear()}
+              month={lookupVersionStatsMonthMonth ?? new Date().getMonth() + 1}
+              onChange={setLookupVersionStatsMonthYearMonth}
+              minYear={2024}
+            />
           </div>
 
           {!lookupVersionStatsMonth.length ? (

@@ -26,24 +26,31 @@ import { Card } from '~/components/ui/card.tsx';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '~/components/ui/chart.tsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select.tsx';
 import { Skeleton } from '~/components/ui/skeleton.tsx';
+import MonthPicker from '~/components/month-picker.tsx';
 import { VersionCombobox } from '~/components/version-combobox.tsx';
 import { mergeLessThanPercent } from '~/lib/utils.ts';
 
 export default function PageIndex() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const setParam = useCallback(
-    (name: string, value: string | number | null | undefined) => {
+  const setParams = useCallback(
+    (entries: Record<string, string | number | null | undefined>) => {
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
-          if (value === null || value === undefined || value === '') params.delete(name);
-          else params.set(name, String(value));
+          for (const [name, value] of Object.entries(entries)) {
+            if (value === null || value === undefined || value === '') params.delete(name);
+            else params.set(name, String(value));
+          }
           return params;
         },
         { replace: true, preventScrollReset: true },
       );
     },
     [setSearchParams],
+  );
+  const setParam = useCallback(
+    (name: string, value: string | number | null | undefined) => setParams({ [name]: value }),
+    [setParams],
   );
   const getNumberParam = (name: string) => {
     const raw = searchParams.get(name);
@@ -102,9 +109,9 @@ export default function PageIndex() {
   const setRequestVersionStatsMonthDisplay = (value?: string | null) =>
     setParam('requestVersionStatsMonthDisplay', value);
   const requestVersionStatsMonthYear = getNumberParam('requestVersionStatsMonthYear');
-  const setRequestVersionStatsMonthYear = (value?: number | null) => setParam('requestVersionStatsMonthYear', value);
   const requestVersionStatsMonthMonth = getNumberParam('requestVersionStatsMonthMonth');
-  const setRequestVersionStatsMonthMonth = (value?: number | null) => setParam('requestVersionStatsMonthMonth', value);
+  const setRequestVersionStatsMonthYearMonth = (year: number, month: number) =>
+    setParams({ requestVersionStatsMonthYear: year, requestVersionStatsMonthMonth: month });
   const { data: requestVersionStatsMonthRaw } = useQuery({
     queryKey: [
       'requestVersionStatsMonth',
@@ -186,9 +193,9 @@ export default function PageIndex() {
   );
 
   const buildsHistoryYear = getNumberParam('buildsHistoryYear');
-  const setBuildsHistoryYear = (value?: number | null) => setParam('buildsHistoryYear', value);
   const buildsHistoryMonth = getNumberParam('buildsHistoryMonth');
-  const setBuildsHistoryMonth = (value?: number | null) => setParam('buildsHistoryMonth', value);
+  const setBuildsHistoryYearMonth = (year: number, month: number) =>
+    setParams({ buildsHistoryYear: year, buildsHistoryMonth: month });
   const { data: buildsHistoryRaw } = useQuery({
     queryKey: ['buildsHistory', buildsHistoryYear, buildsHistoryMonth],
     queryFn: () =>
@@ -425,37 +432,12 @@ export default function PageIndex() {
           </div>
 
           <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 pb-1 z-10'}>
-            <Select
-              value={String(requestVersionStatsMonthYear ?? new Date().getFullYear())}
-              onValueChange={(value) => setRequestVersionStatsMonthYear(Number(value))}
-            >
-              <SelectTrigger className={'w-[6em] mr-1 mb-1'}>
-                <SelectValue placeholder={'Year'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: new Date().getFullYear() - 2023 }, (_, i) => 2024 + i).map((year) => (
-                  <SelectItem key={year} value={String(year)}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={String(requestVersionStatsMonthMonth ?? new Date().getMonth() + 1)}
-              onValueChange={(value) => setRequestVersionStatsMonthMonth(Number(value))}
-            >
-              <SelectTrigger className={'w-[10em] mr-1 mb-1'}>
-                <SelectValue placeholder={'Month'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                  <SelectItem key={month} value={String(month)}>
-                    {Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(2023, month - 1))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MonthPicker
+              year={requestVersionStatsMonthYear ?? new Date().getFullYear()}
+              month={requestVersionStatsMonthMonth ?? new Date().getMonth() + 1}
+              onChange={setRequestVersionStatsMonthYearMonth}
+              minYear={2024}
+            />
 
             <Select
               value={requestVersionStatsMonthDisplay ?? 'pie'}
@@ -602,39 +584,13 @@ export default function PageIndex() {
           </div>
 
           <div className={'absolute left-0 bottom-0 flex flex-row items-center justify-between p-2 pb-1 z-10'}>
-            <Select
-              value={String(buildsHistoryYear ?? new Date().getFullYear())}
-              onValueChange={(value) => setBuildsHistoryYear(Number(value))}
-            >
-              <SelectTrigger className={'w-[6em] mr-1 mb-1'}>
-                <SelectValue placeholder={'Year'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: new Date().getFullYear() - 2011 }, (_, i) => new Date().getFullYear() - i).map(
-                  (year) => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={String(buildsHistoryMonth ?? new Date().getMonth() + 1)}
-              onValueChange={(value) => setBuildsHistoryMonth(Number(value))}
-            >
-              <SelectTrigger className={'w-[10em] mr-1 mb-1'}>
-                <SelectValue placeholder={'Month'} />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                  <SelectItem key={month} value={String(month)}>
-                    {Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(2023, month - 1))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MonthPicker
+              year={buildsHistoryYear ?? new Date().getFullYear()}
+              month={buildsHistoryMonth ?? new Date().getMonth() + 1}
+              onChange={setBuildsHistoryYearMonth}
+              minYear={2012}
+              descending
+            />
           </div>
 
           {!buildsHistoryRaw ? (
